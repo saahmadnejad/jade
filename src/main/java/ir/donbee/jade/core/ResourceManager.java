@@ -49,9 +49,15 @@ public interface ResourceManager {
      * @param r    The <code>Runnable</code> object that will executed by the
      *             returned <code>Thread</code>.
      */
-    Thread getThread(int type, String name, Runnable r);
+    default Thread getThread(int type, String name, Runnable r) {
+        return Thread.ofVirtual().name(name).unstarted(r);
+    }
 
-    void initialize(Profile p);
+    default void initialize(Profile p) {
+        // Do nothing
+    }
 
-    void releaseResources();
+    default void releaseResources() {
+        // Do nothing
+    }
 }
