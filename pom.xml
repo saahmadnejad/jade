@@ -1,0 +1,52 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>ir.donbee</groupId>
+    <artifactId>jade</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>JAVA Agent DEvelopment Framework</name>
+    <description>An open source platform for peer-to-peer agent based applications </description>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+    </properties>
+
+    <dependencies>
+
+        <!-- https://mvnrepository.com/artifact/org.jacorb/jacorb -->
+        <dependency>
+            <groupId>org.jacorb</groupId>
+            <artifactId>jacorb</artifactId>
+            <version>3.9</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.18.0</version>
+        </dependency>
+
+
+    </dependencies>
+<!--
+    <build>
+        <plugins>
+            &lt;!&ndash; Plugin to run Java classes with main() &ndash;&gt;
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>com.example.Main</mainClass> &lt;!&ndash; Change to your main class &ndash;&gt;
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>-->
+</project>
