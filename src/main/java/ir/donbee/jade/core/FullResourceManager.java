@@ -47,7 +47,6 @@ class FullResourceManager implements ResourceManager {
 	private boolean disableThreadGroupInterrupt;
 	private int threadGroupInterruptTimeout;
 
-	
 	public FullResourceManager() {
 		parent = new ThreadGroup("JADE") {
 			public void uncaughtException(Thread t, Throwable e) {
@@ -135,8 +134,3 @@ class FullResourceManager implements ResourceManager {
 		}		
 	}
 }
-
-
-
-
-
