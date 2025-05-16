@@ -233,9 +233,9 @@ public class ThreadedBehaviourFactory {
 		
 		private void start() {
 			// Start the dedicated thread
-			myThread = new Thread(this);
-			myThread.setName(myAgent.getLocalName()+"#"+myBehaviour.getBehaviourName());
-			myThread.start();			
+			myThread = Thread.ofVirtual()
+					.name(myAgent.getLocalName()+"#"+myBehaviour.getBehaviourName())
+					.start(this);
 		}
 		
 		public void action() {

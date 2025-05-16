@@ -508,17 +508,14 @@ public class FaultRecoveryService extends BaseService {
 		
 	private void suicide() {
 		myLogger.log(Logger.WARNING, "Activating suicide procedure.....");
-		Thread t = new Thread() {
-			public void run() {
-				try {
-					Thread.sleep(2000);
-				}
-				catch (Exception e) {}
-				myLogger.log(Logger.WARNING, "Suiciding NOW!!!!!!");
-				System.exit(0);
+		Thread.ofVirtual().start(() -> {
+			try {
+				Thread.sleep(2000);
 			}
-		};
-		t.start();
+			catch (Exception e) {}
+			myLogger.log(Logger.WARNING, "Suiciding NOW!!!!!!");
+			System.exit(0);
+		});
 	}
 	
 	

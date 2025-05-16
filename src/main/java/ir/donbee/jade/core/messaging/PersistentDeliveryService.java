@@ -422,29 +422,26 @@ public class PersistentDeliveryService extends BaseService {
 	 * This happens on the main container only.
 	 */
 	private void flushMessages(final AID target) {
-		Thread t = new Thread() {
-			public void run() {
-				try {
-					Service.Slice[] slices = getStorageEnabledSlices();
-					String sliceName = null;
-					for(int i = 0; i < slices.length; i++) {
-						PersistentDeliverySlice slice = (PersistentDeliverySlice)slices[i];
-						try {
-							sliceName = slice.getNode().getName();
-							slice.flushMessages(target);
-						}
-						catch(Exception e) {
-							myLogger.log(Logger.WARNING,"Persistent-Delivery - Error trying to flush messages for agent "+target.getName()+" on node "+sliceName);
-							// Ignore it and try other slices...
-						}
+		Thread.startVirtualThread(() -> {
+			try {
+				Service.Slice[] slices = getStorageEnabledSlices();
+				String sliceName = null;
+				for(int i = 0; i < slices.length; i++) {
+					PersistentDeliverySlice slice = (PersistentDeliverySlice)slices[i];
+					try {
+						sliceName = slice.getNode().getName();
+						slice.flushMessages(target);
+					}
+					catch(Exception e) {
+						myLogger.log(Logger.WARNING,"Persistent-Delivery - Error trying to flush messages for agent "+target.getName()+" on node "+sliceName);
+						// Ignore it and try other slices...
 					}
 				}
-				catch (ServiceException se) {
-					myLogger.log(Logger.WARNING,"Persistent-Delivery - Error retrieving storage-enabled slices to flush persisted messages for agent "+target.getName());
-				}
 			}
-		};
-		t.start();
+			catch (ServiceException se) {
+				myLogger.log(Logger.WARNING,"Persistent-Delivery - Error retrieving storage-enabled slices to flush persisted messages for agent "+target.getName());
+			}
+		});
 	}
 	
 	private Service.Slice[] getStorageEnabledSlices() throws ServiceException {

@@ -1376,9 +1376,7 @@ public class BEManagementService extends BaseService {
 
 		public void start() {
 			state = ACTIVE_STATE;
-			myThread = new Thread(this);
-			myThread.setName(displayId + "-LM" + myIndex + "-R" + replaceCnt);
-			myThread.start();
+			myThread = Thread.ofVirtual().name(displayId + "-LM" + myIndex + "-R" + replaceCnt).start(this);
 		}
 
 		public void stop() {

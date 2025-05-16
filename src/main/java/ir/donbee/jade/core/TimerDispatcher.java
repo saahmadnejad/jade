@@ -67,7 +67,7 @@ public class TimerDispatcher implements Runnable {
 
 	public synchronized Timer add(Timer t) {
 		if (myThread == null) {
-			myThread = new Thread(this);
+			myThread = Thread.ofVirtual().unstarted(this);
 			start();
 		}
 		while (!addTimer(t)) {

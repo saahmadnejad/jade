@@ -560,18 +560,14 @@ public class NotificationService extends BaseService {
 			if (targetName.equals(myContainer.getAMS()) && !(Thread.currentThread().getName().equals(AMS_DEBUG_HELPER))) {
 				final AID in = introspectorName;
 				final AID tg = targetName;
-				Thread helper = new Thread(new Runnable() {
-					public void run() {
-						try {
-							debugOn(in, tg);
-						}
-						catch(IMTPException imtpe) {
-							imtpe.printStackTrace();
-						}
-					}
-				});
-				helper.setName(AMS_DEBUG_HELPER);
-				helper.start();
+				Thread.ofVirtual()
+						.name(AMS_DEBUG_HELPER).start(() -> {
+							try {
+								debugOn(in, tg);
+							} catch (IMTPException imtpe) {
+								imtpe.printStackTrace();
+							}
+						});
 				return;
 			}
 			

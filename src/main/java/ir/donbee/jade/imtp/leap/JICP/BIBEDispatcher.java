@@ -532,22 +532,19 @@ public class BIBEDispatcher extends Thread implements BEConnectionManager, Dispa
 		}
 
 		private synchronized void startWatchDog(final long timeout) {
-			watchDog = new Thread() {
-				public void run() {
-					try {
-						Thread.sleep(timeout);
-						// WatchDog expired --> close the connection
-						if(myLogger.isLoggable(Logger.WARNING))
-							myLogger.log(Logger.WARNING,myID+" - Response timeout expired");
+			watchDog = Thread.startVirtualThread(() -> {
+				try {
+					Thread.sleep(timeout);
+					// WatchDog expired --> close the connection
+					if(myLogger.isLoggable(Logger.WARNING))
+						myLogger.log(Logger.WARNING,myID+" - Response timeout expired");
 
-						resetConnection(false);
-					}
-					catch (InterruptedException ie) {
-						// Watch dog removed. Just do nothing
-					}
+					resetConnection(false);
 				}
-			};
-			watchDog.start();
+				catch (InterruptedException ie) {
+					// Watch dog removed. Just do nothing
+				}
+			});
 		}
 
 		private synchronized void stopWatchDog() {

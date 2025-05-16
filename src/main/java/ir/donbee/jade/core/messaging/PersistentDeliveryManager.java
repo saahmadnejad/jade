@@ -107,7 +107,9 @@ class PersistentDeliveryManager {
 
 		public ExpirationChecker(long t) {
 			period = t;
-			myThread = new Thread(this, "Persistent Delivery Service -- Expiration Checker Thread");
+			myThread = Thread.ofVirtual()
+					.name("Persistent Delivery Service -- Expiration Checker Thread")
+					.unstarted(this);
 		}
 
 		public void run() {

@@ -559,8 +559,7 @@ public class HTTPFEDispatcher implements FEConnectionManager, Dispatcher, TimerL
 					}
 					reachable = false;
 					myLogger.log(Logger.INFO, "Starting DM ("+System.currentTimeMillis()+").");
-					myThread = new Thread(this);
-					myThread.start();
+					myThread = Thread.startVirtualThread(this);
 					if (pingOK) {
 						// The InputManager is blocked waiting for data that will never arrive
 						// Kill it and create a new one

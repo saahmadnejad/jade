@@ -54,9 +54,7 @@ public class BlockingNodeFailureMonitor extends NodeFailureMonitor
     public void start(Node n, NodeEventListener nel) {
     	super.start(n, nel);
     	
-      Thread thread = new Thread(this);
-      thread.setName(target.getName()+"-failure-monitor");
-      thread.start();
+      Thread.ofVirtual().name(target.getName()+"-failure-monitor").start(this);
     }
     
     public void run() {

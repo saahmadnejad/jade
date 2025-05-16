@@ -27,6 +27,10 @@ package ir.donbee.jade.core;
 import ir.donbee.jade.util.leap.LinkedList;
 import ir.donbee.jade.util.Logger;
 
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
    The singleton instance (accessible through the 
    <code>instance()</code> static method) of this class allows
@@ -63,15 +67,14 @@ public class Runtime {
 	// UNKNOWN --> Mode not yet set
 	private static final int UNKNOWN_MODE = 2;
 
+	private static Map<String, Set<Thread>> CRITICAL_THREAD_GROUP;
 	private static Runtime theInstance;
 
 	static {
+		CRITICAL_THREAD_GROUP = new ConcurrentHashMap<>();
 		theInstance = new Runtime();
 	}
 
-	//#MIDP_EXCLUDE_BEGIN
-	private ThreadGroup criticalThreads;
-	//#MIDP_EXCLUDE_END
 	private String version = "UNKNOWN";
 	private String revision = "UNKNOWN";
 	private String date = "UNKNOWN";
@@ -91,6 +94,7 @@ public class Runtime {
 		version = vm.getVersion();
 		revision = vm.getRevision();
 		date = vm.getDate();
+		CRITICAL_THREAD_GROUP.put("CRITICAL_THREADS", ConcurrentHashMap.newKeySet());
 		//#DOTNET_EXCLUDE_END
 		//#MIDP_EXCLUDE_END
 	}
@@ -247,14 +251,11 @@ public class Runtime {
 
 			//#MIDP_EXCLUDE_BEGIN
 			// Set up group and attributes for time critical threads
-			criticalThreads = new ThreadGroup("JADE time-critical threads");
-			criticalThreads.setMaxPriority(Thread.MAX_PRIORITY);
-			Thread t = new Thread(criticalThreads, theDispatcher);
-			t.setPriority(criticalThreads.getMaxPriority());
-			t.setName("JADE Timer dispatcher");
+			Thread t = Thread.ofVirtual().name("JADE Timer dispatcher").unstarted(theDispatcher);
+			CRITICAL_THREAD_GROUP.get("CRITICAL_THREADS").add(t);
 			//#MIDP_EXCLUDE_END
 			/*#MIDP_INCLUDE_BEGIN
-			Thread t = new Thread(theDispatcher);
+			Thread t = Thread.ofVirtual().unstarted(theDispatcher);
 			#MIDP_INCLUDE_END*/
 			theDispatcher.setThread(t);
 			//TimerDispatcher.setTimerDispatcher(theDispatcher);
@@ -290,15 +291,36 @@ public class Runtime {
 
 			//#MIDP_EXCLUDE_BEGIN
 			try {
-				criticalThreads.destroy();
+				Set<Thread> criticalThreads = CRITICAL_THREAD_GROUP.get("CRITICAL_THREADS");
+				if (criticalThreads != null) {
+					for (Thread thread : criticalThreads) {
+						try {
+							thread.interrupt(); // Recommended over stop() or destroy()
+						} catch (Exception e) {
+							myLogger.log(Logger.WARNING, "Error interrupting thread: " + thread.getName(), e);
+						}
+					}
+
+					// Optionally wait for threads to finish if needed
+					for (Thread thread : criticalThreads) {
+						try {
+							thread.join(1000); // timeout optional
+						} catch (InterruptedException e) {
+							Thread.currentThread().interrupt(); // restore interrupt flag
+							myLogger.log(Logger.WARNING, "Interrupted while waiting for thread: " + thread.getName(), e);
+						}
+					}
+				}
+			} catch (Exception e) {
+				myLogger.log(Logger.WARNING, "Time-critical threads still active or error occurred: ", e);
+				Set<Thread> criticalThreads = CRITICAL_THREAD_GROUP.get("CRITICAL_THREADS");
+				if (criticalThreads != null) {
+					criticalThreads.forEach(thread -> System.out.println("Still active: " + thread.getName()));
+				}
+			} finally {
+				CRITICAL_THREAD_GROUP.remove("CRITICAL_THREADS");
 			}
-			catch(IllegalThreadStateException itse) {
-				myLogger.log(Logger.WARNING, "Time-critical threads still active: ");
-				criticalThreads.list();
-			}
-			finally {
-				criticalThreads = null;
-			}
+
 			//#MIDP_EXCLUDE_END
 			t.start();
 		}

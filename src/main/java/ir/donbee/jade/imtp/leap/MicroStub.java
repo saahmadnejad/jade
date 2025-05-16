@@ -162,48 +162,46 @@ public class MicroStub {
 		if (beginFlush()) {
 			// This is called by the main thread of the underlying EndPoint
 			// --> The actual flushing must be done asynchronously to avoid deadlock
-			flushingThread = new Thread() {
-				public void run() {
-					// 2) Flush the buffer of pending commands
-					logger.log(Logger.INFO, "Start flushing");					
-					int flushedCnt = 0;
-					PostponedCommand pc = null;
-					while ((pc = removeFirst()) != null) {
-						// Exceptions and return values of commands whose delivery
-						// was delayed for disconnection problems can and must not
-						// be handled!!!
-						try {
-							if (logger.isLoggable(Logger.FINE)) {
-								logger.log(Logger.FINE,"Flushing command: code = "+pc.command.getCode());
-							}
-							Command r = executeRemotely(pc.command, 0, pc.sessionId);
-							// Command delivered. Remove the Timer associated to it if any 
-							if (pc.timer != null) {
-								TimerDispatcher.getTimerDispatcher().remove(pc.timer);
-							}
-							flushedCnt++;
-							if (r.getCode() == Command.ERROR) {
-								logger.log(Logger.SEVERE,"Remote exception in command asynchronous delivery. "+r.getParamAt(2));
-							}
+			flushingThread = Thread.ofVirtual().unstarted(() -> {
+				// 2) Flush the buffer of pending commands
+				logger.log(Logger.INFO, "Start flushing");
+				int flushedCnt = 0;
+				PostponedCommand pc = null;
+				while ((pc = removeFirst()) != null) {
+					// Exceptions and return values of commands whose delivery
+					// was delayed for disconnection problems can and must not
+					// be handled!!!
+					try {
+						if (logger.isLoggable(Logger.FINE)) {
+							logger.log(Logger.FINE,"Flushing command: code = "+pc.command.getCode());
 						}
-						catch (Exception ex) {
-							logger.log(Logger.WARNING,"Exception in command asynchronous delivery. "+ex);
-							// We are disconnected again --> put the command back in the queue of postponed commands
-							// and stop flushing. If there was a Timer it is still there --> No need to do anything
-							if (ex instanceof ICPDispatchException) {
-								pc.sessionId = ((ICPDispatchException) ex).getSessionId();
-							}
-							pendingCommands.insertElementAt(pc, 0);
-							break;
+						Command r = executeRemotely(pc.command, 0, pc.sessionId);
+						// Command delivered. Remove the Timer associated to it if any
+						if (pc.timer != null) {
+							TimerDispatcher.getTimerDispatcher().remove(pc.timer);
+						}
+						flushedCnt++;
+						if (r.getCode() == Command.ERROR) {
+							logger.log(Logger.SEVERE,"Remote exception in command asynchronous delivery. "+r.getParamAt(2));
 						}
 					}
-					
-					// 3) Unlock the buffer of pending commands
-					logger.log(Logger.FINE, "########## "+pendingCommands.size()+" pending commands after flush");
-					endFlush();
-					logger.log(Logger.INFO,"Flushing thread terminated ("+flushedCnt+")");
+					catch (Exception ex) {
+						logger.log(Logger.WARNING,"Exception in command asynchronous delivery. "+ex);
+						// We are disconnected again --> put the command back in the queue of postponed commands
+						// and stop flushing. If there was a Timer it is still there --> No need to do anything
+						if (ex instanceof ICPDispatchException) {
+							pc.sessionId = ((ICPDispatchException) ex).getSessionId();
+						}
+						pendingCommands.insertElementAt(pc, 0);
+						break;
+					}
 				}
-			};
+
+				// 3) Unlock the buffer of pending commands
+				logger.log(Logger.FINE, "########## "+pendingCommands.size()+" pending commands after flush");
+				endFlush();
+				logger.log(Logger.INFO,"Flushing thread terminated ("+flushedCnt+")");
+			});
 			return flushingThread;
 		}
 		else {
@@ -299,24 +297,21 @@ public class MicroStub {
 	private void manageTimerExpired(final PostponedCommand pc) {
 		// This is invoked by the TimerDispatcher Thread. Since the operation may be 
 		// long, do it in a dedicated Thread
-		Thread t = new Thread() {
-			public void run() {
-				// Removing expired pending commands cannot be done while flushing to 
-				// avoid cases like:
-				// - Flushing starts and postponed command dispatching begins
-				// - Timer expires and FAILURE is sent back
-				// - Delivering succeeds
-				beginDispatch();
-				boolean found = pendingCommands.removeElement(pc);
-				endDispatch();
-				// The command may have been processed while we were waiting to disable flush.
-				// Do nothing in this case
-				if (found) {
-					handlePostponedCommandExpired(pc.command, pc.icpe);
-				}
+		Thread.startVirtualThread(() -> {
+			// Removing expired pending commands cannot be done while flushing to
+			// avoid cases like:
+			// - Flushing starts and postponed command dispatching begins
+			// - Timer expires and FAILURE is sent back
+			// - Delivering succeeds
+			beginDispatch();
+			boolean found = pendingCommands.removeElement(pc);
+			endDispatch();
+			// The command may have been processed while we were waiting to disable flush.
+			// Do nothing in this case
+			if (found) {
+				handlePostponedCommandExpired(pc.command, pc.icpe);
 			}
-		};
-		t.start();
+		});
 	}
 	
 	protected class PostponedCommand {

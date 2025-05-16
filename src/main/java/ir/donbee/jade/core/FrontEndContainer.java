@@ -677,7 +677,7 @@ class FrontEndContainer implements FrontEnd, AgentToolkit, Runnable {
 		notifyListeners(new ContainerEvent(ContainerEvent.BORN_AGENT, id, myId));
 		//#MIDP_EXCLUDE_END
 		
-		a.powerUp(id, new Thread(a));
+		a.powerUp(id, Thread.ofVirtual().unstarted(a));
 	}
 	
 	
@@ -687,8 +687,7 @@ class FrontEndContainer implements FrontEnd, AgentToolkit, Runnable {
 			// for asynchronous message delivery and the vector of senderAgents
 			pending = new Vector(4);
 			senderAgents = new Vector(1);
-			Thread t = new Thread(this);
-			t.start();
+			Thread.startVirtualThread(this);
 		}
 		
 		synchronized(pending) {

@@ -192,19 +192,15 @@ public class HTTPBEDispatcher implements BEConnectionManager, Dispatcher, JICPMe
 	}
 
 	private void ensureFERunning(final long timeout) {
-		Thread t = new Thread() {
-
-			public void run() {
-				if (timeout > 0) {
-					if (!myOutgoingsHandler.waitForInitialResponse(timeout)) {
-						if (myLogger.isLoggable(Logger.INFO)) {
-							myLogger.log(Logger.INFO, "Missing initial dummy response after reconnection");
-						}
+		Thread.startVirtualThread(() -> {
+			if (timeout > 0) {
+				if (!myOutgoingsHandler.waitForInitialResponse(timeout)) {
+					if (myLogger.isLoggable(Logger.INFO)) {
+						myLogger.log(Logger.INFO, "Missing initial dummy response after reconnection");
 					}
 				}
 			}
-		};
-		t.start();
+		});
 	}
 
 	public void tick(long currentTime) {
@@ -508,18 +504,14 @@ public class HTTPBEDispatcher implements BEConnectionManager, Dispatcher, JICPMe
 			frontEndStatus = CONNECTING;
 			reset();
 
-			Thread t = new Thread() {
-
-				public void run() {
-					if (!myOutgoingsHandler.waitForInitialResponse(60000)) {
-						if (myLogger.isLoggable(Logger.FINE)) {
-							myLogger.log(Logger.FINE, "Missing initial dummy response after reconnection");
-						}
-						setUnreachable();
+			Thread.ofVirtual().start(() -> {
+				if (!myOutgoingsHandler.waitForInitialResponse(60000)) {
+					if (myLogger.isLoggable(Logger.FINE)) {
+						myLogger.log(Logger.FINE, "Missing initial dummy response after reconnection");
 					}
+					setUnreachable();
 				}
-			};
-			t.start();
+			});
 		}
 
 		private synchronized void setUnreachable() {

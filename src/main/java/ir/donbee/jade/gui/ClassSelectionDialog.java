@@ -351,7 +351,7 @@ public class ClassSelectionDialog extends JDialog implements WindowListener, Act
 			setCursor(new Cursor(Cursor.WAIT_CURSOR));
 			updateLabelStatus(true);
 			ClassUpdater cu = new ClassUpdater(classname, classfilter == null ? new ClassFilter() : classfilter);
-			new Thread(cu).start();
+			Thread.ofVirtual().start(cu);
 		}
 	}
 

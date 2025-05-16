@@ -812,8 +812,7 @@ public class FrontEndDispatcher implements FEConnectionManager, Dispatcher, Time
 				}
 
 				// Asynchronously try to recreate the Connection
-				Thread t = new Thread(this);
-				t.start();
+				Thread.startVirtualThread(this);
 			}
 		}
 	}
@@ -914,21 +913,11 @@ public class FrontEndDispatcher implements FEConnectionManager, Dispatcher, Time
 		synchronized (timersLock) {
 			if (t == kaTimer) {
 				// Send KEEP_ALIVE may take time --> Do it in a dedicated Thread 
-				Thread thr = new Thread() {
-					public void run() {
-						sendKeepAlive(t);
-					}
-				};
-				thr.start();
+				Thread.startVirtualThread(() -> sendKeepAlive(t));
 			}
 			else if (t == cdTimer) {
 				// Send DROP_DOWN may take time --> Do it in a dedicated Thread 
-				Thread thr = new Thread() {
-					public void run() {
-						dropDownConnection(t);
-					}
-				};
-				thr.start();
+				Thread.startVirtualThread(() -> dropDownConnection(t));
 			}
 		}
 	}

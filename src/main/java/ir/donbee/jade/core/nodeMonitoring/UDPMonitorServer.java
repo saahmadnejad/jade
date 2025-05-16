@@ -171,7 +171,7 @@ class UDPMonitorServer {
 		private Thread thread;
 
 		public PingHandler(String name) {
-			thread = new Thread(this, name);
+			thread = Thread.ofVirtual().name(name).unstarted(this);
 		}
 
 		private void handlePing() throws IOException {
@@ -492,12 +492,7 @@ class UDPMonitorServer {
 			if (cnt.getValue() == orphanNodePingsCnt) {
 				// A node is considered orphan only once after the reception of 10 "unknown pings"
 				final String id = nodeID;
-				Thread t = new Thread() {
-					public void run() {
-						myService.handleOrphanNode(id);
-					}
-				};
-				t.start();
+				Thread.startVirtualThread(() -> myService.handleOrphanNode(id));
 			}
 		}
 	}

@@ -760,16 +760,13 @@ class CommandDispatcher implements StubHelper, ICP.Listener {
 			// JVM it needs some time to broadcast the termination of this node
 			// to its replicas (if any) --> asynchronously deregister the skeleton after 
 			// a while
-			Thread t = new Thread() {
-				public void run() {
-					try {
-						Thread.sleep(1000);
-					}
-					catch (InterruptedException ie) {}
-					removeRemoteObject(remoteObject);
+			Thread.startVirtualThread(() -> {
+				try {
+					Thread.sleep(1000);
 				}
-			};
-			t.start();
+				catch (InterruptedException ie) {}
+				removeRemoteObject(remoteObject);
+			});
 		} 
 	}
 	

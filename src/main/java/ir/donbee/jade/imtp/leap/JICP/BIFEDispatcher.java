@@ -499,8 +499,7 @@ public class BIFEDispatcher implements FEConnectionManager, Dispatcher, TimerLis
 
             // Asynchronously try to recreate the outConnection
             refreshingOutput = true;
-            Thread t = new Thread(this);
-            t.start();
+            Thread.startVirtualThread(this);
         }
     }
 
@@ -926,57 +925,6 @@ public class BIFEDispatcher implements FEConnectionManager, Dispatcher, TimerLis
         refreshOut();
     }
 
-    /* [WATCHDOG]
-    private Object watchDogLock = new Object();
-    private Thread watchDogThread = null;
-    private boolean done = false;
-
-    private void startWatchDog(final Connection c) {
-    synchronized (watchDogLock) {
-    // If a watch dog is already active, don't start another one.
-    if (watchDogThread == null) {
-    myLogger.log(Logger.INFO, "Starting WatchDog thread.");
-    done = false;
-    watchDogThread = new Thread() {
-    public void run() {
-    synchronized (watchDogLock) {
-    try {
-    if (!done) {
-    watchDogLock.wait(2*RESPONSE_TIMEOUT);
-    if (!done) {
-    // Timeout expired
-    myLogger.log(Logger.WARNING, "WatchDog: timer expired.");
-    try {
-    c.close();
-    myLogger.log(Logger.INFO, "WatchDog: connection closed.");
-    }
-    catch (IOException ioe) {
-    myLogger.log(Logger.WARNING, "WatchDog: IOException closing connection.");
-    }
-    }
-    }
-    }
-    catch (Exception e) {
-    myLogger.log(Logger.WARNING, "WatchDog: Unexpected Exception "+e);
-    }
-    watchDogThread = null;
-    myLogger.log(Logger.INFO, "WatchDog: terminated.");
-    }
-    }
-    };
-    watchDogThread.start();
-    }
-    }
-    }
-
-    private void stopWatchDog() {
-    myLogger.log(Logger.INFO, "Stopping WatchDog thread.");
-    synchronized (watchDogLock) {
-    done = true;
-    watchDogLock.notifyAll();
-    }
-    }
-    // [WATCHDOG] */
     private JICPConnection openConnection(TransportAddress ta, int timeout) throws IOException {
         if (myConnectionListener != null) {
             myConnectionListener.handleConnectionEvent(ConnectionListener.BEFORE_CONNECTION, null);
