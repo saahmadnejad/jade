@@ -265,19 +265,16 @@ public class DynamicJadeGateway {
 		public void handleGatewayConnected() {
 			// This is executed by the GatewayAgent Thread --> Notify listeners by means of an ad-hoc 
 			// Thread to avoid deadlocks with other threads waiting for the execute() method to complete
-			Thread t = new Thread() {
-				public void run() {
-					for (GatewayListener listener : listenersArray) {
-						try {
-							listener.handleGatewayConnected();
-						}
-						catch (Exception e) {
-							e.printStackTrace();
-						}
+			Thread.ofVirtual().start(() -> {
+				for (GatewayListener listener : listenersArray) {
+					try {
+						listener.handleGatewayConnected();
+					}
+					catch (Exception e) {
+						e.printStackTrace();
 					}
 				}
-			};
-			t.start();
+			});
 		}
 		
 		public void handleGatewayDisconnected() {
@@ -286,19 +283,16 @@ public class DynamicJadeGateway {
 			
 			// This is executed by the GatewayAgent Thread --> Notify listeners by means of an ad-hoc 
 			// Thread to avoid deadlocks with other threads waiting for the execute() method to complete
-			Thread t = new Thread() {
-				public void run() {
-					for (GatewayListener listener : listenersArray) {
-						try {
-							listener.handleGatewayDisconnected();
-						}
-						catch (Exception e) {
-							e.printStackTrace();
-						}
+			Thread.ofVirtual().start(() -> {
+				for (GatewayListener listener : listenersArray) {
+					try {
+						listener.handleGatewayDisconnected();
+					}
+					catch (Exception e) {
+						e.printStackTrace();
 					}
 				}
-			};
-			t.start();
+			});
 		}
 	} // END of inner class GatewayListenerImpl
 	//#DOTNET_EXCLUDE_END

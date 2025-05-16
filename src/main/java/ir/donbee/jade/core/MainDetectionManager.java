@@ -413,8 +413,7 @@ public class MainDetectionManager {
 	public static MulticastMainDetectionListener createListener(ProfileImpl profile, IMTPManager m) throws ProfileException {
 		logger.log(Logger.FINER, "MainDetectionManager::export(...)");
 		MulticastMainDetectionListener listener = new MulticastMainDetectionListener(profile, m);
-		Thread listenerThread = new Thread(listener);
-		listenerThread.start();
+		Thread.ofVirtual().start(listener);
 		return listener;
 	}
 }

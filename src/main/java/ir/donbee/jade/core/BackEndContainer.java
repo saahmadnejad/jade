@@ -730,32 +730,29 @@ public class BackEndContainer extends AgentContainerImpl implements BackEnd {
 	 */
 	private void resynch() {
 		synchronizing = true;
-		Thread synchronizer = new Thread() {
-			public void run() {
-				while (!terminating) {
-					try {
-						// Wait a bit also before the first attempt to avoid sending the synch 
-						// command in the middle of the BE creation procedure
-						try {Thread.sleep(1000);} catch (Exception e) {}
-						myLogger.log(Logger.INFO, "BackEnd container "+ here().getName()+" - Sending SYNCH command to FE ...");
-						myFrontEnd.synch();
-						notifySynchronized();
-						myLogger.log(Logger.INFO, "BackEnd container "+ here().getName()+" - Resynch completed");
-						break;
-					}
-					catch (IMTPException imtpe) {
-						// Since the synchronization process will be repeated, be
-						// sure we start from a clean situation
-						//killAgentImages();
-						
-						// The input connection is down again (or there was an IMTP
-						// error resynching). Go back waiting
-						myLogger.log(Logger.WARNING, "BackEnd container "+ here().getName()+" - IMTP Exception in resynch. Wait a bit and retry...");
-					}
+		Thread.ofVirtual().start(() -> {
+			while (!terminating) {
+				try {
+					// Wait a bit also before the first attempt to avoid sending the synch
+					// command in the middle of the BE creation procedure
+					try {Thread.sleep(1000);} catch (Exception e) {}
+					myLogger.log(Logger.INFO, "BackEnd container "+ here().getName()+" - Sending SYNCH command to FE ...");
+					myFrontEnd.synch();
+					notifySynchronized();
+					myLogger.log(Logger.INFO, "BackEnd container "+ here().getName()+" - Resynch completed");
+					break;
+				}
+				catch (IMTPException imtpe) {
+					// Since the synchronization process will be repeated, be
+					// sure we start from a clean situation
+					//killAgentImages();
+
+					// The input connection is down again (or there was an IMTP
+					// error resynching). Go back waiting
+					myLogger.log(Logger.WARNING, "BackEnd container "+ here().getName()+" - IMTP Exception in resynch. Wait a bit and retry...");
 				}
 			}
-		};
-		synchronizer.start();
+		});
 	}
 	
 	private void postponeAfterFrontEndSynch(ACLMessage msg, String sender) {

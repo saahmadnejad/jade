@@ -245,20 +245,17 @@ public class BIBEDispatcher extends Thread implements BEConnectionManager, Dispa
 				// Check the INP connection. Since this method must return
 				// asap, does it in a separated Thread
 				if (inpHolder.isConnected()) {
-					Thread t = new Thread() {
-						public void run() {
-							try {
-								JICPPacket pkt = new JICPPacket(JICPProtocol.KEEP_ALIVE_TYPE, JICPProtocol.DEFAULT_INFO, null);
-								dispatchPacket(pkt, false, -1);
-								if(myLogger.isLoggable(Logger.FINE))
-									myLogger.log(Logger.FINE, myID+" - IC valid");
-							}
-							catch (Exception e) {
-								// Just do nothing
-							}
+					Thread.ofVirtual().start(() -> {
+						try {
+							JICPPacket pkt = new JICPPacket(JICPProtocol.KEEP_ALIVE_TYPE, JICPProtocol.DEFAULT_INFO, null);
+							dispatchPacket(pkt, false, -1);
+							if(myLogger.isLoggable(Logger.FINE))
+								myLogger.log(Logger.FINE, myID+" - IC valid");
 						}
-					};
-					t.start();
+						catch (Exception e) {
+							// Just do nothing
+						}
+					});
 				}
 			}
 		}

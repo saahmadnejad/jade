@@ -374,27 +374,23 @@ public class MicroRuntime {
 		myFrontEnd = null;
 		Thread t = null;
 		if (self) {
-			t = new Thread(terminator);
-		}
-		else {
+			Thread.ofVirtual().start(terminator);
+		} else {
 			// If the termination was activated from remote, then let
 			// the current thread complete before closing down everything
 			final Thread current = Thread.currentThread();
-			t = new Thread(new Runnable() {
-				public void run() {
-					try {
-						current.join();
-					}
-					catch (InterruptedException ie) {
-						logger.log(Logger.SEVERE,"Interrupted in join");
-					}
-					if (terminator != null) {
-						terminator.run();
-					}
+			Thread.ofVirtual().start(() -> {
+				try {
+					current.join();
 				}
-			} );
+				catch (InterruptedException ie) {
+					logger.log(Logger.SEVERE,"Interrupted in join");
+				}
+				if (terminator != null) {
+					terminator.run();
+				}
+			});
 		}
-		t.start();
 	}
 }
 

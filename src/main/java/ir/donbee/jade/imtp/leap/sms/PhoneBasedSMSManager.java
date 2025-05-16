@@ -73,29 +73,26 @@ public class PhoneBasedSMSManager extends SMSManager {
 		// helper phone to connect
     try {
       final ServerSocket server = new ServerSocket(localPort);
-      Thread t = new Thread() {
-      	public void run() {
-		      try {
-		      	// Accept connection
-		        myLogger.log(Logger.INFO, "PB-SMSManager waiting for the helper phone to connect on port "+localPort+" ...");
-		        Socket s = server.accept();
-		        myLogger.log(Logger.INFO, "PB-SMSManager: Helper phone connected");
-		        try {
-			        server.close();
-		        }
-		        catch (IOException ioe) {
-		        	// Just ignore it
-		        }
-		        notifyConnected(new JICPConnection(s));
-		      } 
-		      catch (Exception e) {
-	          myLogger.log(Logger.SEVERE, "PB-SMSManager: Problems accepting connection from the helper phone.");
-	          e.printStackTrace();
-	          shutDown();
-		      }
-      	}
-      };
-      t.start();
+      Thread.ofVirtual().start(() -> {
+		  try {
+			  // Accept connection
+			  myLogger.log(Logger.INFO, "PB-SMSManager waiting for the helper phone to connect on port "+localPort+" ...");
+			  Socket s = server.accept();
+			  myLogger.log(Logger.INFO, "PB-SMSManager: Helper phone connected");
+			  try {
+				  server.close();
+			  }
+			  catch (IOException ioe) {
+				  // Just ignore it
+			  }
+			  notifyConnected(new JICPConnection(s));
+		  }
+		  catch (Exception e) {
+			  myLogger.log(Logger.SEVERE, "PB-SMSManager: Problems accepting connection from the helper phone.");
+			  e.printStackTrace();
+			  shutDown();
+		  }
+	  });
     } 
     catch (IOException ioe) {
       throw new ICPException("I/O error opening server socket on port "+localPort);

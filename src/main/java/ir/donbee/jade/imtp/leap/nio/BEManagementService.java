@@ -273,35 +273,32 @@ public class BEManagementService extends BaseService {
 		}
 		
 		// Active all servers after a while to allow the correct starting and registration to the main-container
-		Thread t = new Thread() {
-			public void run() {
-				long wait = 10000;
-				try {
-					wait = Long.parseLong(p.getParameter(PREFIX + "serversstartwait", null));
-				} catch (Exception ex) {
-				}
+		Thread.ofVirtual().start(() -> {
+			long wait = 10000;
+			try {
+				wait = Long.parseLong(p.getParameter(PREFIX + "serversstartwait", null));
+			} catch (Exception ex) {
+			}
 
-				try {
-					Thread.sleep(wait);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+			try {
+				Thread.sleep(wait);
+			} catch (InterruptedException ex) {
+				ex.printStackTrace();
+			}
 
-				Iterator it = servers.entrySet().iterator();
-				while (it.hasNext()) {
-					String id = null;
-					try {
-						Map.Entry entry = (Map.Entry) it.next();
-						id = (String) entry.getKey();
-						((IOEventServer) entry.getValue()).activate();
-					} catch (Throwable t) {
-						myLogger.log(Logger.WARNING, "Error activating IOEventServer " + id + ". " + t);
-						t.printStackTrace();
-					}
+			Iterator it = servers.entrySet().iterator();
+			while (it.hasNext()) {
+				String id = null;
+				try {
+					Map.Entry entry = (Map.Entry) it.next();
+					id = (String) entry.getKey();
+					((IOEventServer) entry.getValue()).activate();
+				} catch (Throwable t) {
+					myLogger.log(Logger.WARNING, "Error activating IOEventServer " + id + ". " + t);
+					t.printStackTrace();
 				}
 			}
-		};
-		t.start();
+		});
 
 		// Activate the ticker
 		long tickTime = 60000;
@@ -1631,18 +1628,17 @@ public class BEManagementService extends BaseService {
 					if(myLogger.isLoggable(Logger.FINE)) {
 						myLogger.log(Logger.FINE,  "Ticker: Tick begin. Current time = "+currentTime);
 					}
-					Thread t = new Thread() {
-						public void run() {
-							Object[] ss = servers.values().toArray();
-							for (int i = 0; i < ss.length; ++i) {
-								((IOEventServer) ss[i]).tick(currentTime);
-							}
-							if(myLogger.isLoggable(Logger.FINE)) {
-								myLogger.log(Logger.FINE,  "Ticker: Tick end. Current time = "+currentTime);
-							}
-						}
-					};
-					t.setName("BEManagementService-ticker-"+currentTime);
+					Thread t = Thread.ofVirtual()
+							.name("BEManagementService-ticker-" + currentTime)
+							.unstarted(() -> {
+								Object[] ss = servers.values().toArray();
+								for (int i = 0; i < ss.length; ++i) {
+									((IOEventServer) ss[i]).tick(currentTime);
+								}
+								if (myLogger.isLoggable(Logger.FINE)) {
+									myLogger.log(Logger.FINE, "Ticker: Tick end. Current time = " + currentTime);
+								}
+							});
 					t.setDaemon(true);
 					t.start();
 				} catch (Throwable t) {

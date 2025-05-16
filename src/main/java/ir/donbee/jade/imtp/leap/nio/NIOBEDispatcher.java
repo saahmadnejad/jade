@@ -314,22 +314,18 @@ public class NIOBEDispatcher implements NIOMediator, BEConnectionManager, Dispat
                     // Check the INP connection. Since this method must return
                     // asap, does it in a separated Thread
                     if (inpManager.isConnected()) {
-                        Thread t = new Thread() {
-
-                            public void run() {
-                                try {
-                                    //JICPPacket pkt = new JICPPacket(JICPProtocol.KEEP_ALIVE_TYPE, JICPProtocol.DEFAULT_INFO, null);
-                                    //inpManager.dispatch(pkt, false);
-                                    inpManager.sendServerKeepAlive();
-                                    if (myLogger.isLoggable(Logger.CONFIG)) {
-                                        myLogger.log(Logger.CONFIG, myID + ": IC valid");
-                                    }
-                                } catch (Exception e) {
-                                    // Just do nothing: the INP connection has been reset
+                        Thread.ofVirtual().start(() -> {
+                            try {
+                                //JICPPacket pkt = new JICPPacket(JICPProtocol.KEEP_ALIVE_TYPE, JICPProtocol.DEFAULT_INFO, null);
+                                //inpManager.dispatch(pkt, false);
+                                inpManager.sendServerKeepAlive();
+                                if (myLogger.isLoggable(Logger.CONFIG)) {
+                                    myLogger.log(Logger.CONFIG, myID + ": IC valid");
                                 }
+                            } catch (Exception e) {
+                                // Just do nothing: the INP connection has been reset
                             }
-                        };
-                        t.start();
+                        });
                     }
                 }
             }

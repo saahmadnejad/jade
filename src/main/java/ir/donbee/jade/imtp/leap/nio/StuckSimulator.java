@@ -8,23 +8,20 @@ class StuckSimulator {
 	private static Object lock = new Object();
 	
 	static void init() {
-		Thread t = new Thread() {
-			public void run() {
-				synchronized (lock) {
-					System.err.println("LOCK acquired");
-					try {
-						while (true) {
-							Thread.sleep(10000);
-						}
-					}
-					catch (Exception e) {
-						e.printStackTrace();
+		Thread.ofVirtual().start(() -> {
+			synchronized (lock) {
+				System.err.println("LOCK acquired");
+				try {
+					while (true) {
+						Thread.sleep(10000);
 					}
 				}
-				System.err.println("LOCK released");
+				catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
-		};
-		t.start();
+			System.err.println("LOCK released");
+		});
 	}
 	
 	static void stuck() {

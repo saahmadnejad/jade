@@ -193,8 +193,7 @@ class UDPMonitorClient {
 		 channel = new UdpClient();
 		 #DOTNET_INCLUDE_END*/
 		running = true;
-		sender = new Thread(new Sender());
-		sender.start();
+		Thread.ofVirtual().start(new Sender());
 
 		if (logger.isLoggable(Logger.CONFIG))
 			logger.log(Logger.CONFIG, "UDP monitoring client started.");

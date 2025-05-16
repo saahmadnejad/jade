@@ -269,18 +269,16 @@ public class Runtime {
 		if(activeContainers == 0) {
 			// Start a new Thread that calls all terminators one after 
 			// the other
-			Thread t = new Thread(new Runnable() {
-				public void run() {
-					for (int i = 0; i < terminators.size(); ++i) {
-						Runnable r = (Runnable) terminators.get(i);
-						r.run();
-					}
-					// Clear the terminators list at the end
-					terminators.clear();
+			Thread t = Thread.ofVirtual().unstarted(() -> {
+				for (int i = 0; i < terminators.size(); ++i) {
+					Runnable r = (Runnable) terminators.get(i);
+					r.run();
 				}
-			} );
+				// Clear the terminators list at the end
+				terminators.clear();
+			});
 			//#MIDP_EXCLUDE_BEGIN
-			t.setDaemon(false);
+			//t.setDaemon(false);
 			//#MIDP_EXCLUDE_END
 
 			// Terminate the TimerDispatcher and release its resources
