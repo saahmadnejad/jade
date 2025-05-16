@@ -70,14 +70,14 @@ public class AboutJadeAction extends AbstractAction
   /**
   @serial
   */
- 	String logojade = "images/jadelogo.jpg";
+ 	String logojade = "/images/jadelogo.jpg";
  	
- 	String check = "images/tick_blue.gif";
+ 	String check = "/images/tick_blue.gif";
 
  	/**
  	@serial
  	*/
-	String logocselt = "images/logotelecomlab.jpg";
+	String logocselt = "/images/logotelecomlab.jpg";
 	
 	public AboutJadeAction(JFrame gui)
 	{
@@ -145,7 +145,7 @@ public class AboutJadeAction extends AbstractAction
 		JPanel tmp = new JPanel();
 		tmp.setLayout(new javax.swing.BoxLayout(tmp,javax.swing.BoxLayout.X_AXIS));
 						
-		String fipalogo = "images/fipalogo.jpg";
+		String fipalogo = "/images/fipalogo.jpg";
 		ImageIcon fipaicon = new ImageIcon(getClass().getResource(fipalogo));
 	  label = new JLabel(fipaicon);
 		tmp.add(label);	        

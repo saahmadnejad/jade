@@ -54,7 +54,7 @@ class DummyAgentGui extends JFrame
 	DefaultListModel  queuedMsgListModel;
 	JList             queuedMsgList;
 	File              currentDir;
-  String 						logoDummy = "images/dummyagent.gif";
+  String 						logoDummy = "/images/dummyagent.gif";
 	DummyAgentGui thisGUI;
 	
 	//logging

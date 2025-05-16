@@ -54,7 +54,7 @@ public class ACLFrame extends JFrame {
       aclPanel = new ACLPanel(agent);
       jbInit();
       this.setSize(300, 500);
-      setFrameIcon("images/details.gif");
+      setFrameIcon("/images/details.gif");
 
       Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
       this.setLocation(screenSize.width / 2 - this.getSize().width / 2,

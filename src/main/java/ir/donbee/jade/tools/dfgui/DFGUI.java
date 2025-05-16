@@ -185,7 +185,7 @@ to set the agent with which the gui interacts.
 		super();
 		lastSearchResults = new HashMap();
 	
-		Image image = getToolkit().getImage(getClass().getResource("images/df.gif"));
+		Image image = getToolkit().getImage(getClass().getResource("/images/df.gif"));
     setIconImage(image);
 
     setSize(550,450);

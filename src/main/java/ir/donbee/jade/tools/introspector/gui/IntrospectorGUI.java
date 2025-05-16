@@ -62,7 +62,7 @@ public class IntrospectorGUI extends JFrame implements WindowListener {
   private JMenuItem item;
  
 
-  private String logoIntrospector =  "images/bug.gif";
+  private String logoIntrospector =  "/images/bug.gif";
   
 public IntrospectorGUI(Introspector i) {
 

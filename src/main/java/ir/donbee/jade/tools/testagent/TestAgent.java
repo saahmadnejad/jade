@@ -450,7 +450,7 @@ public class TestAgent extends Agent {
   boolean pingBehaviour = true;
 
   ImageIcon dummyIcon =
-    new ImageIcon(this.getClass().getResource("images/dummy.gif"));
+    new ImageIcon(this.getClass().getResource("/images/dummy.gif"));
 
   SplashScreen splash;
 

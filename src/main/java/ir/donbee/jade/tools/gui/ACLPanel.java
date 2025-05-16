@@ -900,11 +900,11 @@ public class ACLPanel extends JPanel {
   private EnvCommentsTextArea envCommentsTextArea = new EnvCommentsTextArea();
 
   private ImageIcon zoomIcon =
-    new ImageIcon(this.getClass().getResource("images/zoom.gif"));
+    new ImageIcon(this.getClass().getResource("/images/zoom.gif"));
   private ImageIcon dateIcon =
-    new ImageIcon(this.getClass().getResource("images/date.gif"));
+    new ImageIcon(this.getClass().getResource("/images/date.gif"));
   private ImageIcon envelopeIcon =
-    new ImageIcon(this.getClass().getResource("images/envelope.gif"));
+    new ImageIcon(this.getClass().getResource("/images/envelope.gif"));
   private ImageIcon messageIcon =
     new ImageIcon(this.getClass().getResource("images/message.gif"));
   private ACLAIDList envToList;

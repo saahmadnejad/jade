@@ -1604,9 +1604,9 @@ public class ACLTracePanel extends JPanel {
     }
 
 
-    public ImageIcon rootIcon = new ImageIcon(this.getClass().getResource("images/inbox.gif"));
-    public ImageIcon nodeIcon = new ImageIcon(this.getClass().getResource("images/service.gif"));
-    public ImageIcon smallAgentIcon = new ImageIcon(this.getClass().getResource("images/smallagent.gif"));
+    public ImageIcon rootIcon = new ImageIcon(this.getClass().getResource("/images/inbox.gif"));
+    public ImageIcon nodeIcon = new ImageIcon(this.getClass().getResource("/images/service.gif"));
+    public ImageIcon smallAgentIcon = new ImageIcon(this.getClass().getResource("/images/smallagent.gif"));
     public ImageIcon messageTypeIcon = new ImageIcon(this.getClass().getResource("images/messagetype.gif"));
     public ImageIcon detailsIcon = new ImageIcon(this.getClass().getResource("images/details.gif"));
     public ImageIcon incomingIcon = new ImageIcon(this.getClass().getResource("images/incoming.gif"));

@@ -82,7 +82,7 @@ public class MainWindow
   //#DOTNET_EXCLUDE_END
   private Sniffer mySniffer;
   private ExtendedProperties myProperties;
-  private String snifferLogo = "images/sniffer.gif";
+  private String snifferLogo = "/images/sniffer.gif";
   /*#DOTNET_INCLUDE_BEGIN
   private System.Windows.Forms.Panel MainPanelW;
   private System.Windows.Forms.Splitter splitter2;

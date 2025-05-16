@@ -54,9 +54,9 @@ public class GuiProperties{
   
    static{
     Object[] icons = {
-     "Introspector.readyIcon",LookAndFeel.makeIcon(foo.getClass(), "images/behaviour.gif"),
-     "Introspector.blockedIcon",LookAndFeel.makeIcon(foo.getClass(), "images/blocked.gif"),
-     "Introspector.runningIcon",LookAndFeel.makeIcon(foo.getClass(), "images/running.gif"),
+     "Introspector.readyIcon",LookAndFeel.makeIcon(foo.getClass(), "/images/behaviour.gif"),
+     "Introspector.blockedIcon",LookAndFeel.makeIcon(foo.getClass(), "/images/blocked.gif"),
+     "Introspector.runningIcon",LookAndFeel.makeIcon(foo.getClass(), "/images/running.gif"),
     };
     MyDefaults = new UIDefaults (icons);
 	}

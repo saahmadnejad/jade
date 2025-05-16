@@ -42,16 +42,16 @@ public class GuiProperties {
   public static final String ImagePath = "";
   static {
     Object[] icons = {
-      "delete",LookAndFeel.makeIcon(foo.getClass(), "images/delete.gif"),
-      "reset",LookAndFeel.makeIcon(foo.getClass(), "images/reset.gif"),
-      "open", LookAndFeel.makeIcon(foo.getClass(), "images/open.gif"),
-      "openq",LookAndFeel.makeIcon(foo.getClass(), "images/openq.gif"),
-      "save",LookAndFeel.makeIcon(foo.getClass(), "images/save.gif"),
-      "saveq",LookAndFeel.makeIcon(foo.getClass(), "images/saveq.gif"),
-      "send",LookAndFeel.makeIcon(foo.getClass(), "images/send.gif"),
-      "set",LookAndFeel.makeIcon(foo.getClass(), "images/set.gif"),
-      "reply",LookAndFeel.makeIcon(foo.getClass(), "images/reply.gif"),
-      "view",LookAndFeel.makeIcon(foo.getClass(), "images/view.gif")
+      "delete",LookAndFeel.makeIcon(foo.getClass(), "/images/delete.gif"),
+      "reset",LookAndFeel.makeIcon(foo.getClass(), "/images/reset.gif"),
+      "open", LookAndFeel.makeIcon(foo.getClass(), "/images/open.gif"),
+      "openq",LookAndFeel.makeIcon(foo.getClass(), "/images/openq.gif"),
+      "save",LookAndFeel.makeIcon(foo.getClass(), "/images/save.gif"),
+      "saveq",LookAndFeel.makeIcon(foo.getClass(), "/images/saveq.gif"),
+      "send",LookAndFeel.makeIcon(foo.getClass(), "/images/send.gif"),
+      "set",LookAndFeel.makeIcon(foo.getClass(), "/images/set.gif"),
+      "reply",LookAndFeel.makeIcon(foo.getClass(), "/images/reply.gif"),
+      "view",LookAndFeel.makeIcon(foo.getClass(), "/images/view.gif")
     };
 
     MyDefaults = new UIDefaults (icons);

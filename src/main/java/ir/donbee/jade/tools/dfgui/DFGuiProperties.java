@@ -44,18 +44,18 @@ class DFGuiProperties
 	{
 		Object[] icons = 
 		{
-			"exitdf",LookAndFeel.makeIcon(foo.getClass(), "images/exitdf.gif"),
-			"closegui",LookAndFeel.makeIcon(foo.getClass(), "images/closegui.gif"),
-			"refresh", LookAndFeel.makeIcon(foo.getClass(), "images/refresh.gif"),
-			"view", LookAndFeel.makeIcon(foo.getClass(), "images/view.gif"),
-			"search", LookAndFeel.makeIcon(foo.getClass(), "images/search.gif"),
-			"modify",LookAndFeel.makeIcon(foo.getClass(), "images/modify.gif"),
-			"deregister",LookAndFeel.makeIcon(foo.getClass(), "images/deregister.gif"),
-			"registeragent",LookAndFeel.makeIcon(foo.getClass(), "images/registeragent.gif"),
-			"federatedf",LookAndFeel.makeIcon(foo.getClass(), "images/federatedf.gif"),
-			"about",LookAndFeel.makeIcon(foo.getClass(), "images/about.gif"),
-			"searchwithconstraints",LookAndFeel.makeIcon(foo.getClass(), "images/searchfed.gif"),	
-			"refreshapplet",LookAndFeel.makeIcon(foo.getClass(), "images/connec.gif")	
+			"exitdf",LookAndFeel.makeIcon(foo.getClass(), "/images/exitdf.gif"),
+			"closegui",LookAndFeel.makeIcon(foo.getClass(), "/images/closegui.gif"),
+			"refresh", LookAndFeel.makeIcon(foo.getClass(), "/images/refresh.gif"),
+			"view", LookAndFeel.makeIcon(foo.getClass(), "/images/view.gif"),
+			"search", LookAndFeel.makeIcon(foo.getClass(), "/images/search.gif"),
+			"modify",LookAndFeel.makeIcon(foo.getClass(), "/images/modify.gif"),
+			"deregister",LookAndFeel.makeIcon(foo.getClass(), "/images/deregister.gif"),
+			"registeragent",LookAndFeel.makeIcon(foo.getClass(), "/images/registeragent.gif"),
+			"federatedf",LookAndFeel.makeIcon(foo.getClass(), "/images/federatedf.gif"),
+			"about",LookAndFeel.makeIcon(foo.getClass(), "/images/about.gif"),
+			"searchwithconstraints",LookAndFeel.makeIcon(foo.getClass(), "/images/searchfed.gif"),
+			"refreshapplet",LookAndFeel.makeIcon(foo.getClass(), "/images/connec.gif")
 		};
 
 		MyDefaults = new UIDefaults (icons);

@@ -64,10 +64,10 @@ public class StatePanel extends JPanel {
   private JButton wakeUpAction;
   private JButton killAction;
 
-  private Icon ledOff = new ImageIcon(getClass().getResource("images/rbs.gif"));
-  private Icon ledOn = new ImageIcon(getClass().getResource("images/rbrs.gif"));
-  private Icon button = new ImageIcon(getClass().getResource("images/rb.gif"));
-  private Icon pressedButton = new ImageIcon(getClass().getResource("images/rbp.gif"));
+  private Icon ledOff = new ImageIcon(getClass().getResource("/images/rbs.gif"));
+  private Icon ledOn = new ImageIcon(getClass().getResource("/images/rbrs.gif"));
+  private Icon button = new ImageIcon(getClass().getResource("/images/rb.gif"));
+  private Icon pressedButton = new ImageIcon(getClass().getResource("/images/rbp.gif"));
   private Font myFont = new Font("Monospaced", Font.BOLD, 10);
 
   private MainBarListener listener;

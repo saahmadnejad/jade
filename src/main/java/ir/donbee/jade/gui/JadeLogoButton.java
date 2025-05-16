@@ -44,7 +44,7 @@ package ir.donbee.jade.gui;
 	
 	public class JadeLogoButton extends JButton
 	{
-		private static String logojade ="images/jadelogo.jpg";
+		private static String logojade ="/images/jadelogo.jpg";
 
 	    /**
 	       Default constructor.

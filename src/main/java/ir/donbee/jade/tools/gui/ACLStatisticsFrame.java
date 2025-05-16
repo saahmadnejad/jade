@@ -68,7 +68,7 @@ public class ACLStatisticsFrame extends JFrame {
 
     try {
       jbInit();
-      setFrameIcon("images/details.gif");
+      setFrameIcon("/images/details.gif");
       this.statisticsTable.setModel(aclTableModel);
       this.statisticsTable.updateUI();
       itemBoxModel.addElement("performative");
@@ -353,7 +353,7 @@ public class ACLStatisticsFrame extends JFrame {
 
         String sValue = (String)value;
         setText((String)value);
-        //     setIcon(new ImageIcon(getClass().getResource("images/start.gif")));
+        //     setIcon(new ImageIcon(getClass().getResource("/images/start.gif")));
         setText((String)value);
       }
       setBackground(isSelected ? Color.blue : Color.white);

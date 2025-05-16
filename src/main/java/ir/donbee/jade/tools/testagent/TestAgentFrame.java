@@ -60,7 +60,7 @@ public class TestAgentFrame extends JFrame {
       jbInit();
       this.setSize(600, 600);
       this.setTitle("Jade TestAgent beta - " + agent.getName());
-      this.setFrameIcon("images/dummy.gif");
+      this.setFrameIcon("/images/dummy.gif");
       this.setVisible(true);
     }
     catch (Exception e) {
@@ -83,15 +83,15 @@ public class TestAgentFrame extends JFrame {
 
     try {
       newIcon =
-        new ImageIcon(this.getClass().getResource("images/new.gif"));
+        new ImageIcon(this.getClass().getResource("/images/new.gif"));
       openIcon =
-        new ImageIcon(this.getClass().getResource("images/open.gif"));
+        new ImageIcon(this.getClass().getResource("/images/open.gif"));
       saveIcon =
-        new ImageIcon(this.getClass().getResource("images/save.gif"));
+        new ImageIcon(this.getClass().getResource("/images/save.gif"));
       sendIcon =
-        new ImageIcon(this.getClass().getResource("images/send.gif"));
+        new ImageIcon(this.getClass().getResource("/images/send.gif"));
       readQueueIcon =
-        new ImageIcon(this.getClass().getResource("images/readqueue.gif"));
+        new ImageIcon(this.getClass().getResource("/images/readqueue.gif"));
       saveQueueIcon =
         new ImageIcon(this.getClass().getResource("images/writequeue.gif"));
       currentIcon =

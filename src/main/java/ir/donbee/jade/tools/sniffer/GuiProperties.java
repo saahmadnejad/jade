@@ -50,14 +50,14 @@ public class GuiProperties{
   public static final String ImagePath = "";
    static{
     Object[] icons = {
-     "SnifferAction.ClearCanvasActionIcon",LookAndFeel.makeIcon(foo.getClass(), "images/litter2.gif"),
-     "SnifferAction.DisplayLogFileActionIcon",LookAndFeel.makeIcon(foo.getClass(), "images/open.gif"),
-     "SnifferAction.WriteLogFileActionIcon",LookAndFeel.makeIcon(foo.getClass(), "images/save1.gif"),
-     "SnifferAction.MessageFileActionIcon",LookAndFeel.makeIcon(foo.getClass(), "images/textfile.gif"),
-     "SnifferAction.DoSnifferActionIcon",LookAndFeel.makeIcon(foo.getClass(),"images/bullet1.gif"),
-     "SnifferAction.DoNotSnifferActionIcon",LookAndFeel.makeIcon(foo.getClass(),"images/bullet2.gif"),
-     "SnifferAction.ShowOnlyActionIcon",LookAndFeel.makeIcon(foo.getClass(),"images/bullet4.gif"),
-     "SnifferAction.ExitActionIcon",LookAndFeel.makeIcon(foo.getClass(), "images/exit.gif"),
+     "SnifferAction.ClearCanvasActionIcon",LookAndFeel.makeIcon(foo.getClass(), "/images/litter2.gif"),
+     "SnifferAction.DisplayLogFileActionIcon",LookAndFeel.makeIcon(foo.getClass(), "/images/open.gif"),
+     "SnifferAction.WriteLogFileActionIcon",LookAndFeel.makeIcon(foo.getClass(), "/images/save1.gif"),
+     "SnifferAction.MessageFileActionIcon",LookAndFeel.makeIcon(foo.getClass(), "/images/textfile.gif"),
+     "SnifferAction.DoSnifferActionIcon",LookAndFeel.makeIcon(foo.getClass(),"/images/bullet1.gif"),
+     "SnifferAction.DoNotSnifferActionIcon",LookAndFeel.makeIcon(foo.getClass(),"/images/bullet2.gif"),
+     "SnifferAction.ShowOnlyActionIcon",LookAndFeel.makeIcon(foo.getClass(),"/images/bullet4.gif"),
+     "SnifferAction.ExitActionIcon",LookAndFeel.makeIcon(foo.getClass(), "/images/exit.gif"),
     };
     MyDefaults = new UIDefaults (icons);
 	}

@@ -68,7 +68,7 @@ class MainWindow extends JFrame {
 	private PopupMenuRemotePlatform popRP;
 	private InstallMTPDialog installDlg = new InstallMTPDialog(this, true);
 	private ManageMTPsDialog manageDlg;
-	private String logojade = "images/logosmall.jpg";
+	private String logojade = "/images/logosmall.jpg";
 
 	private List containerNames = new LinkedList();
 	private Map addresses = new TreeMap(String.CASE_INSENSITIVE_ORDER);

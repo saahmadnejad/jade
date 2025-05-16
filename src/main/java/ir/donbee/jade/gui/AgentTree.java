@@ -370,17 +370,17 @@ public class AgentTree extends JPanel {
     
 	public AgentTree(Font f) {
 		mapDescriptor = new HashMap();
-		register(TREE_ROOT_TYPE, null, "images/folderyellow.gif");
-		register(LOCAL_PLATFORM_TYPE, null, "images/folderyellow.gif");
-		register(CONTAINER_TYPE, null, "images/foldergreen.gif");
-		register(AGENT_TYPE, null, "images/runtree.gif");
+		register(TREE_ROOT_TYPE, null, "/images/folderyellow.gif");
+		register(LOCAL_PLATFORM_TYPE, null, "/images/folderyellow.gif");
+		register(CONTAINER_TYPE, null, "/images/foldergreen.gif");
+		register(AGENT_TYPE, null, "/images/runtree.gif");
 		
-		register(FROZEN_CONTAINER_TYPE, null, "images/frozenagents.gif");
-		register(FROZEN_AGENT_TYPE, null, "images/freezeagent.gif");
+		register(FROZEN_CONTAINER_TYPE, null, "/images/frozenagents.gif");
+		register(FROZEN_AGENT_TYPE, null, "/images/freezeagent.gif");
 		
-  		register(REMOTE_PLATFORMS_FOLDER_TYPE, null, "images/folderblue.gif");
-		register(REMOTE_PLATFORM_TYPE, null , "images/folderlightblue.gif");
-	    register(REMOTE_AGENT_TYPE, null, "images/runtree.gif");
+  		register(REMOTE_PLATFORMS_FOLDER_TYPE, null, "/images/folderblue.gif");
+		register(REMOTE_PLATFORM_TYPE, null , "/images/folderlightblue.gif");
+	    register(REMOTE_AGENT_TYPE, null, "/images/runtree.gif");
 	    
 		tree = new JTree();
 		if (f != null) {
