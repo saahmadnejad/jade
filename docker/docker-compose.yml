@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   backend:
     build:
@@ -5,12 +7,31 @@ services:
       dockerfile: docker/Dockerfile.backend
     ports:
       - "8080:8080"
-#    depends_on:
-#      - frontend
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ../backend:/app/java:ro
 
-#  frontend:
-#    build:
-#      context: ..
-#      dockerfile: docker/Dockerfile.frontend
-#    ports:
-#      - "3000:80"
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ../ui:/app/ui:ro
+    depends_on:
+      backend:
+        condition: service_healthy
