@@ -1,0 +1,26 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: jade-backend
+    ports:
+      - "10990:1099"
+    environment:
+      - JAVA_OPTS=-Xmx512m
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "java"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: jade-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_started

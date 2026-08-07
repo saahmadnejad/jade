@@ -1,4 +1,3 @@
-
 ### text file after first run! ###
 APDescription.txt
 MTPs-Main-Container.txt
@@ -8,3 +7,13 @@ MTPs-Main-Container.txt
 
 ### build dir ###
 target
+
+### Docker ###
+*.pid
+*.log
+
+### Node ###
+frontend/node_modules/
+**/node_modules/
+frontend/pnpm-lock.yaml
+dist/
