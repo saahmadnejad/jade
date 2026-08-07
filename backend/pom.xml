@@ -33,7 +33,22 @@
             <version>1.18.0</version>
         </dependency>
 
-
+        <!-- Vert.x core and web for REST API and event bus -->
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-core</artifactId>
+            <version>4.5.10</version>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-web</artifactId>
+            <version>4.5.10</version>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-web-client</artifactId>
+            <version>4.5.10</version>
+        </dependency>
     </dependencies>
     <build>
         <finalName>backend</finalName>

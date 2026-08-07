@@ -31,13 +31,19 @@ podman compose down                           # Stop containers
 
 ### Backend (Java)
 
-- **Source root**: `backend/src/main/java/ir/donbee/jade/`
+- **Source root**: `backend/src/main/java/io/donbee/jade/`
 - **Java version**: 21 (virtual threads via `Thread.ofVirtual()`)
 - **Build tool**: Maven (`pom.xml` at `backend/pom.xml`)
-- **Main class**: `ir.donbee.jade.Boot` (declared in pom.xml shade plugin)
-- **Dependencies**: JacORB 3.9, commons-codec 1.18.0
-- **Package**: All code under `ir.donbee.jade.*`
-- **No REST API**: JADE communicates via RMI/LEAP/JICP. To add HTTP endpoints to the React frontend, you must add a Java HTTP server or REST layer inside the backend (e.g. `java.net.http.HttpServer` or embedded Jetty).
+- **Main class**: `io.donbee.jade.Boot` (declared in pom.xml shade plugin)
+- **Dependencies**: JacORB 3.9, commons-codec 1.18.0, Vert.x 4.5.10 (core, web, web-client)
+- **Package**: All code under `io.donbee.jade.*`
+- **REST API**: Built-in Vert.x REST server, started on Main Container. Endpoints:
+  - `GET /api/health` — health check
+  - `GET /api/version` — JADE version info
+  - `GET /api/platform` — platform metadata (ID, container name, AMS, DF)
+  - `GET /api/agents` — list of agents in the main container
+  - Configurable via `Profile.REST_PORT` (default 8080, pass as `-rest-port <n>` on CLI)
+- **REST source**: `backend/src/main/java/io/donbee/jade/rest/`
 
 ### Frontend (TypeScript)
 
@@ -69,15 +75,16 @@ podman compose down                           # Stop containers
 3. Route via Vite's `index.html` entry point (SPA — no server-side routing)
 
 ### Modifying the backend
-1. Edit Java files in `backend/src/main/java/ir/donbee/jade/`
-2. Test locally: `mvn compile exec:java -Dexec.mainClass="ir.donbee.jade.Boot"`
+1. Edit Java files in `backend/src/main/java/io/donbee/jade/`
+2. Test locally: `cd backend && mvn compile exec:java -Dexec.mainClass="io.donbee.jade.Boot"`
 3. Rebuild Docker with `podman compose up --build -d`
 
 ## Important Files
 
-- `backend/src/main/java/ir/donbee/jade/Boot.java` — Entry point, CLI arg parsing
-- `backend/src/main/java/ir/donbee/jade/core/Profile.java` — Profile constants
-- `backend/src/main/java/ir/donbee/jade/core/ProfileImpl.java` — Profile implementation
+- `backend/src/main/java/io/donbee/jade/Boot.java` — Entry point, CLI arg parsing, REST API startup
+- `backend/src/main/java/io/donbee/jade/rest/RestAPIVerticle.java` — Vert.x REST verticle
+- `backend/src/main/java/io/donbee/jade/core/Profile.java` — Profile constants (incl. `REST_PORT`)
+- `backend/src/main/java/io/donbee/jade/core/ProfileImpl.java` — Profile implementation
 - `backend/src/main/java/ir/donbee/jade/core/FullResourceManager.java` — Virtual thread management
 - `frontend/apps/frontend/src/App.tsx` — Root React component
 - `frontend/packages/shared/src/api/client.ts` — Axios API client

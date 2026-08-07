@@ -300,6 +300,9 @@ public abstract class Profile {
 	public static final String PJAVA = "pjava";
 	public static final String MIDP = "midp";
 	public static final String ANDROID = "android";
+	
+	public static final String REST_PORT = "rest-port";
+	public static final int DEFAULT_REST_PORT = 8080;
 
 	
 	

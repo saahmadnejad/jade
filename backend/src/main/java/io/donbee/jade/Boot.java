@@ -29,6 +29,7 @@ package io.donbee.jade;
 import io.donbee.jade.core.Runtime;
 import io.donbee.jade.core.Profile;
 import io.donbee.jade.core.ProfileImpl;
+import io.donbee.jade.core.ProfileImpl;
 import io.donbee.jade.core.ProfileException;
 
 import io.donbee.jade.util.leap.Properties;
@@ -86,7 +87,8 @@ public class Boot {
 			//#PJAVA_EXCLUDE_BEGIN
 			// Check whether this is the Main Container or a peripheral container
 			if (p.getBooleanProperty(Profile.MAIN, true)) {
-				Runtime.instance().createMainContainer(p);
+				io.donbee.jade.wrapper.AgentContainer wrapper = Runtime.instance().createMainContainer(p);
+				startRestAPI(wrapper, p);
 			} else {
 				Runtime.instance().createAgentContainer(p);
 			}
@@ -247,6 +249,21 @@ public class Boot {
 		System.out.println("     where agent-specifier = <agent-name>:<agent-class>[(comma separated args)]"); 
 		System.out.println();
 		System.out.println("Look at the JADE Administrator's Guide for more details");
+	}
+
+	/**
+	 * Starts the Vert.x REST API HTTP server.
+	 */
+	private static void startRestAPI(io.donbee.jade.wrapper.AgentContainer container, Profile p) {
+		try {
+			int port = Integer.parseInt(p.getParameter(Profile.REST_PORT, String.valueOf(Profile.DEFAULT_REST_PORT)));
+			io.vertx.core.Vertx vertx = io.vertx.core.Vertx.vertx();
+			io.donbee.jade.rest.RestAPIVerticle verticle = new io.donbee.jade.rest.RestAPIVerticle(container, port);
+			vertx.deployVerticle(verticle);
+		} catch (Exception e) {
+			if(logger.isLoggable(Logger.WARNING))
+				logger.log(Logger.WARNING, "WARNING: Unable to start REST API server. " + e);
+		}
 	}
 }
 
