@@ -6,7 +6,10 @@
     "apps/*",
     "packages/*"
   ],
+  "packageManager": "pnpm@9.x",
   "scripts": {
+    "dev": "pnpm --filter frontend dev",
+    "build": "pnpm --filter frontend build",
     "dev:frontend": "pnpm --filter frontend dev",
     "dev:mobile": "pnpm --filter mobile start"
   }

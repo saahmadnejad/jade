@@ -1,0 +1,6 @@
+packages-dir: packages
+catalog-dir: .
+
+packages:
+  - "apps/*"
+  - "packages/*"
