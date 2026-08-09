@@ -232,4 +232,40 @@ public class RestAPIIntegrationTest {
                 async.complete();
             }));
     }
+
+    // ===== Get Single Agent =====
+
+    @Test
+    public void Given_AgentExists_When_GetAgentByName_Then_ReturnsAgentDetails(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.get(REST_PORT, "localhost", "/api/agents/df")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(200, response.statusCode());
+                JsonObject body = response.bodyAsJsonObject();
+                context.assertTrue(body.containsKey("name"));
+                context.assertTrue(body.containsKey("state"));
+                context.assertTrue(body.containsKey("container"));
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_NonExistentAgent_When_GetAgentByName_Then_Returns404(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.get(REST_PORT, "localhost", "/api/agents/nonexistent-agent-abc123")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(404, response.statusCode());
+                async.complete();
+            }));
+    }
 }
