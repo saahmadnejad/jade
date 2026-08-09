@@ -6,6 +6,7 @@ import io.donbee.jade.core.AgentManager;
 import io.donbee.jade.core.ContainerID;
 import io.donbee.jade.core.MainContainer;
 import io.donbee.jade.core.VersionManager;
+import io.donbee.jade.domain.FIPAAgentManagement.AMSAgentDescription;
 import io.donbee.jade.util.leap.List;
 
 import io.vertx.core.AbstractVerticle;
@@ -100,17 +101,58 @@ public class RestAPIVerticle extends AbstractVerticle {
                 return;
             }
             try {
+                boolean detail = "true".equalsIgnoreCase(ctx.queryParams().get("detail"));
                 ContainerID cid = impl.getID();
                 List agents = agentManager.containerAgents(cid);
                 JsonArray arr = new JsonArray();
                 for (int i = 0; i < agents.size(); i++) {
                     AID aid = (AID) agents.get(i);
-                    arr.add(new JsonObject().put("name", aid.getName()));
+                    if (detail) {
+                        try {
+                            AMSAgentDescription amsDesc = agentManager.getAMSDescription(aid);
+                            JsonObject agentObj = new JsonObject()
+                                .put("name", aid.getName())
+                                .put("state", amsDesc.getState() != null ? amsDesc.getState() : "UNKNOWN")
+                                .put("ownership", amsDesc.getOwnership() != null ? amsDesc.getOwnership() : "")
+                                .put("container", cid.getName())
+                                .put("addresses", aid.getAllAddresses() != null ? toJsonArray(aid.getAllAddresses()) : new JsonArray());
+                            arr.add(agentObj);
+                        } catch (Exception ignored) {
+                            arr.add(new JsonObject().put("name", aid.getName()));
+                        }
+                    } else {
+                        arr.add(new JsonObject().put("name", aid.getName()));
+                    }
                 }
                 ctx.response()
                     .setStatusCode(200)
                     .putHeader("Content-Type", "application/json")
                     .end(new JsonObject().put("agents", arr).toBuffer());
+            } catch (Exception e) {
+                ctx.fail(500, e);
+            }
+        });
+
+        router.get("/api/containers").handler(ctx -> {
+            if (agentManager == null) {
+                ctx.fail(403, new RuntimeException("Not a Main Container"));
+                return;
+            }
+            try {
+                ContainerID[] cids = agentManager.containerIDs();
+                JsonArray arr = new JsonArray();
+                for (ContainerID cid : cids) {
+                    JsonObject containerObj = new JsonObject()
+                        .put("name", cid.getName())
+                        .put("address", cid.getAddress() != null ? cid.getAddress() : "")
+                        .put("port", cid.getPort() != null ? cid.getPort() : "")
+                        .put("isMain", cid.getName() != null && cid.getName().equals(impl.here().getName()));
+                    arr.add(containerObj);
+                }
+                ctx.response()
+                    .setStatusCode(200)
+                    .putHeader("Content-Type", "application/json")
+                    .end(new JsonObject().put("containers", arr).toBuffer());
             } catch (Exception e) {
                 ctx.fail(500, e);
             }
@@ -125,5 +167,13 @@ public class RestAPIVerticle extends AbstractVerticle {
                     startPromise.fail(http.cause());
                 }
             });
+    }
+
+    private static JsonArray toJsonArray(java.util.Iterator<String> it) {
+        JsonArray arr = new JsonArray();
+        while (it.hasNext()) {
+            arr.add(it.next());
+        }
+        return arr;
     }
 }

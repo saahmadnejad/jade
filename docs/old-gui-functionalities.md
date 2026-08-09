@@ -421,10 +421,11 @@ Source: `backend/src/main/java/io/donbee/jade/rest/RestAPIVerticle.java`
 
 | # | Endpoint | Method | Functionality | TESTED | Notes |
 |---|----------|--------|--------------|--------|-------|
-| 9.1 | `/api/health` | GET | Health check — returns `{"status":"ok"}` | [ ] | |
-| 9.2 | `/api/version` | GET | Platform version info (version, revision, date) | [ ] | |
-| 9.3 | `/api/platform` | GET | Platform metadata (ID, container name, isMain, AMS, default DF) | [ ] | |
-| 9.4 | `/api/agents` | GET | List of agents on main container (name only — currently) | [ ] | |
+| 9.1 | `/api/health` | GET | Health check — returns `{"status":"ok"}` | [x] | |
+| 9.2 | `/api/version` | GET | Platform version info (version, revision, date) | [x] | |
+| 9.3 | `/api/platform` | GET | Platform metadata (ID, container name, isMain, AMS, default DF) | [x] | |
+| 9.4 | `/api/agents` | GET | List agents (add `?detail=true` for state/ownership/addresses) | [x] | `detail` param added |
+| 9.5 | `/api/containers` | GET | List all containers with addresses, ports, isMain | [x] | **NEW** endpoint |
 
 **Note:** The old GUI communicates with the backend via ACL messages (FIPA protocols), not REST. The new React GUI must use REST. Many functionalities above require **new REST endpoints** to be added to `RestAPIVerticle.java`. Each migration task should include:
 1. Add/extend the REST endpoint in RestAPIVerticle
