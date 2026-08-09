@@ -29,6 +29,8 @@ public interface PlatformService {
 
     void shutdownPlatform();
 
+    AgentInfo deployAgent(String agentName, String className, Object[] args);
+
     class PlatformInfo {
         public final String platformID;
         public final String containerName;

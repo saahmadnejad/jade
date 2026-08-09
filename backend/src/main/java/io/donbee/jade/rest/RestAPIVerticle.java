@@ -4,8 +4,10 @@ import io.donbee.jade.core.AgentContainer;
 import io.donbee.jade.core.AgentManager;
 import io.donbee.jade.core.MainContainer;
 import io.donbee.jade.rest.handler.AgentActionHandler;
+import io.donbee.jade.rest.handler.AgentDeployHandler;
 import io.donbee.jade.rest.handler.AgentInfoHandler;
 import io.donbee.jade.rest.handler.AgentListHandler;
+import io.donbee.jade.rest.handler.ContainerInfoHandler;
 import io.donbee.jade.rest.handler.ContainerListHandler;
 import io.donbee.jade.rest.handler.HealthHandler;
 import io.donbee.jade.rest.handler.PlatformInfoHandler;
@@ -78,10 +80,12 @@ public class RestAPIVerticle extends AbstractVerticle {
 
         // Containers
         router.get("/api/containers").handler(new ContainerListHandler(service));
+        router.get("/api/containers/:name").handler(new ContainerInfoHandler(service));
 
         // Agents
         router.get("/api/agents").handler(new AgentListHandler(service));
         router.get("/api/agents/:name").handler(new AgentInfoHandler(service));
+        router.post("/api/agents").handler(new AgentDeployHandler(service));
         router.delete("/api/agents/:name").handler(new AgentActionHandler(service, AgentActionHandler.Action.KILL));
         router.post("/api/agents/:name/suspend").handler(new AgentActionHandler(service, AgentActionHandler.Action.SUSPEND));
         router.post("/api/agents/:name/resume").handler(new AgentActionHandler(service, AgentActionHandler.Action.RESUME));

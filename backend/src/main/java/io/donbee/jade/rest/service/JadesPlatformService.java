@@ -4,6 +4,7 @@ import io.donbee.jade.core.AID;
 import io.donbee.jade.core.AgentContainer;
 import io.donbee.jade.core.AgentManager;
 import io.donbee.jade.core.ContainerID;
+import io.donbee.jade.core.NameClashException;
 import io.donbee.jade.domain.FIPAAgentManagement.AMSAgentDescription;
 
 import java.util.ArrayList;
@@ -210,8 +211,34 @@ public class JadesPlatformService implements PlatformService {
         }
     }
 
-    private AID findAgentByName(String agentName) {
+    @Override
+    public AgentInfo deployAgent(String agentName, String className, Object[] args) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
         ContainerID cid = impl.getID();
+        try {
+            agentManager.create(agentName, className, args, cid, null, null, null, null);
+        } catch (NameClashException e) {
+            throw new IllegalArgumentException("Agent already exists: " + agentName, e);
+        } catch (Exception e) {
+            if (containsCause(e, NameClashException.class)) {
+                throw new IllegalArgumentException("Agent already exists: " + agentName, e);
+            }
+            throw new RuntimeException("Failed to deploy agent: " + e.getMessage(), e);
+        }
+        AID aid = new AID();
+        aid.setName(agentName);
+        return new AgentInfo(
+            aid.getName(),
+            null,
+            null,
+            cid.getName(),
+            new String[0]
+        );
+    }
+
+    private AID findAgentByName(String agentName) {        ContainerID cid = impl.getID();
         io.donbee.jade.util.leap.List agents;
         try {
             agents = agentManager.containerAgents(cid);
@@ -233,5 +260,16 @@ public class JadesPlatformService implements PlatformService {
             list.add(it.next());
         }
         return list.toArray(new String[0]);
+    }
+
+    private boolean containsCause(Throwable t, Class<? extends Throwable> causeClass) {
+        Throwable current = t;
+        while (current != null) {
+            if (causeClass.isInstance(current)) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

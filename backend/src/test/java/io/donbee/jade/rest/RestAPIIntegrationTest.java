@@ -268,4 +268,79 @@ public class RestAPIIntegrationTest {
                 async.complete();
             }));
     }
+
+    // ===== Get Container By Name =====
+
+    @Test
+    public void Given_ContainerExists_When_GetContainerByName_Then_ReturnsContainerDetails(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.get(REST_PORT, "localhost", "/api/containers/Main-Container")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(200, response.statusCode());
+                JsonObject body = response.bodyAsJsonObject();
+                context.assertEquals("Main-Container", body.getString("name"));
+                context.assertTrue(body.getBoolean("isMain"));
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_NonExistentContainer_When_GetContainerByName_Then_Returns404(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.get(REST_PORT, "localhost", "/api/containers/nonexistent-container-123")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(404, response.statusCode());
+                async.complete();
+            }));
+    }
+
+    // ===== Deploy Agent =====
+
+    @Test
+    public void Given_ValidRequestBody_When_DeployAgent_Then_Returns201(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        JsonObject jsonBody = new JsonObject()
+            .put("name", "test-deployed-agent")
+            .put("class", "io.donbee.jade.tools.DummyAgent.DummyAgent");
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/agents")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(201, response.statusCode());
+                JsonObject body = response.bodyAsJsonObject();
+                context.assertTrue(body.getString("message").contains("deployed"));
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_MissingName_When_DeployAgent_Then_Returns400(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        JsonObject jsonBody = new JsonObject().put("class", "io.donbee.jade.tutorials.DummyAgent");
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/agents")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(400, response.statusCode());
+                async.complete();
+            }));
+    }
 }
