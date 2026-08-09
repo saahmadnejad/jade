@@ -1,17 +1,20 @@
 package io.donbee.jade.rest;
 
-import io.donbee.jade.core.AID;
 import io.donbee.jade.core.AgentContainer;
 import io.donbee.jade.core.AgentManager;
-import io.donbee.jade.core.ContainerID;
 import io.donbee.jade.core.MainContainer;
-import io.donbee.jade.core.VersionManager;
-import io.donbee.jade.domain.FIPAAgentManagement.AMSAgentDescription;
-import io.donbee.jade.util.leap.List;
+import io.donbee.jade.rest.handler.AgentActionHandler;
+import io.donbee.jade.rest.handler.AgentListHandler;
+import io.donbee.jade.rest.handler.ContainerListHandler;
+import io.donbee.jade.rest.handler.HealthHandler;
+import io.donbee.jade.rest.handler.PlatformInfoHandler;
+import io.donbee.jade.rest.handler.ShutdownHandler;
+import io.donbee.jade.rest.handler.VersionHandler;
+import io.donbee.jade.rest.service.JadesPlatformService;
+import io.donbee.jade.rest.service.PlatformService;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -19,12 +22,14 @@ import io.vertx.ext.web.handler.CorsHandler;
 
 import java.lang.reflect.Field;
 
+/**
+ * Vert.x REST verticle that wires all route handlers.
+ * This class has a single responsibility: configure the HTTP router.
+ */
 public class RestAPIVerticle extends AbstractVerticle {
 
     private final io.donbee.jade.wrapper.AgentContainer wrapper;
     private final int port;
-    private AgentContainer impl;
-    private AgentManager agentManager;
 
     public RestAPIVerticle(io.donbee.jade.wrapper.AgentContainer container) {
         this(container, 8080);
@@ -37,126 +42,47 @@ public class RestAPIVerticle extends AbstractVerticle {
 
     @Override
     public void start(Promise<Void> startPromise) {
-        try {
-            Field f = io.donbee.jade.wrapper.ContainerController.class.getDeclaredField("myImpl");
-            f.setAccessible(true);
-            impl = (AgentContainer) f.get(wrapper);
-            MainContainer main = impl.getMain();
-            if (main != null) {
-                agentManager = (AgentManager) main;
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to access internal container", e);
-        }
+        AgentContainer impl = extractImpl();
+        AgentManager agentManager = extractAgentManager(impl);
+        PlatformService service = new JadesPlatformService(impl, agentManager);
 
         Router router = Router.router(vertx);
-
         router.route().handler(CorsHandler.create("*"));
         router.route().handler(BodyHandler.create());
-
-        router.get("/api/health").handler(ctx -> {
-            ctx.response()
-                .setStatusCode(200)
+        router.route().failureHandler(routingContext -> {
+            int statusCode = routingContext.statusCode();
+            if (statusCode < 400) {
+                statusCode = 500;
+            }
+            String message = routingContext.failure() != null
+                ? routingContext.failure().getMessage()
+                : "Unexpected error";
+            routingContext.response()
+                .setStatusCode(statusCode)
                 .putHeader("Content-Type", "application/json")
-                .end(new JsonObject().put("status", "ok").toBuffer());
+                .end(new JsonObject().put("error", message).put("code", statusCode).encode());
         });
 
-        router.get("/api/version").handler(ctx -> {
-            JsonObject resp = new JsonObject()
-                .put("version", "UNKNOWN")
-                .put("revision", "UNKNOWN")
-                .put("date", "UNKNOWN");
-            VersionManager vm = new VersionManager();
-            try {
-                resp.put("version", vm.getVersion());
-                resp.put("revision", vm.getRevision());
-                resp.put("date", vm.getDate());
-            } catch (Exception ignored) {}
-            ctx.response()
-                .setStatusCode(200)
-                .putHeader("Content-Type", "application/json")
-                .end(resp.toBuffer());
-        });
+        // Health
+        router.get("/api/health").handler(new HealthHandler());
 
-        router.get("/api/platform").handler(ctx -> {
-            try {
-                JsonObject resp = new JsonObject()
-                    .put("platformID", impl.getPlatformID())
-                    .put("containerName", impl.here().getName())
-                    .put("isMain", impl.getMain() != null)
-                    .put("ams", impl.getAMS().getName())
-                    .put("defaultDF", impl.getDefaultDF().getName());
-                ctx.response()
-                    .setStatusCode(200)
-                    .putHeader("Content-Type", "application/json")
-                    .end(resp.toBuffer());
-            } catch (Exception e) {
-                ctx.fail(500, e);
-            }
-        });
+        // Version
+        router.get("/api/version").handler(new VersionHandler());
 
-        router.get("/api/agents").handler(ctx -> {
-            if (agentManager == null) {
-                ctx.fail(403, new RuntimeException("Not a Main Container"));
-                return;
-            }
-            try {
-                boolean detail = "true".equalsIgnoreCase(ctx.queryParams().get("detail"));
-                ContainerID cid = impl.getID();
-                List agents = agentManager.containerAgents(cid);
-                JsonArray arr = new JsonArray();
-                for (int i = 0; i < agents.size(); i++) {
-                    AID aid = (AID) agents.get(i);
-                    if (detail) {
-                        try {
-                            AMSAgentDescription amsDesc = agentManager.getAMSDescription(aid);
-                            JsonObject agentObj = new JsonObject()
-                                .put("name", aid.getName())
-                                .put("state", amsDesc.getState() != null ? amsDesc.getState() : "UNKNOWN")
-                                .put("ownership", amsDesc.getOwnership() != null ? amsDesc.getOwnership() : "")
-                                .put("container", cid.getName())
-                                .put("addresses", aid.getAllAddresses() != null ? toJsonArray(aid.getAllAddresses()) : new JsonArray());
-                            arr.add(agentObj);
-                        } catch (Exception ignored) {
-                            arr.add(new JsonObject().put("name", aid.getName()));
-                        }
-                    } else {
-                        arr.add(new JsonObject().put("name", aid.getName()));
-                    }
-                }
-                ctx.response()
-                    .setStatusCode(200)
-                    .putHeader("Content-Type", "application/json")
-                    .end(new JsonObject().put("agents", arr).toBuffer());
-            } catch (Exception e) {
-                ctx.fail(500, e);
-            }
-        });
+        // Platform info
+        router.get("/api/platform").handler(new PlatformInfoHandler(service));
 
-        router.get("/api/containers").handler(ctx -> {
-            if (agentManager == null) {
-                ctx.fail(403, new RuntimeException("Not a Main Container"));
-                return;
-            }
-            try {
-                ContainerID[] cids = agentManager.containerIDs();
-                JsonArray arr = new JsonArray();
-                for (ContainerID cid : cids) {
-                    JsonObject containerObj = new JsonObject()
-                        .put("name", cid.getName())
-                        .put("address", cid.getAddress() != null ? cid.getAddress() : "")
-                        .put("port", cid.getPort() != null ? cid.getPort() : "")
-                        .put("isMain", cid.getName() != null && cid.getName().equals(impl.here().getName()));
-                    arr.add(containerObj);
-                }
-                ctx.response()
-                    .setStatusCode(200)
-                    .putHeader("Content-Type", "application/json")
-                    .end(new JsonObject().put("containers", arr).toBuffer());
-            } catch (Exception e) {
-                ctx.fail(500, e);
-            }
-        });
+        // Platform shutdown
+        router.post("/api/platform/shutdown").handler(new ShutdownHandler(service));
+
+        // Containers
+        router.get("/api/containers").handler(new ContainerListHandler(service));
+
+        // Agents
+        router.get("/api/agents").handler(new AgentListHandler(service));
+        router.delete("/api/agents/:name").handler(new AgentActionHandler(service, AgentActionHandler.Action.KILL));
+        router.post("/api/agents/:name/suspend").handler(new AgentActionHandler(service, AgentActionHandler.Action.SUSPEND));
+        router.post("/api/agents/:name/resume").handler(new AgentActionHandler(service, AgentActionHandler.Action.RESUME));
 
         vertx.createHttpServer()
             .requestHandler(router)
@@ -169,11 +95,25 @@ public class RestAPIVerticle extends AbstractVerticle {
             });
     }
 
-    private static JsonArray toJsonArray(java.util.Iterator<String> it) {
-        JsonArray arr = new JsonArray();
-        while (it.hasNext()) {
-            arr.add(it.next());
+    private AgentContainer extractImpl() {
+        try {
+            Field f = io.donbee.jade.wrapper.ContainerController.class.getDeclaredField("myImpl");
+            f.setAccessible(true);
+            return (AgentContainer) f.get(wrapper);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to access internal container", e);
         }
-        return arr;
+    }
+
+    private AgentManager extractAgentManager(AgentContainer impl) {
+        try {
+            MainContainer main = impl.getMain();
+            if (main != null) {
+                return (AgentManager) main;
+            }
+        } catch (Exception e) {
+            // Not a main container
+        }
+        return null;
     }
 }

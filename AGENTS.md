@@ -90,3 +90,73 @@ podman compose down                           # Stop containers
 - `frontend/packages/shared/src/api/client.ts` — Axios API client
 - `docker/Dockerfile.backend` — Backend Docker build
 - `docker/Dockerfile.frontend` — Frontend Docker build
+
+## Coding Standards (Software Architect Role)
+
+When working on this project, act as a **software architect** who values robustness, reusability, and adherence to SOLID principles:
+
+### SOLID Principles
+- **Single Responsibility (SRP)**: Each class should have exactly one reason to change. Extract route handlers, data services, and model builders into separate classes. E.g., `RestAPIVerticle` should only wire routes; delegate handler logic to dedicated handler/service classes.
+- **Open/Closed (OCP)**: Use interfaces and abstractions so new endpoints can be added without modifying existing handler classes.
+- **Liskov Substitution (LSP)**: When implementing service interfaces, ensure substitutability (e.g., mock services for testing should behave identically).
+- **Interface Segregation (ISP)**: Avoid fat interfaces. Split `AgentManager` into focused interfaces if possible.
+- **Dependency Inversion (DIP)**: High-level handlers should depend on abstractions (interfaces), not concrete JADE backend classes. Inject dependencies via constructors.
+
+### Test-First Approach with AAA Pattern
+All new code must include tests following the **Arrange-Act-Assert** pattern:
+
+#### Naming Convention (TDD-style Given-When-Then)
+```java
+// Java / JUnit 5
+@DisplayName("When authenticated user requests agent list with detail=true, Then agents with state and ownership are returned")
+@Test
+void Given_UserIsAuthenticated_When_AgentListRequestedWithDetail_Then_ResponseIncludesStateAndOwnership() {
+    // Arrange
+    ...
+    // Act
+    ...
+    // Assert
+    ...
+}
+```
+
+```typescript
+// TypeScript / Vitest
+it('Given an authenticated user, When the agent list endpoint is called with detail=true, Then the response includes agent state and ownership', () => {
+  // Arrange
+  ...
+  // Act
+  ...
+  // Assert
+  ...
+});
+```
+
+#### Test Structure (AAA)
+```java
+@Test
+void Given_..._When_..._Then_() {
+    // --- Arrange --- (setup mocks, fixtures, test data)
+    // --- Act ---     (execute the unit under test)
+    // --- Assert ---  (verify expected outcome)
+}
+```
+
+### Backend Test Strategy
+- **Unit tests**: Use Mockito to mock `AgentManager`, `AgentContainer`, etc. Test handler/service classes in isolation.
+- **Integration tests**: Use Vert.x `VertxUnit` / `WebTestClient` to test REST endpoints end-to-end against an in-memory JADE runtime (or a mock platform).
+- **Test layout**: `src/test/java/...` following the same package structure as `src/main/java`.
+
+### Frontend Test Strategy
+- **Unit tests**: Vitest + React Testing Library. Mock `axios` calls. Test component rendering, error states, and prop handling.
+- **Integration tests**: Test full API client → component data flow with mocked responses.
+- **Test layout**: `apps/frontend/src/**/*.test.tsx`, `packages/shared/src/**/*.test.ts`.
+
+### REST API Design Rules
+1. RESTful resource naming (`/api/agents`, `/api/containers`)
+2. HTTP methods map to CRUD: GET (read), POST (create), PUT (update), DELETE (delete), PATCH (partial)
+3. Paginated responses for lists (`limit`, `offset` query params)
+4. Consistent error response format: `{"error": "message", "code": 404}`
+5. All endpoints return JSON with `Content-Type: application/json`
+6. 2XX = success, 4XX = client error, 5XX = server error
+7. Each endpoint documented with input/output JSON schema in `docs/api/`
