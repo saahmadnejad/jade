@@ -47,7 +47,7 @@ public class RestAPIVerticle extends AbstractVerticle {
         PlatformService service = new JadesPlatformService(impl, agentManager);
 
         Router router = Router.router(vertx);
-        router.route().handler(CorsHandler.create("*"));
+        router.route().handler(CorsHandler.create().addOrigin("*"));
         router.route().handler(BodyHandler.create());
         router.route().failureHandler(routingContext -> {
             int statusCode = routingContext.statusCode();
@@ -86,7 +86,8 @@ public class RestAPIVerticle extends AbstractVerticle {
 
         vertx.createHttpServer()
             .requestHandler(router)
-            .listen(port, http -> {
+            .listen(port)
+            .onComplete(http -> {
                 if (http.succeeded()) {
                     startPromise.complete();
                 } else {

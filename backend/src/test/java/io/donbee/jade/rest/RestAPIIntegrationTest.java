@@ -37,7 +37,7 @@ public class RestAPIIntegrationTest {
 
         vertx = Vertx.vertx();
         RestAPIVerticle verticle = new RestAPIVerticle(container, REST_PORT);
-        vertx.deployVerticle(verticle, context.asyncAssertSuccess());
+        vertx.deployVerticle(verticle).onComplete(context.asyncAssertSuccess(ar -> {}));
 
         client = WebClient.create(vertx);
 
@@ -47,7 +47,7 @@ public class RestAPIIntegrationTest {
     @AfterClass
     public static void tearDown(TestContext context) {
         if (vertx != null) {
-            vertx.close(context.asyncAssertSuccess());
+            vertx.close().onComplete(context.asyncAssertSuccess(ar -> {}));
         }
         if (runtime != null) {
             runtime.shutDown();
@@ -63,7 +63,8 @@ public class RestAPIIntegrationTest {
 
         // Act
         client.get(REST_PORT, "localhost", "/api/health")
-            .send(context.asyncAssertSuccess(response -> {
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
                 // Assert
                 context.assertEquals(200, response.statusCode());
                 JsonObject body = response.bodyAsJsonObject();
@@ -81,7 +82,8 @@ public class RestAPIIntegrationTest {
 
         // Act
         client.get(REST_PORT, "localhost", "/api/version")
-            .send(context.asyncAssertSuccess(response -> {
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
                 // Assert
                 context.assertEquals(200, response.statusCode());
                 JsonObject body = response.bodyAsJsonObject();
@@ -99,7 +101,8 @@ public class RestAPIIntegrationTest {
 
         // Act
         client.get(REST_PORT, "localhost", "/api/platform")
-            .send(context.asyncAssertSuccess(response -> {
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
                 // Assert
                 context.assertEquals(200, response.statusCode());
                 JsonObject body = response.bodyAsJsonObject();
@@ -119,7 +122,8 @@ public class RestAPIIntegrationTest {
 
         // Act
         client.get(REST_PORT, "localhost", "/api/agents")
-            .send(context.asyncAssertSuccess(response -> {
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
                 // Assert
                 context.assertEquals(200, response.statusCode());
                 JsonObject body = response.bodyAsJsonObject();
@@ -137,7 +141,8 @@ public class RestAPIIntegrationTest {
 
         // Act
         client.get(REST_PORT, "localhost", "/api/agents?detail=true")
-            .send(context.asyncAssertSuccess(response -> {
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
                 // Assert
                 context.assertEquals(200, response.statusCode());
                 JsonObject body = response.bodyAsJsonObject();
@@ -155,7 +160,8 @@ public class RestAPIIntegrationTest {
 
         // Act
         client.get(REST_PORT, "localhost", "/api/containers")
-            .send(context.asyncAssertSuccess(response -> {
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
                 // Assert
                 context.assertEquals(200, response.statusCode());
                 JsonObject body = response.bodyAsJsonObject();
@@ -174,7 +180,8 @@ public class RestAPIIntegrationTest {
 
         // Act - Suspend (df is always present in main container)
         client.post(REST_PORT, "localhost", "/api/agents/df/suspend")
-            .send(context.asyncAssertSuccess(response -> {
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
                 // Assert
                 context.assertEquals(200, response.statusCode());
                 context.assertTrue(response.bodyAsJsonObject().getString("message").contains("suspended"));
@@ -183,7 +190,8 @@ public class RestAPIIntegrationTest {
 
         // Act - Resume
         client.post(REST_PORT, "localhost", "/api/agents/df/resume")
-            .send(context.asyncAssertSuccess(response -> {
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
                 // Assert
                 context.assertEquals(200, response.statusCode());
                 context.assertTrue(response.bodyAsJsonObject().getString("message").contains("resumed"));
@@ -200,7 +208,8 @@ public class RestAPIIntegrationTest {
 
         // Act
         client.post(REST_PORT, "localhost", "/api/agents/nonexistent-agent-abc123/suspend")
-            .send(context.asyncAssertSuccess(response -> {
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
                 // Assert
                 context.assertEquals(404, response.statusCode());
                 async.complete();
@@ -216,7 +225,8 @@ public class RestAPIIntegrationTest {
 
         // Act
         client.delete(REST_PORT, "localhost", "/api/agents/nonexistent-agent-xyz789")
-            .send(context.asyncAssertSuccess(response -> {
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
                 // Assert
                 context.assertEquals(404, response.statusCode());
                 async.complete();

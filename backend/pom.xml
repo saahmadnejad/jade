@@ -33,34 +33,34 @@
             <version>1.18.0</version>
         </dependency>
 
-        <!-- Vert.x core and web for REST API and event bus -->
+        <!-- Vert.x 5 for REST API and event bus -->
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-core</artifactId>
-            <version>4.5.10</version>
+            <version>5.1.6</version>
         </dependency>
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-web</artifactId>
-            <version>4.5.10</version>
+            <version>5.1.6</version>
         </dependency>
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-web-client</artifactId>
-            <version>4.5.10</version>
+            <version>5.1.6</version>
         </dependency>
 
         <!-- Test dependencies -->
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-unit</artifactId>
-            <version>4.5.10</version>
+            <version>5.1.6</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-web-client</artifactId>
-            <version>4.5.10</version>
+            <version>5.1.6</version>
             <scope>test</scope>
         </dependency>
         <dependency>
