@@ -20,6 +20,12 @@ import io.donbee.jade.rest.handler.ContainerMTPInstallHandler;
 import io.donbee.jade.rest.handler.ContainerMTPListHandler;
 import io.donbee.jade.rest.handler.ContainerMTPUNinstallHandler;
 import io.donbee.jade.rest.handler.ContainerSaveHandler;
+import io.donbee.jade.rest.handler.PlatformInfoHandler;
+import io.donbee.jade.rest.handler.RemotePlatformAddHandler;
+import io.donbee.jade.rest.handler.RemotePlatformAgentsHandler;
+import io.donbee.jade.rest.handler.RemotePlatformListHandler;
+import io.donbee.jade.rest.handler.ShutdownHandler;
+import io.donbee.jade.rest.handler.ToolLaunchHandler;
 import io.donbee.jade.rest.handler.HealthHandler;
 import io.donbee.jade.rest.handler.JsonFailureHandler;
 import io.donbee.jade.rest.handler.PlatformInfoHandler;
@@ -134,6 +140,14 @@ public class RestAPIVerticle extends AbstractVerticle {
         router.post(ApiRoutes.AGENT_SAVE).handler(new AgentSaveLoadHandler(service, true));
         router.post(ApiRoutes.AGENT_LOAD).handler(new AgentSaveLoadHandler(service, false));
         router.patch(ApiRoutes.AGENT_BY_NAME).handler(new AgentOwnershipHandler(service));
+
+        // Tools
+        router.post(ApiRoutes.TOOLS_START).handler(new ToolLaunchHandler(service));
+
+        // Remote Platforms
+        router.get(ApiRoutes.PLATFORMS).handler(new RemotePlatformListHandler(service));
+        router.post(ApiRoutes.PLATFORMS).handler(new RemotePlatformAddHandler(service));
+        router.get(ApiRoutes.PLATFORM_AGENTS).handler(new RemotePlatformAgentsHandler(service));
     }
 
     private AgentContainer extractImpl() {

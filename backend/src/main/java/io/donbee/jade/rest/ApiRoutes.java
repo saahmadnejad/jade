@@ -47,4 +47,7 @@ public final class ApiRoutes {
     public static final String PLATFORM_DESCRIPTION = "/api/platforms/:name/description";
     public static final String PLATFORM_REFRESH = "/api/platforms/:name/refresh";
     public static final String PLATFORM_AGENTS = "/api/platforms/:name/agents";
+
+    // Tools
+    public static final String TOOLS_START = "/api/tools/:tool/start";
 }

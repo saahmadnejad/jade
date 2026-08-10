@@ -59,6 +59,12 @@ public interface PlatformService {
 
     AgentInfo deployAgent(String agentName, String className, Object[] args);
 
+    java.util.List<RemotePlatformInfo> getRemotePlatforms();
+
+    RemotePlatformInfo addRemotePlatform(String amsName, String[] addresses);
+
+    java.util.List<AgentInfo> searchRemotePlatformAgents(String platformName);
+
     class PlatformInfo {
         public final String platformID;
         public final String containerName;
@@ -112,6 +118,20 @@ public interface PlatformService {
         public MTPInfo(String address, String className) {
             this.address = address;
             this.className = className;
+        }
+    }
+
+    class RemotePlatformInfo {
+        public final String name;
+        public final String ams;
+        public final String[] addresses;
+        public final String[] services;
+
+        public RemotePlatformInfo(String name, String ams, String[] addresses, String[] services) {
+            this.name = name;
+            this.ams = ams;
+            this.addresses = addresses;
+            this.services = services;
         }
     }
 }

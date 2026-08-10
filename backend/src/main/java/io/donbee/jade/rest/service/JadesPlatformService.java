@@ -257,10 +257,10 @@ public class JadesPlatformService implements PlatformService {
         throw new IllegalArgumentException("Container not found: " + containerName);
     }
 
-    private void sendAMSAction(io.donbee.jade.content.Concept action, String actionLabel) {
+    private void sendAMSAction(io.donbee.jade.content.Concept action, String actionLabel, io.donbee.jade.content.onto.Ontology ontology) {
         try {
             io.donbee.jade.content.ContentManager cm = new io.donbee.jade.content.ContentManager();
-            cm.registerOntology(io.donbee.jade.domain.persistence.PersistenceOntology.getInstance());
+            cm.registerOntology(ontology);
             io.donbee.jade.content.lang.sl.SLCodec codec = new io.donbee.jade.content.lang.sl.SLCodec();
             cm.registerLanguage(codec);
 
@@ -280,6 +280,10 @@ public class JadesPlatformService implements PlatformService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to send " + actionLabel + " action: " + e.getMessage(), e);
         }
+    }
+
+    private void sendAMSAction(io.donbee.jade.content.Concept action, String actionLabel) {
+        sendAMSAction(action, actionLabel, io.donbee.jade.domain.persistence.PersistenceOntology.getInstance());
     }
 
     @Override
@@ -484,6 +488,53 @@ public class JadesPlatformService implements PlatformService {
         amsd.setOwnership(newOwner);
         modifyAct.setDescription(amsd);
         sendAMSAction(modifyAct, "Modify");
+    }
+
+    @Override
+    public java.util.List<RemotePlatformInfo> getRemotePlatforms() {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        java.util.List<RemotePlatformInfo> platforms = new java.util.ArrayList<>();
+        try {
+            ContainerID cid = impl.getID();
+            String[] addresses = new String[]{cid.getAddress() + ":" + cid.getPort()};
+            String[] services = {"FIPAAgentManagement", "Mobility", "Messaging"};
+            platforms.add(new RemotePlatformInfo(
+                impl.getPlatformID(),
+                impl.getAMS().getName(),
+                addresses != null ? addresses : new String[]{},
+                services
+            ));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to list remote platforms: " + e.getMessage(), e);
+        }
+        return platforms;
+    }
+
+    @Override
+    public RemotePlatformInfo addRemotePlatform(String amsName, String[] addresses) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        try {
+            io.donbee.jade.domain.FIPAAgentManagement.GetDescription gd = new io.donbee.jade.domain.FIPAAgentManagement.GetDescription();
+            AID remoteAid = new AID();
+            remoteAid.setName(amsName);
+            sendAMSAction(gd, "GetDescription", io.donbee.jade.domain.FIPAAgentManagement.FIPAManagementOntology.getInstance());
+            return new RemotePlatformInfo(amsName, amsName, addresses, new String[]{"FIPAAgentManagement"});
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to add remote platform: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public java.util.List<AgentInfo> searchRemotePlatformAgents(String platformName) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        java.util.List<AgentInfo> result = new java.util.ArrayList<>();
+        return result;
     }
 
     private AID findAgentByName(String agentName) {        ContainerID cid = impl.getID();
