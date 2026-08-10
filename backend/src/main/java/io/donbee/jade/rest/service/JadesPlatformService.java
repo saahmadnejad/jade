@@ -529,6 +529,47 @@ public class JadesPlatformService implements PlatformService {
     }
 
     @Override
+    public RemotePlatformInfo getRemotePlatformDescription(String platformName) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        java.util.List<RemotePlatformInfo> platforms = getRemotePlatforms();
+        for (RemotePlatformInfo p : platforms) {
+            if (p.name.equals(platformName)) {
+                return p;
+            }
+        }
+        throw new IllegalArgumentException("Remote platform not found: " + platformName);
+    }
+
+    @Override
+    public void removeRemotePlatform(String platformName) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        throw new UnsupportedOperationException("Removing remote platforms is not supported by this JADE implementation");
+    }
+
+    @Override
+    public RemotePlatformInfo fetchRemotePlatform(String url) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        if (url == null || url.isEmpty()) {
+            throw new IllegalArgumentException("URL is required");
+        }
+        try {
+            String[] parts = url.split(":");
+            String host = parts[0];
+            int port = parts.length > 1 ? Integer.parseInt(parts[1]) : 1099;
+            String addresses = host + ":" + port;
+            return addRemotePlatform(host + ":" + port + "/FIPA", new String[]{addresses});
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid URL format: " + url);
+        }
+    }
+
+    @Override
     public java.util.List<AgentInfo> searchRemotePlatformAgents(String platformName) {
         if (agentManager == null) {
             throw new IllegalStateException("Not a Main Container");

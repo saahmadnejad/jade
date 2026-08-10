@@ -65,6 +65,12 @@ public interface PlatformService {
 
     java.util.List<AgentInfo> searchRemotePlatformAgents(String platformName);
 
+    RemotePlatformInfo getRemotePlatformDescription(String platformName);
+
+    void removeRemotePlatform(String platformName);
+
+    RemotePlatformInfo fetchRemotePlatform(String url);
+
     class PlatformInfo {
         public final String platformID;
         public final String containerName;

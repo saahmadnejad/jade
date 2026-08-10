@@ -23,7 +23,10 @@ import io.donbee.jade.rest.handler.ContainerSaveHandler;
 import io.donbee.jade.rest.handler.PlatformInfoHandler;
 import io.donbee.jade.rest.handler.RemotePlatformAddHandler;
 import io.donbee.jade.rest.handler.RemotePlatformAgentsHandler;
+import io.donbee.jade.rest.handler.RemotePlatformDescriptionHandler;
+import io.donbee.jade.rest.handler.RemotePlatformFetchHandler;
 import io.donbee.jade.rest.handler.RemotePlatformListHandler;
+import io.donbee.jade.rest.handler.RemotePlatformRemoveHandler;
 import io.donbee.jade.rest.handler.ShutdownHandler;
 import io.donbee.jade.rest.handler.ToolLaunchHandler;
 import io.donbee.jade.rest.handler.HealthHandler;
@@ -147,6 +150,10 @@ public class RestAPIVerticle extends AbstractVerticle {
         // Remote Platforms
         router.get(ApiRoutes.PLATFORMS).handler(new RemotePlatformListHandler(service));
         router.post(ApiRoutes.PLATFORMS).handler(new RemotePlatformAddHandler(service));
+        router.post(ApiRoutes.PLATFORM_FETCH).handler(new RemotePlatformFetchHandler(service));
+        router.delete(ApiRoutes.PLATFORM_BY_NAME).handler(new RemotePlatformRemoveHandler(service));
+        router.get(ApiRoutes.PLATFORM_DESCRIPTION).handler(new RemotePlatformDescriptionHandler(service));
+        router.post(ApiRoutes.PLATFORM_REFRESH).handler(new RemotePlatformDescriptionHandler(service));
         router.get(ApiRoutes.PLATFORM_AGENTS).handler(new RemotePlatformAgentsHandler(service));
     }
 
