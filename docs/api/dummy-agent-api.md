@@ -1,5 +1,7 @@
 # Dummy Agent REST API Specification
 
+**Purpose:** Specification for the Dummy Agent tool's REST endpoints. This is the work queue for implementing the dummy agent GUI's backend API — message composition, sending, queueing, and file I/O. Update as endpoints are implemented.
+
 Detailed input/output specifications for Dummy Agent functionalities.
 
 The Dummy Agent provides a simple GUI for composing and sending ACL messages manually. The REST API exposes message composition, sending, queueing, and file I/O operations.

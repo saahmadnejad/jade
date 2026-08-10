@@ -1,5 +1,7 @@
 # Sniffer REST API Specification
 
+**Purpose:** Specification for the Sniffer tool's REST endpoints. This is the work queue for implementing the message sniffer's backend API — agent sniffing control, message capture, and file load/save operations. Update as endpoints are implemented.
+
 Detailed input/output specifications for Sniffer functionalities.
 
 The Sniffer intercepts ACL messages exchanged between agents. The React UI needs endpoints to configure sniffing, view caught messages, and manage the sniffer lifecycle.

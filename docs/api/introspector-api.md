@@ -1,5 +1,7 @@
 # Introspector REST API Specification
 
+**Purpose:** Specification for the Introspector (Agent Debugger) tool's REST endpoints. This is the work queue for implementing the debugger's backend API — message tracing, behaviour tree inspection, and execution control (step, break, slow, go). Update as endpoints are implemented.
+
 Detailed input/output specifications for Introspector (Agent Debugger) functionalities.
 
 The Introspector attaches to a target agent and provides debugging capabilities: message tracing, behaviour tree inspection, and execution control (step, break, slow, go).

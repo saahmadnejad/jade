@@ -1,5 +1,7 @@
 # DF GUI REST API Specification
 
+**Purpose:** Specification for the DF (Directory Facilitator) GUI tool's REST endpoints. This is the work queue for implementing the DF GUI's backend API — DF registrations management, service type browsing, and federation controls. Update as endpoints are implemented.
+
 Detailed input/output specifications for DF GUI (Directory Facilitator GUI) functionalities.
 
 The DF GUI manages the Directory Facilitator (yellow pages) service. The REST API allows registering, deregistering, modifying, viewing, searching agents, and managing DF federation.

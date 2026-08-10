@@ -1,5 +1,7 @@
 # Log Manager REST API Specification
 
+**Purpose:** Specification for the Log Manager tool's REST endpoints. This is the work queue for implementing the logging management backend API — logger configuration, container-level log level management, and file load/save operations. Update as endpoints are implemented.
+
 Detailed input/output specifications for Log Manager Agent functionalities.
 
 The Log Manager agent allows configuring the logging system on the platform and individual containers. It manages per-container log displays and log levels.

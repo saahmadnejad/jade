@@ -1,6 +1,6 @@
 # Shared GUI Components REST API Specification
 
-Specifications for the shared Swing GUI components used across all old JADE tools, and their API needs for the new React GUI.
+**Purpose:** Specifications for shared Swing GUI components used across all JADE tools (RMA, Sniffer, Log Manager, Introspector, Test Agent), and their API needs for the new React GUI. This is the work queue for implementing backend services that are shared/common across multiple tools. Update as endpoints are implemented.
 
 ---
 

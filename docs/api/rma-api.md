@@ -1,10 +1,27 @@
 # RMA REST API Specification
 
+**Purpose:** This document is the canonical specification for core JADE platform REST endpoints (platform, containers, agents). It serves as the work queue for implementing the backend REST API — each endpoint's "JADE backend call" notes describe the JADE ontology/backend methods that need to be wired in. This doc should be updated as endpoints are implemented or new ones are planned.
+
 Detailed input/output specifications for RMA (Remote Management Agent) functionalities. Each entry describes the REST endpoint design, request/response schemas, and the underlying JADE management ontology calls.
 
 ---
 
 ## 1. Platform Operations
+
+### 1.0 Health Check
+- **Endpoint**: `GET /api/health`
+- **Input**: none
+- **Output (200)**: `{"status": "ok"}`
+- **JADE backend call**: None — static response
+
+### 1.0b Version Info
+- **Endpoint**: `GET /api/version`
+- **Input**: none
+- **Output (200)**:
+```json
+{"version": "string", "revision": "string", "date": "string"}
+```
+- **JADE backend call**: `io.donbee.jade.util.VersionManager` / `io.donbee.jade.Version`
 
 ### 1.1 Platform Info
 - **Endpoint**: `GET /api/platform`
@@ -64,6 +81,22 @@ Detailed input/output specifications for RMA (Remote Management Agent) functiona
 }
 ```
 - **JADE backend call**: Subscribe to AMS introspection events (AddedContainer, RemovedContainer)
+
+### 2.1b Get Single Container
+- **Endpoint**: `GET /api/containers/{name}`
+- **Input**: path param `name` (container name, e.g. `Main-Container`)
+- **Output (200)**:
+```json
+{
+  "name": "Main-Container",
+  "address": "127.0.0.1",
+  "port": "1099",
+  "isMain": true
+}
+```
+- **Error (404)**: `{"error": "Container not found: nonexistent"}`
+- **Error (403)**: `{"error": "Not a Main Container"}`
+- **JADE backend call**: `agentManager.containerIDs()` to iterate, match by name
 
 ### 2.2 Kill Container
 - **Endpoint**: `DELETE /api/containers/{name}`
@@ -163,6 +196,23 @@ Detailed input/output specifications for RMA (Remote Management Agent) functiona
 }
 ```
 - **JADE backend call**: `agentManager.containerAgents(cid)` or AMS `AMSService` search
+
+### 3.1b Get Single Agent
+- **Endpoint**: `GET /api/agents/{name}`
+- **Input**: path param `name` (agent local name, e.g. `rma`)
+- **Output (200)**:
+```json
+{
+  "name": "rma@jade-main",
+  "state": "ACTIVE",
+  "ownership": "init",
+  "container": "Main-Container",
+  "addresses": ["jades://127.0.0.1:1099/jade-tools"]
+}
+```
+- **Error (404)**: `{"error": "Agent not found: nonexistent"}`
+- **Error (403)**: `{"error": "Not a Main Container"}`
+- **JADE backend call**: `agentManager.containerAgents(cid)` to iterate, match by local name or GUID
 
 ### 3.2 Start New Agent
 - **Endpoint**: `POST /api/agents`
@@ -442,8 +492,12 @@ These endpoints start the respective GUI tool agents. The actual GUI rendering i
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| GET | `/api/health` | Health check |
+| GET | `/api/version` | JADE version info |
 | GET | `/api/platform` | Platform metadata |
+| POST | `/api/platform/shutdown` | Shutdown platform |
 | GET | `/api/containers` | List all containers |
+| GET | `/api/containers/{name}` | Get single container by name |
 | DELETE | `/api/containers/{name}` | Kill a container |
 | POST | `/api/containers/{name}/save` | Save container state |
 | POST | `/api/containers/{name}/load` | Load container state |
@@ -451,6 +505,7 @@ These endpoints start the respective GUI tool agents. The actual GUI rendering i
 | POST | `/api/containers/{name}/mtps` | Install a new MTP |
 | DELETE | `/api/containers/{name}/mtps/{address}` | Uninstall an MTP |
 | GET | `/api/agents` | List agents (filter by container/state) |
+| GET | `/api/agents/{name}` | Get single agent by name |
 | POST | `/api/agents` | Start new agent |
 | DELETE | `/api/agents/{name}` | Kill agent |
 | POST | `/api/agents/{name}/suspend` | Suspend agent |

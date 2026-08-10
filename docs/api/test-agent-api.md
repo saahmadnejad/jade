@@ -1,5 +1,7 @@
 # Test Agent REST API Specification
 
+**Purpose:** Specification for the Test Agent tool's REST endpoints. This is the work queue for implementing the test agent's backend API — message composition, trace management, and automated test execution. Update as endpoints are implemented.
+
 Detailed input/output specifications for Test Agent functionalities.
 
 The Test Agent is a test/debug tool for sending and receiving ACL messages. It includes a message composition panel (ACLPanel), an ACL trace/history view (ACLTracePanel), and message file I/O capabilities.
