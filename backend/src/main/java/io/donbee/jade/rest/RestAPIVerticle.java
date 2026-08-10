@@ -4,9 +4,14 @@ import io.donbee.jade.core.AgentContainer;
 import io.donbee.jade.core.AgentManager;
 import io.donbee.jade.core.MainContainer;
 import io.donbee.jade.rest.handler.AgentActionHandler;
+import io.donbee.jade.rest.handler.AgentCloneHandler;
 import io.donbee.jade.rest.handler.AgentDeployHandler;
+import io.donbee.jade.rest.handler.AgentFreezeThawHandler;
 import io.donbee.jade.rest.handler.AgentInfoHandler;
 import io.donbee.jade.rest.handler.AgentListHandler;
+import io.donbee.jade.rest.handler.AgentMoveHandler;
+import io.donbee.jade.rest.handler.AgentOwnershipHandler;
+import io.donbee.jade.rest.handler.AgentSaveLoadHandler;
 import io.donbee.jade.rest.handler.ContainerInfoHandler;
 import io.donbee.jade.rest.handler.ContainerKillHandler;
 import io.donbee.jade.rest.handler.ContainerListHandler;
@@ -122,6 +127,13 @@ public class RestAPIVerticle extends AbstractVerticle {
             new AgentActionHandler(service, AgentActionHandler.Action.SUSPEND));
         router.post(ApiRoutes.AGENT_RESUME).handler(
             new AgentActionHandler(service, AgentActionHandler.Action.RESUME));
+        router.post(ApiRoutes.AGENT_FREEZE).handler(new AgentFreezeThawHandler(service, true));
+        router.post(ApiRoutes.AGENT_THAW).handler(new AgentFreezeThawHandler(service, false));
+        router.post(ApiRoutes.AGENT_CLONE).handler(new AgentCloneHandler(service));
+        router.post(ApiRoutes.AGENT_MOVE).handler(new AgentMoveHandler(service));
+        router.post(ApiRoutes.AGENT_SAVE).handler(new AgentSaveLoadHandler(service, true));
+        router.post(ApiRoutes.AGENT_LOAD).handler(new AgentSaveLoadHandler(service, false));
+        router.patch(ApiRoutes.AGENT_BY_NAME).handler(new AgentOwnershipHandler(service));
     }
 
     private AgentContainer extractImpl() {

@@ -362,8 +362,128 @@ public class JadesPlatformService implements PlatformService {
             null,
             null,
             cid.getName(),
-            new String[0]
-        );
+            new String[]{});
+    }
+
+    @Override
+    public AgentInfo freezeAgent(String agentName, String bufferContainer, String repository) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        AID aid = findAgentByName(agentName);
+        if (aid == null) {
+            throw new IllegalArgumentException("Agent not found: " + agentName);
+        }
+        ContainerID bufferCid = findContainerByName(bufferContainer);
+        io.donbee.jade.domain.persistence.FreezeAgent freezeAct = new io.donbee.jade.domain.persistence.FreezeAgent();
+        freezeAct.setAgent(aid);
+        freezeAct.setRepository(repository);
+        freezeAct.setBufferContainer(bufferCid);
+        sendAMSAction(freezeAct, "FreezeAgent");
+        return new AgentInfo(aid.getName(), "FROZEN", null, bufferCid.getName(), new String[]{});
+    }
+
+    @Override
+    public AgentInfo thawAgent(String agentName, String targetContainer, String repository) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        AID aid = findAgentByName(agentName);
+        if (aid == null) {
+            throw new IllegalArgumentException("Agent not found: " + agentName);
+        }
+        ContainerID targetCid = findContainerByName(targetContainer);
+        io.donbee.jade.domain.persistence.ThawAgent thawAct = new io.donbee.jade.domain.persistence.ThawAgent();
+        thawAct.setAgent(aid);
+        thawAct.setRepository(repository);
+        thawAct.setNewContainer(targetCid);
+        sendAMSAction(thawAct, "ThawAgent");
+        return new AgentInfo(aid.getName(), "ACTIVE", null, targetCid.getName(), new String[]{});
+    }
+
+    @Override
+    public AgentInfo cloneAgent(String agentName, String newName, String targetContainer) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        AID aid = findAgentByName(agentName);
+        if (aid == null) {
+            throw new IllegalArgumentException("Agent not found: " + agentName);
+        }
+        ContainerID targetCid = findContainerByName(targetContainer);
+        try {
+            agentManager.copy(aid, targetCid, newName);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to clone agent: " + e.getMessage(), e);
+        }
+        AID clonedAid = new AID();
+        clonedAid.setName(newName);
+        return new AgentInfo(clonedAid.getName(), "ACTIVE", null, targetCid.getName(), new String[]{});
+    }
+
+    @Override
+    public void moveAgent(String agentName, String targetContainer) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        AID aid = findAgentByName(agentName);
+        if (aid == null) {
+            throw new IllegalArgumentException("Agent not found: " + agentName);
+        }
+        ContainerID targetCid = findContainerByName(targetContainer);
+        try {
+            agentManager.move(aid, targetCid);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to move agent: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void saveAgent(String agentName, String repository) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        AID aid = findAgentByName(agentName);
+        if (aid == null) {
+            throw new IllegalArgumentException("Agent not found: " + agentName);
+        }
+        io.donbee.jade.domain.persistence.SaveAgent saveAct = new io.donbee.jade.domain.persistence.SaveAgent();
+        saveAct.setAgent(aid);
+        saveAct.setRepository(repository);
+        sendAMSAction(saveAct, "SaveAgent");
+    }
+
+    @Override
+    public AgentInfo loadAgent(String agentName, String targetContainer, String repository) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        ContainerID targetCid = findContainerByName(targetContainer);
+        io.donbee.jade.domain.persistence.LoadAgent loadAct = new io.donbee.jade.domain.persistence.LoadAgent();
+        loadAct.setAgent(new AID(agentName, AID.ISLOCALNAME));
+        loadAct.setRepository(repository);
+        loadAct.setWhere(targetCid);
+        sendAMSAction(loadAct, "LoadAgent");
+        AID aid = new AID();
+        aid.setName(agentName);
+        return new AgentInfo(aid.getName(), "ACTIVE", null, targetCid.getName(), new String[]{});
+    }
+
+    @Override
+    public void changeAgentOwnership(String agentName, String newOwner) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        AID aid = findAgentByName(agentName);
+        if (aid == null) {
+            throw new IllegalArgumentException("Agent not found: " + agentName);
+        }
+        io.donbee.jade.domain.FIPAAgentManagement.Modify modifyAct = new io.donbee.jade.domain.FIPAAgentManagement.Modify();
+        AMSAgentDescription amsd = new AMSAgentDescription();
+        amsd.setName(aid);
+        amsd.setOwnership(newOwner);
+        modifyAct.setDescription(amsd);
+        sendAMSAction(modifyAct, "Modify");
     }
 
     private AID findAgentByName(String agentName) {        ContainerID cid = impl.getID();

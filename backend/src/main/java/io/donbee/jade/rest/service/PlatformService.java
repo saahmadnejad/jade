@@ -43,6 +43,20 @@ public interface PlatformService {
 
     java.util.List<MTPInfo> getMTPs(String containerName);
 
+    AgentInfo freezeAgent(String agentName, String bufferContainer, String repository);
+
+    AgentInfo thawAgent(String agentName, String targetContainer, String repository);
+
+    AgentInfo cloneAgent(String agentName, String newName, String targetContainer);
+
+    void moveAgent(String agentName, String targetContainer);
+
+    void saveAgent(String agentName, String repository);
+
+    AgentInfo loadAgent(String agentName, String targetContainer, String repository);
+
+    void changeAgentOwnership(String agentName, String newOwner);
+
     AgentInfo deployAgent(String agentName, String className, Object[] args);
 
     class PlatformInfo {

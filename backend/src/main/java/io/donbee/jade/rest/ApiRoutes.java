@@ -32,4 +32,19 @@ public final class ApiRoutes {
     public static final String AGENT_BY_NAME = "/api/agents/:name";
     public static final String AGENT_SUSPEND = "/api/agents/:name/suspend";
     public static final String AGENT_RESUME = "/api/agents/:name/resume";
+    public static final String AGENT_FREEZE = "/api/agents/:name/freeze";
+    public static final String AGENT_THAW = "/api/agents/:name/thaw";
+    public static final String AGENT_CLONE = "/api/agents/clone";
+    public static final String AGENT_MOVE = "/api/agents/:name/move";
+    public static final String AGENT_SAVE = "/api/agents/:name/save";
+    public static final String AGENT_LOAD = "/api/agents/load";
+    public static final String AGENT_REGISTER_REMOTE = "/api/agents/register-remote";
+
+    // Remote Platforms
+    public static final String PLATFORMS = "/api/platforms";
+    public static final String PLATFORM_FETCH = "/api/platforms/fetch";
+    public static final String PLATFORM_BY_NAME = "/api/platforms/:name";
+    public static final String PLATFORM_DESCRIPTION = "/api/platforms/:name/description";
+    public static final String PLATFORM_REFRESH = "/api/platforms/:name/refresh";
+    public static final String PLATFORM_AGENTS = "/api/platforms/:name/agents";
 }

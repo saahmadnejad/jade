@@ -589,4 +589,125 @@ public class RestAPIIntegrationTest {
                 async.complete();
             }));
     }
+
+    // ===== Freeze Agent =====
+
+    @Test
+    public void Given_UnknownAgent_When_FreezeAgent_Then_Returns404(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        JsonObject jsonBody = new JsonObject()
+            .put("container", "Main-Container")
+            .put("repository", "file://./store");
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/agents/nonexistent-agent/freeze")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(404, response.statusCode());
+                async.complete();
+            }));
+    }
+
+    // ===== Thaw Agent =====
+
+    @Test
+    public void Given_UnknownAgent_When_ThawAgent_Then_Returns404(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        JsonObject jsonBody = new JsonObject()
+            .put("container", "Main-Container")
+            .put("repository", "file://./store");
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/agents/nonexistent-agent/thaw")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(404, response.statusCode());
+                async.complete();
+            }));
+    }
+
+    // ===== Clone Agent =====
+
+    @Test
+    public void Given_UnknownAgent_When_CloneAgent_Then_Returns404(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        JsonObject jsonBody = new JsonObject()
+            .put("name", "nonexistent-agent")
+            .put("newName", "cloned-agent")
+            .put("container", "Main-Container");
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/agents/clone")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(404, response.statusCode());
+                async.complete();
+            }));
+    }
+
+    // ===== Move Agent =====
+
+    @Test
+    public void Given_UnknownAgent_When_MoveAgent_Then_Returns404(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        JsonObject jsonBody = new JsonObject().put("container", "Main-Container");
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/agents/nonexistent-agent/move")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(404, response.statusCode());
+                async.complete();
+            }));
+    }
+
+    // ===== Save Agent =====
+
+    @Test
+    public void Given_UnknownAgent_When_SaveAgent_Then_Returns404(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        JsonObject jsonBody = new JsonObject().put("repository", "file://./store");
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/agents/nonexistent-agent/save")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(404, response.statusCode());
+                async.complete();
+            }));
+    }
+
+    // ===== Ownership Change =====
+
+    @Test
+    public void Given_UnknownAgent_When_ChangeOwnership_Then_Returns404(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        JsonObject jsonBody = new JsonObject().put("ownership", "new-owner");
+
+        // Act
+        client.patch(REST_PORT, "localhost", "/api/agents/nonexistent-agent")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(404, response.statusCode());
+                async.complete();
+            }));
+    }
 }
