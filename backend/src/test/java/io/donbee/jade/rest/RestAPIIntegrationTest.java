@@ -343,4 +343,51 @@ public class RestAPIIntegrationTest {
                 async.complete();
             }));
     }
+
+    // ===== Kill Container =====
+
+    @Test
+    public void Given_KillMainContainer_When_DeleteContainer_Then_Returns403(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.delete(REST_PORT, "localhost", "/api/containers/Main-Container?confirm=true")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(403, response.statusCode());
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_NonExistentContainer_When_DeleteContainer_Then_Returns404(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.delete(REST_PORT, "localhost", "/api/containers/nonexistent-container-123?confirm=true")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(404, response.statusCode());
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_MissingConfirmParam_When_DeleteContainer_Then_Returns400(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.delete(REST_PORT, "localhost", "/api/containers/Node1")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(400, response.statusCode());
+                async.complete();
+            }));
+    }
 }

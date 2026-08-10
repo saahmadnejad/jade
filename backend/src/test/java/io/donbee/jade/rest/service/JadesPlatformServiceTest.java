@@ -456,4 +456,63 @@ public class JadesPlatformServiceTest {
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Not a Main Container");
     }
+
+    // ===== killContainer =====
+
+    @Test
+    public void Given_MainContainer_When_KillContainer_Then_CallsAgentManagerKillContainer() throws Exception {
+        // Arrange
+        ContainerID localCid = mock(ContainerID.class);
+        ContainerID remoteCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(remoteCid.getName()).thenReturn("Node1");
+        when(mockImpl.here()).thenReturn(localCid);
+        when(mockAgentManager.containerIDs()).thenReturn(new ContainerID[]{localCid, remoteCid});
+        doNothing().when(mockAgentManager).killContainer(any(ContainerID.class), any(), any());
+
+        // Act
+        service.killContainer("Node1");
+
+        // Assert
+        verify(mockAgentManager).killContainer(eq(remoteCid), any(), any());
+    }
+
+    @Test
+    public void Given_KillMainContainer_When_KillContainer_Then_ThrowsIllegalStateException() {
+        // Arrange
+        ContainerID localCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(mockImpl.here()).thenReturn(localCid);
+        when(mockAgentManager.containerIDs()).thenReturn(new ContainerID[]{localCid});
+
+        // Act & Assert
+        assertThatThrownBy(() -> service.killContainer("Main-Container"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Cannot kill the Main Container");
+    }
+
+    @Test
+    public void Given_UnknownContainer_When_KillContainer_Then_ThrowsIllegalArgumentException() {
+        // Arrange
+        ContainerID localCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(mockImpl.here()).thenReturn(localCid);
+        when(mockAgentManager.containerIDs()).thenReturn(new ContainerID[]{localCid});
+
+        // Act & Assert
+        assertThatThrownBy(() -> service.killContainer("nonexistent"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Container not found");
+    }
+
+    @Test
+    public void Given_NonMainContainer_When_KillContainer_Then_ThrowsIllegalStateException() {
+        // Arrange
+        JadesPlatformService nonMainService = new JadesPlatformService(mockImpl, null);
+
+        // Act & Assert
+        assertThatThrownBy(() -> nonMainService.killContainer("Node1"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Not a Main Container");
+    }
 }

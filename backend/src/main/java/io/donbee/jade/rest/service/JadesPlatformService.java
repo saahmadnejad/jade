@@ -212,6 +212,32 @@ public class JadesPlatformService implements PlatformService {
     }
 
     @Override
+    public void killContainer(String containerName) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        ContainerID localCid = impl.getID();
+        if (containerName.equals(localCid.getName())) {
+            throw new IllegalStateException("Cannot kill the Main Container");
+        }
+        ContainerID targetCid = null;
+        for (ContainerID cid : agentManager.containerIDs()) {
+            if (cid.getName().equals(containerName)) {
+                targetCid = cid;
+                break;
+            }
+        }
+        if (targetCid == null) {
+            throw new IllegalArgumentException("Container not found: " + containerName);
+        }
+        try {
+            agentManager.killContainer(targetCid, null, null);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to kill container: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     public AgentInfo deployAgent(String agentName, String className, Object[] args) {
         if (agentManager == null) {
             throw new IllegalStateException("Not a Main Container");

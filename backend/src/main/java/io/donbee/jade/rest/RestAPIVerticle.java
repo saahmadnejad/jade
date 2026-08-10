@@ -8,6 +8,7 @@ import io.donbee.jade.rest.handler.AgentDeployHandler;
 import io.donbee.jade.rest.handler.AgentInfoHandler;
 import io.donbee.jade.rest.handler.AgentListHandler;
 import io.donbee.jade.rest.handler.ContainerInfoHandler;
+import io.donbee.jade.rest.handler.ContainerKillHandler;
 import io.donbee.jade.rest.handler.ContainerListHandler;
 import io.donbee.jade.rest.handler.HealthHandler;
 import io.donbee.jade.rest.handler.JsonFailureHandler;
@@ -99,6 +100,7 @@ public class RestAPIVerticle extends AbstractVerticle {
         // Containers
         router.get(ApiRoutes.CONTAINERS).handler(new ContainerListHandler(service));
         router.get(ApiRoutes.CONTAINER_BY_NAME).handler(new ContainerInfoHandler(service));
+        router.delete(ApiRoutes.CONTAINER_BY_NAME).handler(new ContainerKillHandler(service));
 
         // Agents
         router.get(ApiRoutes.AGENTS).handler(new AgentListHandler(service));
