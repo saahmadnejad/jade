@@ -10,6 +10,7 @@ import io.donbee.jade.rest.handler.AgentListHandler;
 import io.donbee.jade.rest.handler.ContainerInfoHandler;
 import io.donbee.jade.rest.handler.ContainerListHandler;
 import io.donbee.jade.rest.handler.HealthHandler;
+import io.donbee.jade.rest.handler.JsonFailureHandler;
 import io.donbee.jade.rest.handler.PlatformInfoHandler;
 import io.donbee.jade.rest.handler.ShutdownHandler;
 import io.donbee.jade.rest.handler.VersionHandler;
@@ -18,7 +19,6 @@ import io.donbee.jade.rest.service.PlatformService;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.CorsHandler;
@@ -45,50 +45,11 @@ public class RestAPIVerticle extends AbstractVerticle {
 
     @Override
     public void start(Promise<Void> startPromise) {
-        AgentContainer impl = extractImpl();
-        AgentManager agentManager = extractAgentManager(impl);
-        PlatformService service = new JadesPlatformService(impl, agentManager);
+        PlatformService service = buildService();
 
         Router router = Router.router(vertx);
-        router.route().handler(CorsHandler.create().addOrigin("*"));
-        router.route().handler(BodyHandler.create());
-        router.route().failureHandler(routingContext -> {
-            int statusCode = routingContext.statusCode();
-            if (statusCode < 400) {
-                statusCode = 500;
-            }
-            String message = routingContext.failure() != null
-                ? routingContext.failure().getMessage()
-                : "Unexpected error";
-            routingContext.response()
-                .setStatusCode(statusCode)
-                .putHeader("Content-Type", "application/json")
-                .end(new JsonObject().put("error", message).put("code", statusCode).encode());
-        });
-
-        // Health
-        router.get("/api/health").handler(new HealthHandler());
-
-        // Version
-        router.get("/api/version").handler(new VersionHandler());
-
-        // Platform info
-        router.get("/api/platform").handler(new PlatformInfoHandler(service));
-
-        // Platform shutdown
-        router.post("/api/platform/shutdown").handler(new ShutdownHandler(service));
-
-        // Containers
-        router.get("/api/containers").handler(new ContainerListHandler(service));
-        router.get("/api/containers/:name").handler(new ContainerInfoHandler(service));
-
-        // Agents
-        router.get("/api/agents").handler(new AgentListHandler(service));
-        router.get("/api/agents/:name").handler(new AgentInfoHandler(service));
-        router.post("/api/agents").handler(new AgentDeployHandler(service));
-        router.delete("/api/agents/:name").handler(new AgentActionHandler(service, AgentActionHandler.Action.KILL));
-        router.post("/api/agents/:name/suspend").handler(new AgentActionHandler(service, AgentActionHandler.Action.SUSPEND));
-        router.post("/api/agents/:name/resume").handler(new AgentActionHandler(service, AgentActionHandler.Action.RESUME));
+        configureMiddleware(router);
+        configureRoutes(router, service);
 
         vertx.createHttpServer()
             .requestHandler(router)
@@ -100,6 +61,55 @@ public class RestAPIVerticle extends AbstractVerticle {
                     startPromise.fail(http.cause());
                 }
             });
+    }
+
+    /**
+     * Build the PlatformService by extracting internal JADE objects
+     * from the wrapper container.
+     */
+    private PlatformService buildService() {
+        AgentContainer impl = extractImpl();
+        AgentManager agentManager = extractAgentManager(impl);
+        return new JadesPlatformService(impl, agentManager);
+    }
+
+    /**
+     * Configure middleware: CORS, body parsing, and error handling.
+     */
+    private void configureMiddleware(Router router) {
+        router.route().handler(CorsHandler.create().addOrigin("*"));
+        router.route().handler(BodyHandler.create());
+        router.route().failureHandler(new JsonFailureHandler());
+    }
+
+    /**
+     * Configure all REST API routes, mapping paths to handlers.
+     */
+    private void configureRoutes(Router router, PlatformService service) {
+        // Health
+        router.get(ApiRoutes.HEALTH).handler(new HealthHandler());
+
+        // Version
+        router.get(ApiRoutes.VERSION).handler(new VersionHandler());
+
+        // Platform
+        router.get(ApiRoutes.PLATFORM).handler(new PlatformInfoHandler(service));
+        router.post(ApiRoutes.PLATFORM_SHUTDOWN).handler(new ShutdownHandler(service));
+
+        // Containers
+        router.get(ApiRoutes.CONTAINERS).handler(new ContainerListHandler(service));
+        router.get(ApiRoutes.CONTAINER_BY_NAME).handler(new ContainerInfoHandler(service));
+
+        // Agents
+        router.get(ApiRoutes.AGENTS).handler(new AgentListHandler(service));
+        router.get(ApiRoutes.AGENT_BY_NAME).handler(new AgentInfoHandler(service));
+        router.post(ApiRoutes.AGENTS).handler(new AgentDeployHandler(service));
+        router.delete(ApiRoutes.AGENT_BY_NAME).handler(
+            new AgentActionHandler(service, AgentActionHandler.Action.KILL));
+        router.post(ApiRoutes.AGENT_SUSPEND).handler(
+            new AgentActionHandler(service, AgentActionHandler.Action.SUSPEND));
+        router.post(ApiRoutes.AGENT_RESUME).handler(
+            new AgentActionHandler(service, AgentActionHandler.Action.RESUME));
     }
 
     private AgentContainer extractImpl() {
