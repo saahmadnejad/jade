@@ -22,6 +22,10 @@ public final class ApiRoutes {
     // Containers
     public static final String CONTAINERS = "/api/containers";
     public static final String CONTAINER_BY_NAME = "/api/containers/:name";
+    public static final String CONTAINER_BY_NAME_SAVE = "/api/containers/:name/save";
+    public static final String CONTAINER_BY_NAME_LOAD = "/api/containers/:name/load";
+    public static final String CONTAINER_MTPS = "/api/containers/:name/mtps";
+    public static final String CONTAINER_MTP_BY_ADDRESS = "/api/containers/:name/mtps/:address";
 
     // Agents
     public static final String AGENTS = "/api/agents";

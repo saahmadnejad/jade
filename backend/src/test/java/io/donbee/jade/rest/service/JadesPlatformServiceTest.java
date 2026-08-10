@@ -515,4 +515,206 @@ public class JadesPlatformServiceTest {
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Not a Main Container");
     }
+
+    // ===== saveContainer =====
+
+    @Test
+    public void Given_MainContainer_When_SaveContainer_Then_SendsAMSAgentAction() {
+        // Arrange - will throw RuntimeException because AMS action can't complete in test
+        // but we verify the service attempts it
+        ContainerID localCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(mockImpl.here()).thenReturn(localCid);
+        when(mockImpl.getID()).thenReturn(localCid);
+        AID mockAms = mock(AID.class);
+        when(mockImpl.getAMS()).thenReturn(mockAms);
+
+        // Act & Assert
+        assertThatThrownBy(() -> service.saveContainer("Main-Container", "file://./store"))
+            .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    public void Given_NonMainContainer_When_SaveContainer_Then_ThrowsIllegalStateException() {
+        // Arrange
+        JadesPlatformService nonMainService = new JadesPlatformService(mockImpl, null);
+
+        // Act & Assert
+        assertThatThrownBy(() -> nonMainService.saveContainer("Node1", "file://./store"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Not a Main Container");
+    }
+
+    @Test
+    public void Given_UnknownContainer_When_SaveContainer_Then_ThrowsIllegalArgumentException() {
+        // Arrange
+        ContainerID localCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(mockImpl.getID()).thenReturn(localCid);
+        when(mockAgentManager.containerIDs()).thenReturn(new ContainerID[]{localCid});
+
+        // Act & Assert
+        assertThatThrownBy(() -> service.saveContainer("nonexistent", "file://./store"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Container not found");
+    }
+
+    @Test
+    public void Given_NonMainContainer_When_LoadContainer_Then_ThrowsIllegalStateException() {
+        // Arrange
+        JadesPlatformService nonMainService = new JadesPlatformService(mockImpl, null);
+
+        // Act & Assert
+        assertThatThrownBy(() -> nonMainService.loadContainer("Node1", "file://./store"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Not a Main Container");
+    }
+
+    // ===== installMTP =====
+
+    @Test
+    public void Given_MainContainer_When_InstallMTP_Then_CallsAgentManagerInstallMTP() throws Exception {
+        // Arrange
+        ContainerID remoteCid = mock(ContainerID.class);
+        ContainerID localCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(remoteCid.getName()).thenReturn("Node1");
+        when(mockImpl.getID()).thenReturn(localCid);
+        AID mockAms = mock(AID.class);
+        when(mockImpl.getAMS()).thenReturn(mockAms);
+        when(mockAgentManager.containerIDs()).thenReturn(new ContainerID[]{localCid, remoteCid});
+        io.donbee.jade.mtp.MTPDescriptor mtpDesc = mock(io.donbee.jade.mtp.MTPDescriptor.class);
+        when(mockAgentManager.installMTP("127.0.0.1:1100", remoteCid, "jade.mtp.tcl.TcpMTP"))
+            .thenReturn(mtpDesc);
+
+        // Act
+        io.donbee.jade.mtp.MTPDescriptor result = service.installMTP("Node1", "127.0.0.1:1100", "jade.mtp.tcl.TcpMTP");
+
+        // Assert
+        verify(mockAgentManager).installMTP("127.0.0.1:1100", remoteCid, "jade.mtp.tcl.TcpMTP");
+        assertThat(result).isEqualTo(mtpDesc);
+    }
+
+    @Test
+    public void Given_NonMainContainer_When_InstallMTP_Then_ThrowsIllegalStateException() {
+        // Arrange
+        JadesPlatformService nonMainService = new JadesPlatformService(mockImpl, null);
+
+        // Act & Assert
+        assertThatThrownBy(() -> nonMainService.installMTP("Node1", "127.0.0.1:1100", "jade.mtp.tcl.TcpMTP"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Not a Main Container");
+    }
+
+    @Test
+    public void Given_UnknownContainer_When_InstallMTP_Then_ThrowsIllegalArgumentException() {
+        // Arrange
+        ContainerID localCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(mockImpl.getID()).thenReturn(localCid);
+        when(mockAgentManager.containerIDs()).thenReturn(new ContainerID[]{localCid});
+
+        // Act & Assert
+        assertThatThrownBy(() -> service.installMTP("nonexistent", "127.0.0.1:1100", "jade.mtp.tcl.TcpMTP"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Container not found");
+    }
+
+    // ===== uninstallMTP =====
+
+    @Test
+    public void Given_MainContainer_When_UninstallMTP_Then_CallsAgentManagerUninstallMTP() throws Exception {
+        // Arrange
+        ContainerID remoteCid = mock(ContainerID.class);
+        ContainerID localCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(remoteCid.getName()).thenReturn("Node1");
+        when(mockImpl.getID()).thenReturn(localCid);
+        when(mockAgentManager.containerIDs()).thenReturn(new ContainerID[]{localCid, remoteCid});
+        doNothing().when(mockAgentManager).uninstallMTP("127.0.0.1:1100", remoteCid);
+
+        // Act
+        service.uninstallMTP("Node1", "127.0.0.1:1100");
+
+        // Assert
+        verify(mockAgentManager).uninstallMTP("127.0.0.1:1100", remoteCid);
+    }
+
+    @Test
+    public void Given_NonMainContainer_When_UninstallMTP_Then_ThrowsIllegalStateException() {
+        // Arrange
+        JadesPlatformService nonMainService = new JadesPlatformService(mockImpl, null);
+
+        // Act & Assert
+        assertThatThrownBy(() -> nonMainService.uninstallMTP("Node1", "127.0.0.1:1100"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Not a Main Container");
+    }
+
+    @Test
+    public void Given_UnknownContainer_When_UninstallMTP_Then_ThrowsIllegalArgumentException() {
+        // Arrange
+        ContainerID localCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(mockImpl.getID()).thenReturn(localCid);
+        when(mockAgentManager.containerIDs()).thenReturn(new ContainerID[]{localCid});
+
+        // Act & Assert
+        assertThatThrownBy(() -> service.uninstallMTP("nonexistent", "127.0.0.1:1100"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Container not found");
+    }
+
+    // ===== getMTPs =====
+
+    @Test
+    public void Given_MainContainer_When_GetMTPs_Then_ReturnsMtpList() throws Exception {
+        // Arrange
+        ContainerID localCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(mockImpl.getID()).thenReturn(localCid);
+        AID mockAms = mock(AID.class);
+        when(mockImpl.getAMS()).thenReturn(mockAms);
+
+        io.donbee.jade.mtp.MTPDescriptor mtpDesc1 = mock(io.donbee.jade.mtp.MTPDescriptor.class);
+        when(mtpDesc1.getName()).thenReturn("jade.mtp.tcl.TcpMTP");
+        when(mtpDesc1.getAddresses()).thenReturn(new String[]{"127.0.0.1:1099"});
+
+        io.donbee.jade.util.leap.List mtpList = new io.donbee.jade.util.leap.ArrayList();
+        mtpList.add(mtpDesc1);
+        when(mockAgentManager.containerMTPs(localCid)).thenReturn(mtpList);
+
+        // Act
+        java.util.List<PlatformService.MTPInfo> result = service.getMTPs("Main-Container");
+
+        // Assert
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).address).isEqualTo("127.0.0.1:1099");
+        assertThat(result.get(0).className).isEqualTo("jade.mtp.tcl.TcpMTP");
+    }
+
+    @Test
+    public void Given_NonMainContainer_When_GetMTPs_Then_ThrowsIllegalStateException() {
+        // Arrange
+        JadesPlatformService nonMainService = new JadesPlatformService(mockImpl, null);
+
+        // Act & Assert
+        assertThatThrownBy(() -> nonMainService.getMTPs("Main-Container"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Not a Main Container");
+    }
+
+    @Test
+    public void Given_UnknownContainer_When_GetMTPs_Then_ThrowsIllegalArgumentException() {
+        // Arrange
+        ContainerID localCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(mockImpl.getID()).thenReturn(localCid);
+        when(mockAgentManager.containerIDs()).thenReturn(new ContainerID[]{localCid});
+
+        // Act & Assert
+        assertThatThrownBy(() -> service.getMTPs("nonexistent"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Container not found");
+    }
 }

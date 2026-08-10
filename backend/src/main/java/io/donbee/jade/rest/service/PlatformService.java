@@ -3,6 +3,8 @@ package io.donbee.jade.rest.service;
 
 import java.util.List;
 
+import io.donbee.jade.mtp.MTPDescriptor;
+
 /**
  * Service interface for platform data access.
  * Follows DIP — high-level handlers depend on this abstraction.
@@ -30,6 +32,16 @@ public interface PlatformService {
     void shutdownPlatform();
 
     void killContainer(String containerName);
+
+    void saveContainer(String containerName, String repository);
+
+    void loadContainer(String containerName, String repository);
+
+    MTPDescriptor installMTP(String containerName, String address, String className);
+
+    void uninstallMTP(String containerName, String address);
+
+    java.util.List<MTPInfo> getMTPs(String containerName);
 
     AgentInfo deployAgent(String agentName, String className, Object[] args);
 
@@ -76,6 +88,16 @@ public interface PlatformService {
             this.address = address;
             this.port = port;
             this.isMain = isMain;
+        }
+    }
+
+    class MTPInfo {
+        public final String address;
+        public final String className;
+
+        public MTPInfo(String address, String className) {
+            this.address = address;
+            this.className = className;
         }
     }
 }

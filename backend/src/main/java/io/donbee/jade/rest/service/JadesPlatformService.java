@@ -6,6 +6,10 @@ import io.donbee.jade.core.AgentManager;
 import io.donbee.jade.core.ContainerID;
 import io.donbee.jade.core.NameClashException;
 import io.donbee.jade.domain.FIPAAgentManagement.AMSAgentDescription;
+import io.donbee.jade.domain.FIPANames;
+import io.donbee.jade.content.onto.basic.Action;
+import io.donbee.jade.lang.acl.ACLMessage;
+import io.donbee.jade.mtp.MTPDescriptor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -234,6 +238,104 @@ public class JadesPlatformService implements PlatformService {
             agentManager.killContainer(targetCid, null, null);
         } catch (Exception e) {
             throw new RuntimeException("Failed to kill container: " + e.getMessage(), e);
+        }
+    }
+
+    private ContainerID findContainerByName(String containerName) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        ContainerID localCid = impl.getID();
+        if (containerName.equals(localCid.getName())) {
+            return localCid;
+        }
+        for (ContainerID cid : agentManager.containerIDs()) {
+            if (cid.getName().equals(containerName)) {
+                return cid;
+            }
+        }
+        throw new IllegalArgumentException("Container not found: " + containerName);
+    }
+
+    private void sendAMSAction(io.donbee.jade.content.Concept action, String actionLabel) {
+        try {
+            io.donbee.jade.content.ContentManager cm = new io.donbee.jade.content.ContentManager();
+            cm.registerOntology(io.donbee.jade.domain.persistence.PersistenceOntology.getInstance());
+            io.donbee.jade.content.lang.sl.SLCodec codec = new io.donbee.jade.content.lang.sl.SLCodec();
+            cm.registerLanguage(codec);
+
+            Action a = new Action();
+            a.setActor(impl.getAMS());
+            a.setAction(action);
+
+            ACLMessage requestMsg = new ACLMessage(ACLMessage.REQUEST);
+            requestMsg.setSender(impl.getAMS());
+            requestMsg.addReceiver(impl.getAMS());
+            requestMsg.setLanguage(FIPANames.ContentLanguage.FIPA_SL0);
+            requestMsg.setOntology(codec.getName());
+            requestMsg.setReplyByDate(new java.util.Date(System.currentTimeMillis() + 10000L));
+            cm.fillContent(requestMsg, a);
+
+            impl.postMessageToLocalAgent(requestMsg, impl.getAMS());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send " + actionLabel + " action: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void saveContainer(String containerName, String repository) {
+        ContainerID cid = findContainerByName(containerName);
+        io.donbee.jade.domain.persistence.SaveContainer saveAct = new io.donbee.jade.domain.persistence.SaveContainer();
+        saveAct.setContainer(cid);
+        saveAct.setRepository(repository);
+        sendAMSAction(saveAct, "SaveContainer");
+    }
+
+    @Override
+    public void loadContainer(String containerName, String repository) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        io.donbee.jade.domain.persistence.LoadContainer loadAct = new io.donbee.jade.domain.persistence.LoadContainer();
+        loadAct.setContainer(new ContainerID(containerName, null));
+        loadAct.setRepository(repository);
+        sendAMSAction(loadAct, "LoadContainer");
+    }
+
+    @Override
+    public MTPDescriptor installMTP(String containerName, String address, String className) {
+        ContainerID cid = findContainerByName(containerName);
+        try {
+            return agentManager.installMTP(address, cid, className);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to install MTP: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void uninstallMTP(String containerName, String address) {
+        ContainerID cid = findContainerByName(containerName);
+        try {
+            agentManager.uninstallMTP(address, cid);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to uninstall MTP: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public java.util.List<MTPInfo> getMTPs(String containerName) {
+        ContainerID cid = findContainerByName(containerName);
+        try {
+            java.util.List<MTPInfo> result = new java.util.ArrayList<>();
+            io.donbee.jade.util.leap.List mtps = agentManager.containerMTPs(cid);
+            for (int i = 0; i < mtps.size(); i++) {
+                MTPDescriptor dsc = (MTPDescriptor) mtps.get(i);
+                String address = dsc.getAddresses().length > 0 ? dsc.getAddresses()[0] : "";
+                result.add(new MTPInfo(address, dsc.getName()));
+            }
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to list MTPs: " + e.getMessage(), e);
         }
     }
 

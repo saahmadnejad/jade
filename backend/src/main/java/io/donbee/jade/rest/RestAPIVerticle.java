@@ -10,6 +10,11 @@ import io.donbee.jade.rest.handler.AgentListHandler;
 import io.donbee.jade.rest.handler.ContainerInfoHandler;
 import io.donbee.jade.rest.handler.ContainerKillHandler;
 import io.donbee.jade.rest.handler.ContainerListHandler;
+import io.donbee.jade.rest.handler.ContainerLoadHandler;
+import io.donbee.jade.rest.handler.ContainerMTPInstallHandler;
+import io.donbee.jade.rest.handler.ContainerMTPListHandler;
+import io.donbee.jade.rest.handler.ContainerMTPUNinstallHandler;
+import io.donbee.jade.rest.handler.ContainerSaveHandler;
 import io.donbee.jade.rest.handler.HealthHandler;
 import io.donbee.jade.rest.handler.JsonFailureHandler;
 import io.donbee.jade.rest.handler.PlatformInfoHandler;
@@ -101,6 +106,11 @@ public class RestAPIVerticle extends AbstractVerticle {
         router.get(ApiRoutes.CONTAINERS).handler(new ContainerListHandler(service));
         router.get(ApiRoutes.CONTAINER_BY_NAME).handler(new ContainerInfoHandler(service));
         router.delete(ApiRoutes.CONTAINER_BY_NAME).handler(new ContainerKillHandler(service));
+        router.post(ApiRoutes.CONTAINER_BY_NAME_SAVE).handler(new ContainerSaveHandler(service));
+        router.post(ApiRoutes.CONTAINER_BY_NAME_LOAD).handler(new ContainerLoadHandler(service));
+        router.post(ApiRoutes.CONTAINER_MTPS).handler(new ContainerMTPInstallHandler(service));
+        router.get(ApiRoutes.CONTAINER_MTPS).handler(new ContainerMTPListHandler(service));
+        router.delete(ApiRoutes.CONTAINER_MTP_BY_ADDRESS).handler(new ContainerMTPUNinstallHandler(service));
 
         // Agents
         router.get(ApiRoutes.AGENTS).handler(new AgentListHandler(service));
