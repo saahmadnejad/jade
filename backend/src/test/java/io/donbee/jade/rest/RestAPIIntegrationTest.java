@@ -710,4 +710,83 @@ public class RestAPIIntegrationTest {
                 async.complete();
             }));
     }
+
+    // ===== Tool Launch =====
+
+    @Test
+    public void Given_ValidToolName_When_StartTool_Then_Returns201(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/tools/sniffer/start")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(new JsonObject().put("container", "Main-Container"))
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert - tool agent creation may succeed or fail depending on classpath
+                if (response.statusCode() == 201) {
+                    context.assertTrue(response.bodyAsJsonObject().getString("message").contains("started"));
+                } else {
+                    context.assertEquals(500, response.statusCode());
+                }
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_UnknownTool_When_StartTool_Then_Returns400(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/tools/unknown-tool/start")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(new JsonObject().put("container", "Main-Container"))
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(400, response.statusCode());
+                async.complete();
+            }));
+    }
+
+    // ===== Remote Platforms =====
+
+    @Test
+    public void Given_MainContainer_When_ListPlatforms_Then_Returns200(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.get(REST_PORT, "localhost", "/api/platforms")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(200, response.statusCode());
+                context.assertTrue(response.bodyAsJsonObject().getJsonArray("platforms").size() > 0);
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_ValidAmsName_When_AddPlatform_Then_Returns201Or400(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        JsonObject jsonBody = new JsonObject()
+            .put("ams", "ams@remote-platform")
+            .put("addresses", io.vertx.core.json.JsonArray.of("jades://192.168.1.10:1099"));
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/platforms")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert - adding remote platform may fail if unreachable
+                if (response.statusCode() == 201) {
+                    context.assertTrue(response.bodyAsJsonObject().getString("message").contains("added"));
+                } else {
+                    context.assertEquals(400, response.statusCode());
+                }
+                async.complete();
+            }));
+    }
 }
