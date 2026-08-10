@@ -61,16 +61,35 @@ Returns details for a specific container by name.
 
 The following endpoints are fully specified in [rma-api.md](rma-api.md):
 
-| Endpoint | Status |
-|----------|--------|
-| GET /api/platform | Specified & Implemented |
-| POST /api/platform/shutdown | Specified & Implemented |
-| GET /api/containers | Specified & Implemented |
-| GET /api/agents | Specified & Implemented |
-| POST /api/agents | Specified & Implemented *(see implementation notes)* |
-| DELETE /api/agents/:name | Specified & Implemented |
-| POST /api/agents/:name/suspend | Specified & Implemented |
-| POST /api/agents/:name/resume | Specified & Implemented |
+| Method | Endpoint | Status |
+|----------|----------|--------|
+| GET | `/api/platform` | Specified & Implemented |
+| POST | `/api/platform/shutdown` | Specified & Implemented |
+| GET | `/api/containers` | Specified & Implemented |
+| GET | `/api/containers/:name` | Specified & Implemented |
+| DELETE | `/api/containers/:name` | Specified & Implemented |
+| POST | `/api/containers/:name/save` | Specified & Implemented |
+| POST | `/api/containers/:name/load` | Specified & Implemented |
+| GET | `/api/containers/:name/mtps` | Specified & Implemented |
+| POST | `/api/containers/:name/mtps` | Specified & Implemented |
+| DELETE | `/api/containers/:name/mtps/:address` | Specified & Implemented |
+| GET | `/api/agents` | Specified & Implemented |
+| GET | `/api/agents/:name` | Specified & Implemented |
+| POST | `/api/agents` | Specified & Implemented *(see implementation notes)* |
+| DELETE | `/api/agents/:name` | Specified & Implemented |
+| POST | `/api/agents/:name/suspend` | Specified & Implemented |
+| POST | `/api/agents/:name/resume` | Specified & Implemented |
+| POST | `/api/agents/:name/freeze` | Specified & Implemented |
+| POST | `/api/agents/:name/thaw` | Specified & Implemented |
+| POST | `/api/agents/clone` | Specified & Implemented |
+| POST | `/api/agents/:name/move` | Specified & Implemented |
+| POST | `/api/agents/:name/save` | Specified & Implemented |
+| POST | `/api/agents/load` | Specified & Implemented |
+| PATCH | `/api/agents/:name` | Specified & Implemented |
+| GET | `/api/platforms` | Specified & Implemented |
+| POST | `/api/platforms` | Specified & Implemented |
+| GET | `/api/platforms/:name/agents` | Specified & Implemented |
+| POST | `/api/tools/:tool/start` | Specified & Implemented |
 
 **Implementation note for POST /api/agents:** The implemented request body uses `class` (not `className`) and `args` (not `arguments`), both optional `container`/`owner` fields are omitted for simplicity.
 
