@@ -160,3 +160,4 @@ void Given_..._When_..._Then_() {
 5. All endpoints return JSON with `Content-Type: application/json`
 6. 2XX = success, 4XX = client error, 5XX = server error
 7. Each endpoint documented with input/output JSON schema in `docs/api/`
+8. **Docs consistency rule**: Before every commit, verify all API docs are consistent and follow a single goal. Update doc specs first, then verify docs match the code. No commit is complete without this verification step.
