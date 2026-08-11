@@ -525,10 +525,8 @@ These endpoints start the respective GUI tool agents. The actual GUI rendering i
 | POST | `/api/platforms/{name}/refresh` | Refresh AP description |
 | DELETE | `/api/platforms/{name}` | Remove remote platform |
 | GET | `/api/platforms/{name}/agents` | Get remote platform agents |
-| POST | `/api/agents/register-remote` | Register remote agent with local AMS |
 | POST | `/api/tools/sniffer/start` | Start Sniffer tool |
 | POST | `/api/tools/dummy/start` | Start Dummy Agent |
 | POST | `/api/tools/logger/start` | Start Logger Agent |
 | POST | `/api/tools/introspector/start` | Start Introspector |
 | POST | `/api/tools/df-gui/start` | Start DF GUI |
-| POST | `/api/platform/shutdown` | Shutdown platform |
