@@ -6,9 +6,9 @@ A fork of JADE (Java Agent DEvelopment Framework) running on Java 21 with virtua
 
 ```
 jade/
-├── backend/                    # JADE framework (Java 21, 1015 source files)
+├── backend/                    # JADE framework (Java 21, 1007 source files)
 │   ├── pom.xml                 # Maven build (shade plugin -> uber jar)
-│   └── src/main/java/ir/donbee/jade/
+│   └── src/main/java/io/donbee/jade/
 ├── frontend/                   # React + Vite + TypeScript UI
 │   ├── pnpm-workspace.yaml     # pnpm monorepo config
 │   ├── package.json            # Root workspace package
@@ -16,7 +16,7 @@ jade/
 │   └── packages/shared/        # Shared TS library (axios API client)
 ├── docker/                     # Docker build files
 │   ├── Dockerfile.backend      # Multi-stage: Maven -> JRE 21 Alpine
-│   ├── Dockerfile.frontend     # Multi-stage: Node -> pnpm -> Vite -> nginx
+│   ├── Dockerfile.frontend     # Multi-stage: Node -> pnpm -> Vite build -> nginx
 │   └── nginx.conf              # nginx config (SPA fallback + /api proxy)
 ├── docker-compose.yml          # Root compose file
 └── .dockerignore / .gitignore
@@ -33,13 +33,14 @@ podman compose ps
 
 # Frontend: http://localhost:3000
 # Backend (JADE RMI): localhost:10990
+# Backend (REST API): http://localhost:8080/api
 ```
 
 ### Local Development
 
 **Backend (JADE):**
 ```bash
-cd backend && mvn compile exec:java -Dexec.mainClass="ir.donbee.jade.Boot"
+cd backend && mvn compile exec:java -Dexec.mainClass="io.donbee.jade.Boot"
 ```
 
 **Frontend (React):**
@@ -52,14 +53,13 @@ cd frontend && pnpm install && pnpm dev
 
 ### Backend (`backend/`)
 
-The backend is a fork of JADE under the `ir.donbee.jade` package. Key components:
+The backend is a fork of JADE under the `io.donbee.jade` package. Key components:
 
-- **`ir.donbee.jade.Boot`** — Main entry point. Parses command-line args and starts the JADE runtime.
-- **`ir.donbee.jade.core.Runtime`** — Singleton managing JADE container lifecycle.
-- **`ir.donbee.jade.core.Profile` / `ProfileImpl`** — Configuration properties for platform startup.
+- **`io.donbee.jade.Boot`** — Main entry point. Parses command-line args and starts the JADE runtime.
+- **`io.donbee.jade.core.Runtime`** — Singleton managing JADE container lifecycle.
+- **`io.donbee.jade.core.Profile` / `ProfileImpl`** — Configuration properties for platform startup.
 - **Virtual threads** — All threads use `Thread.ofVirtual()` (Java 21+).
-
-JADE exposes its API via RMI (port 1099) using the LEAP/JICP protocol. No REST/HTTP endpoints exist yet — this is a planned enhancement.
+- **REST API** — Built-in Vert.x REST server on port 8080. 38 endpoints covering platform info, containers, agents, tools, and remote platform management. Configurable via `-rest-port <n>`.
 
 ### Frontend (`frontend/`)
 
