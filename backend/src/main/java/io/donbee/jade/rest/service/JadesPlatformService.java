@@ -491,6 +491,32 @@ public class JadesPlatformService implements PlatformService {
     }
 
     @Override
+    public void registerRemoteAgent(String aidName, String[] addresses) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        try {
+            io.donbee.jade.domain.FIPAAgentManagement.Register registerAct =
+                new io.donbee.jade.domain.FIPAAgentManagement.Register();
+            io.donbee.jade.domain.FIPAAgentManagement.AMSAgentDescription amsDesc =
+                new io.donbee.jade.domain.FIPAAgentManagement.AMSAgentDescription();
+            AID aid = new AID();
+            aid.setName(aidName);
+            if (addresses != null) {
+                for (String addr : addresses) {
+                    aid.addAddresses(addr);
+                }
+            }
+            amsDesc.setName(aid);
+            registerAct.setDescription(amsDesc);
+            sendAMSAction(registerAct, "Register",
+                io.donbee.jade.domain.FIPAAgentManagement.FIPAManagementOntology.getInstance());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to register remote agent: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     public java.util.List<RemotePlatformInfo> getRemotePlatforms() {
         if (agentManager == null) {
             throw new IllegalStateException("Not a Main Container");

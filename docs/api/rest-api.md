@@ -86,8 +86,13 @@ The following endpoints are fully specified in [rma-api.md](rma-api.md):
 | POST | `/api/agents/:name/save` | Specified & Implemented |
 | POST | `/api/agents/load` | Specified & Implemented |
 | PATCH | `/api/agents/:name` | Specified & Implemented |
+| POST | `/api/agents/register-remote` | Specified & Implemented |
 | GET | `/api/platforms` | Specified & Implemented |
 | POST | `/api/platforms` | Specified & Implemented |
+| POST | `/api/platforms/fetch` | Specified & Implemented |
+| DELETE | `/api/platforms/:name` | Specified & Implemented |
+| GET | `/api/platforms/:name/description` | Specified & Implemented |
+| POST | `/api/platforms/:name/refresh` | Specified & Implemented |
 | GET | `/api/platforms/:name/agents` | Specified & Implemented |
 | POST | `/api/tools/:tool/start` | Specified & Implemented |
 

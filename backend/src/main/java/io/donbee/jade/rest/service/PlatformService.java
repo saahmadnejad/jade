@@ -57,6 +57,8 @@ public interface PlatformService {
 
     void changeAgentOwnership(String agentName, String newOwner);
 
+    void registerRemoteAgent(String aidName, String[] addresses);
+
     AgentInfo deployAgent(String agentName, String className, Object[] args);
 
     java.util.List<RemotePlatformInfo> getRemotePlatforms();
