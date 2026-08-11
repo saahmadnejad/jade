@@ -517,7 +517,7 @@ These endpoints start the respective GUI tool agents. The actual GUI rendering i
 | POST | `/api/agents/{name}/save` | Save agent state |
 | POST | `/api/agents/load` | Load agent |
 | PATCH | `/api/agents/{name}` | Modify agent (ownership) |
-| POST | `/api/agents/{name}/ownership` | Change agent ownership |
+| POST | `/api/agents/register-remote` | Register remote agent with local AMS |
 | GET | `/api/platforms` | List remote platforms |
 | POST | `/api/platforms` | Add remote platform via AMS AID |
 | POST | `/api/platforms/fetch` | Add remote platform via URL |

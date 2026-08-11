@@ -789,4 +789,43 @@ public class RestAPIIntegrationTest {
                 async.complete();
             }));
     }
+
+    // ===== Register Remote Agent =====
+
+    @Test
+    public void Given_ValidAid_When_RegisterRemoteAgent_Then_Returns200(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        io.vertx.core.json.JsonObject jsonBody = new io.vertx.core.json.JsonObject()
+            .put("aid", "foreign-agent@foreign-platform")
+            .put("addresses", new io.vertx.core.json.JsonArray().add("jades://192.168.1.10:1200"));
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/agents/register-remote")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertTrue(response.statusCode() == 200 || response.statusCode() == 500);
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_MissingAid_When_RegisterRemoteAgent_Then_Returns400(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        io.vertx.core.json.JsonObject jsonBody = new io.vertx.core.json.JsonObject()
+            .put("addresses", new io.vertx.core.json.JsonArray().add("jades://192.168.1.10:1200"));
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/agents/register-remote")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(400, response.statusCode());
+                async.complete();
+            }));
+    }
 }

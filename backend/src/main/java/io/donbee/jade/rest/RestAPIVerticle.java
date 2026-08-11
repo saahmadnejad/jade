@@ -11,6 +11,7 @@ import io.donbee.jade.rest.handler.AgentInfoHandler;
 import io.donbee.jade.rest.handler.AgentListHandler;
 import io.donbee.jade.rest.handler.AgentMoveHandler;
 import io.donbee.jade.rest.handler.AgentOwnershipHandler;
+import io.donbee.jade.rest.handler.AgentRegisterRemoteHandler;
 import io.donbee.jade.rest.handler.AgentSaveLoadHandler;
 import io.donbee.jade.rest.handler.ContainerInfoHandler;
 import io.donbee.jade.rest.handler.ContainerKillHandler;
@@ -143,6 +144,7 @@ public class RestAPIVerticle extends AbstractVerticle {
         router.post(ApiRoutes.AGENT_SAVE).handler(new AgentSaveLoadHandler(service, true));
         router.post(ApiRoutes.AGENT_LOAD).handler(new AgentSaveLoadHandler(service, false));
         router.patch(ApiRoutes.AGENT_BY_NAME).handler(new AgentOwnershipHandler(service));
+        router.post(ApiRoutes.AGENT_REGISTER_REMOTE).handler(new AgentRegisterRemoteHandler(service));
 
         // Tools
         router.post(ApiRoutes.TOOLS_START).handler(new ToolLaunchHandler(service));
