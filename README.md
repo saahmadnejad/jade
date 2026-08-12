@@ -12,8 +12,8 @@ jade/
 ├── frontend/                   # React + Vite + TypeScript UI
 │   ├── pnpm-workspace.yaml     # pnpm monorepo config
 │   ├── package.json            # Root workspace package
-│   ├── apps/frontend/          # React app (Vite dev server on :3000)
-│   └── packages/shared/        # Shared TS library (axios API client)
+│   ├── apps/webapp/            # React app (Vite dev server on :3000)
+│   └── packages/shared/        # Shared TS library (API client for webapp + mobile)
 ├── docker/                     # Docker build files
 │   ├── Dockerfile.backend      # Multi-stage: Maven -> JRE 21 Alpine
 │   ├── Dockerfile.frontend     # Multi-stage: Node -> pnpm -> Vite build -> nginx
@@ -45,7 +45,7 @@ cd backend && mvn compile exec:java -Dexec.mainClass="io.donbee.jade.Boot"
 
 **Frontend (React):**
 ```bash
-cd frontend && pnpm install && pnpm dev
+cd frontend && pnpm install && pnpm --filter webapp dev
 # Vite dev server: http://localhost:3000
 ```
 
@@ -65,14 +65,14 @@ The backend is a fork of JADE under the `io.donbee.jade` package. Key components
 
 A pnpm monorepo with two packages:
 
-- **`apps/frontend/`** — React 18 + Vite + TypeScript app. Uses Vitest + React Testing Library for tests.
-- **`packages/shared/`** — Shared TypeScript library with `HttpClient` interface (DIP), typed API clients per domain (PlatformAPI, ContainerAPI, AgentAPI, ToolAPI, RemotePlatformAPI), and TypeScript types for all API responses.
+- **`apps/webapp/`** — React 18 + Vite + TypeScript webapp. Uses Vitest + React Testing Library for tests.
+- **`packages/shared/`** — Shared TypeScript library with `HttpClient` interface (DIP), typed API clients per domain (PlatformAPI, ContainerAPI, AgentAPI, ToolAPI, RemotePlatformAPI), and TypeScript types for all API responses. Shared between webapp and mobile apps.
 
 ### Docker
 
 - **Backend**: Multi-stage build (Maven → JRE 21 Alpine). Runs `java -jar app.jar`.
 - **Frontend**: Multi-stage build (Node → pnpm install → Vite build → nginx Alpine).
-- **docker-compose.yml** — Both services on a single network; frontend depends on backend.
+- **docker-compose.yml** — Both services on a single network; webapp depends on backend.
 
 ## Testing
 
@@ -85,5 +85,5 @@ cd backend && JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 mvn test
 ```bash
 cd frontend
 pnpm --filter shared test:run   # API client unit tests
-pnpm --filter frontend test     # App integration tests
+pnpm --filter webapp test     # App integration tests
 ```
