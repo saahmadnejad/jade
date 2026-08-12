@@ -1,23 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react';
+import { health, type HealthStatus } from 'shared';
 
 function App() {
-  const [status, setStatus] = useState<string>('loading')
+  const [status, setStatus] = useState<string>('loading');
 
   useEffect(() => {
-    fetchBackendHealth()
-  }, [])
+    fetchBackendHealth();
+  }, []);
 
   async function fetchBackendHealth() {
     try {
-      const res = await fetch('/api/health')
-      if (res.ok) {
-        const data = await res.json()
-        setStatus(`connected: ${JSON.stringify(data)}`)
-      } else {
-        setStatus('backend unreachable')
-      }
+      const data: HealthStatus = await health.check();
+      setStatus(`connected: ${JSON.stringify(data)}`);
     } catch {
-      setStatus('backend unreachable')
+      setStatus('backend unreachable');
     }
   }
 
@@ -26,7 +22,7 @@ function App() {
       <h1 style={{ color: '#2563eb' }}>Jade UI</h1>
       <p>Backend status: {status}</p>
     </div>
-  )
+  );
 }
 
 const containerStyle: React.CSSProperties = {
@@ -37,6 +33,6 @@ const containerStyle: React.CSSProperties = {
   justifyContent: 'center',
   fontFamily: 'system-ui, -apple-system, sans-serif',
   margin: 0,
-}
+};
 
-export default App
+export default App;
