@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { health, type HealthStatus } from 'shared';
+import { api, type HealthStatus } from 'shared';
 
 function App() {
   const [status, setStatus] = useState<string>('loading');
@@ -10,7 +10,7 @@ function App() {
 
   async function fetchBackendHealth() {
     try {
-      const data: HealthStatus = await health.check();
+      const data: HealthStatus = await api.platform.health();
       setStatus(`connected: ${JSON.stringify(data)}`);
     } catch {
       setStatus('backend unreachable');
