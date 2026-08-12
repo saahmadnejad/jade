@@ -5,4 +5,5 @@ export * from './container';
 export * from './agent';
 export * from './tool';
 export * from './remote-platform';
+export * from './df';
 export * from './factory';

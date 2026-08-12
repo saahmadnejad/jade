@@ -257,19 +257,13 @@ The DF GUI manages the Directory Facilitator (yellow pages) service. The REST AP
 
 ## 5. DF Lifecycle
 
-### 5.1 Exit DF (Kill DF Agent)
-- **Endpoint**: `DELETE /api/tools/df-gui`
-- **Input**: none
-- **Output (200)**: `{"message": "DF agent killed"}`
-- **JADE backend call**: AMS `KillAgent` on DF
-
-### 5.2 Close GUI (Hide GUI, Keep DF Running)
+### 5.1 Close GUI (Hide GUI, Keep DF Running)
 - **Endpoint**: `POST /api/tools/df-gui/close`
 - **Input**: none
 - **Output (200)**: `{"message": "DF GUI closed, DF agent still running"}`
 - **JADE backend call**: No backend action — GUI-only action
 
-### 5.3 Get DF Status
+### 5.2 Get DF Status
 - **Endpoint**: `GET /api/tools/df-gui/status`
 - **Input**: none
 - **Output (200)**:
@@ -324,6 +318,5 @@ The DF GUI manages the Directory Facilitator (yellow pages) service. The REST AP
 | GET | `/api/df/description` | Get this DF's description |
 | GET | `/api/df/ap-description` | Get AP description for DF |
 | POST | `/api/df/refresh` | Refresh all DF data |
-| DELETE | `/api/tools/df-gui` | Kill the DF agent |
 | POST | `/api/tools/df-gui/close` | Close DF GUI (keep agent running) |
 | GET | `/api/tools/df-gui/status` | Get DF status |

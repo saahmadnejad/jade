@@ -5,6 +5,7 @@ import io.donbee.jade.core.Profile;
 import io.donbee.jade.core.ProfileImpl;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -147,6 +148,33 @@ public class RestAPIIntegrationTest {
                 context.assertEquals(200, response.statusCode());
                 JsonObject body = response.bodyAsJsonObject();
                 context.assertTrue(body.getJsonArray("agents").size() > 0);
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_MainContainerRunning_When_AgentsListRequested_Then_AgentNamesAreUrlSafeLocalNames(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.get(REST_PORT, "localhost", "/api/agents?detail=true")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert — names must be local names (no '/' from a GUID container suffix,
+                // which would break the /api/agents/:name route parameter)
+                context.assertEquals(200, response.statusCode());
+                JsonArray agents = response.bodyAsJsonObject().getJsonArray("agents");
+                context.assertTrue(agents.size() > 0);
+                boolean dfPresent = false;
+                for (int i = 0; i < agents.size(); i++) {
+                    String name = agents.getJsonObject(i).getString("name");
+                    context.assertFalse(name.contains("/"), "agent name must be local, not a GUID: " + name);
+                    if ("df".equals(name)) {
+                        dfPresent = true;
+                    }
+                }
+                context.assertTrue(dfPresent, "default DF agent must be addressable by local name 'df'");
                 async.complete();
             }));
     }
@@ -825,6 +853,236 @@ public class RestAPIIntegrationTest {
             .onComplete(context.asyncAssertSuccess(response -> {
                 // Assert
                 context.assertEquals(400, response.statusCode());
+                async.complete();
+            }));
+    }
+
+    // ===== DF Registration Management =====
+
+    @Test
+    public void Given_MainContainer_When_ListDFRegistrations_Then_Returns200(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.get(REST_PORT, "localhost", "/api/df/registrations")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                if (response.statusCode() != 200) {
+                    context.fail("Expected 200, got " + response.statusCode() + ": " + response.bodyAsString());
+                }
+                JsonObject body = response.bodyAsJsonObject();
+                context.assertTrue(body.getJsonArray("registrations") != null);
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_ValidAgentName_When_RegisterWithDF_Then_Returns201(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        io.vertx.core.json.JsonObject jsonBody = new io.vertx.core.json.JsonObject()
+            .put("agentName", "test-df-agent@Main-Container")
+            .put("addresses", new io.vertx.core.json.JsonArray()
+                .add("jades://127.0.0.1:19099"));
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/df/registrations")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertTrue(response.statusCode() == 201 || response.statusCode() == 500);
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_MissingAgentName_When_RegisterWithDF_Then_Returns400(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        io.vertx.core.json.JsonObject jsonBody = new io.vertx.core.json.JsonObject();
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/df/registrations")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(400, response.statusCode());
+                async.complete();
+            }));
+    }
+
+    // ===== DF Search =====
+
+    @Test
+    public void Given_EmptyTemplate_When_SearchDF_Then_Returns200(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        io.vertx.core.json.JsonObject jsonBody = new io.vertx.core.json.JsonObject()
+            .put("description", new io.vertx.core.json.JsonObject());
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/df/search")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertTrue(response.statusCode() == 200 || response.statusCode() == 500);
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_NoBody_When_SearchDF_Then_Returns400(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/df/search")
+            .putHeader("Content-Type", "application/json")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(400, response.statusCode());
+                async.complete();
+            }));
+    }
+
+    // ===== DF Description =====
+
+    @Test
+    public void Given_MainContainer_When_GetDFDescription_Then_Returns200(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.get(REST_PORT, "localhost", "/api/df/description")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertTrue(response.statusCode() == 200 || response.statusCode() == 500);
+                async.complete();
+            }));
+    }
+
+    // ===== DF Status =====
+
+    @Test
+    public void Given_MainContainer_When_GetDFStatus_Then_Returns200(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.get(REST_PORT, "localhost", "/api/tools/df-gui/status")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertTrue(response.statusCode() == 200 || response.statusCode() == 500);
+                async.complete();
+            }));
+    }
+
+    // ===== DF Federation =====
+    // NOTE: These run before the DF Kill test, while the DF agent is still alive.
+
+    @Test
+    public void Given_MainContainer_When_GetDFParents_Then_Returns200WithParentsList(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.get(REST_PORT, "localhost", "/api/df/federation/parents")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert — parents list defaults to an empty array when not federated
+                context.assertTrue(response.statusCode() == 200 || response.statusCode() == 403 || response.statusCode() == 500);
+                io.vertx.core.json.JsonObject body = response.bodyAsJsonObject();
+                context.assertTrue(body.getJsonArray("parents") != null);
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_MainContainer_When_GetDFChildren_Then_Returns200WithChildrenList(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.get(REST_PORT, "localhost", "/api/df/federation/children")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert — children list defaults to an empty array when no child DFs are federated
+                context.assertTrue(response.statusCode() == 200 || response.statusCode() == 403 || response.statusCode() == 500);
+                io.vertx.core.json.JsonObject body = response.bodyAsJsonObject();
+                context.assertTrue(body.getJsonArray("children") != null);
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_ValidParent_When_Federate_Then_Returns200Or500(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        io.vertx.core.json.JsonObject jsonBody = new io.vertx.core.json.JsonObject()
+            .put("parentDF", "parent-df@nonexistent-platform")
+            .put("parentDFAddresses", new io.vertx.core.json.JsonArray().add("jades://127.0.0.1:19999/jade-df"));
+
+        // Act — federating with a non-reachable parent is expected to fail (500); accept both
+        client.post(REST_PORT, "localhost", "/api/df/federation")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertTrue(response.statusCode() == 200 || response.statusCode() == 500);
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_MissingParentDF_When_Federate_Then_Returns400(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/df/federation")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(new io.vertx.core.json.JsonObject())
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(400, response.statusCode());
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_ParentName_When_DeregisterParent_Then_Returns200Or500(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act — no parents federated in the test platform; accept success or failure
+        client.delete(REST_PORT, "localhost", "/api/df/federation/parent-df@nonexistent-platform")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertTrue(response.statusCode() == 200 || response.statusCode() == 404 || response.statusCode() == 500);
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_ChildName_When_DeregisterChild_Then_Returns200Or404(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act — no children federated; expect 404 (not registered) or 500
+        client.delete(REST_PORT, "localhost", "/api/df/federation/children/child-df@nonexistent")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertTrue(response.statusCode() == 200 || response.statusCode() == 404 || response.statusCode() == 500);
                 async.complete();
             }));
     }

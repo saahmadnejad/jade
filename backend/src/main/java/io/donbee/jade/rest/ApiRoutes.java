@@ -50,4 +50,19 @@ public final class ApiRoutes {
 
     // Tools
     public static final String TOOLS_START = "/api/tools/:tool/start";
+
+    // DF (Directory Facilitator)
+    public static final String DF_REGISTRATIONS = "/api/df/registrations";
+    public static final String DF_REGISTRATION_BY_NAME = "/api/df/registrations/:agentName";
+    public static final String DF_SEARCH = "/api/df/search";
+    public static final String DF_DESCRIPTION = "/api/df/description";
+    public static final String DF_REFRESH = "/api/df/refresh";
+    public static final String DF_GUI_STATUS = "/api/tools/df-gui/status";
+
+    // DF Federation
+    public static final String DF_FEDERATION = "/api/df/federation";
+    public static final String DF_FEDERATION_PARENTS = "/api/df/federation/parents";
+    public static final String DF_FEDERATION_CHILDREN = "/api/df/federation/children";
+    public static final String DF_FEDERATION_PARENT_BY_NAME = "/api/df/federation/:parentDFName";
+    public static final String DF_FEDERATION_CHILDREN_BY_NAME = "/api/df/federation/children/:childDFName";
 }

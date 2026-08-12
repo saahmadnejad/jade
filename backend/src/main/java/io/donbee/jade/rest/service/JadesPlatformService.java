@@ -6,18 +6,39 @@ import io.donbee.jade.core.AgentManager;
 import io.donbee.jade.core.ContainerID;
 import io.donbee.jade.core.NameClashException;
 import io.donbee.jade.domain.FIPAAgentManagement.AMSAgentDescription;
+import io.donbee.jade.domain.FIPAAgentManagement.DFAgentDescription;
+import io.donbee.jade.domain.FIPAAgentManagement.FIPAManagementOntology;
+import io.donbee.jade.domain.FIPAAgentManagement.FIPAManagementVocabulary;
+import io.donbee.jade.domain.FIPAAgentManagement.Register;
+import io.donbee.jade.domain.FIPAAgentManagement.Deregister;
+import io.donbee.jade.domain.FIPAAgentManagement.Modify;
+import io.donbee.jade.domain.FIPAAgentManagement.Search;
+import io.donbee.jade.domain.FIPAAgentManagement.SearchConstraints;
+import io.donbee.jade.domain.FIPAAgentManagement.ServiceDescription;
+import io.donbee.jade.domain.DFGUIManagement.DeregisterFrom;
+import io.donbee.jade.domain.DFGUIManagement.Federate;
+import io.donbee.jade.domain.DFGUIManagement.GetParents;
+import io.donbee.jade.domain.DFGUIManagement.DFAppletOntology;
 import io.donbee.jade.domain.FIPANames;
+import io.donbee.jade.domain.FIPAException;
 import io.donbee.jade.content.onto.basic.Action;
+import io.donbee.jade.content.onto.basic.Result;
 import io.donbee.jade.lang.acl.ACLMessage;
+import io.donbee.jade.rest.service.DFService.DFRegistrationInfo;
+import io.donbee.jade.rest.service.DFService.DFServiceInfo;
+import io.donbee.jade.rest.service.DFService.DFParentInfo;
+import io.donbee.jade.rest.service.DFService.SearchConstraintsInfo;
+import io.donbee.jade.rest.service.DFService.DFStatus;
+
 import io.donbee.jade.mtp.MTPDescriptor;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Concrete implementation of PlatformService using the JADE backend.
+ * Concrete implementation of PlatformService and DFService using the JADE backend.
  */
-public class JadesPlatformService implements PlatformService {
+public class JadesPlatformService implements PlatformService, DFService {
 
     private final AgentContainer impl;
     private final AgentManager agentManager;
@@ -69,7 +90,7 @@ public class JadesPlatformService implements PlatformService {
                 } catch (Exception ignored) {
                 }
                 result.add(new AgentInfo(
-                    aid.getName(),
+                    aid.getLocalName(),
                     state,
                     ownership,
                     cid.getName(),
@@ -77,7 +98,7 @@ public class JadesPlatformService implements PlatformService {
                 ));
             } else {
                 result.add(new AgentInfo(
-                    aid.getName(),
+                    aid.getLocalName(),
                     null,
                     null,
                     cid.getName(),
@@ -110,7 +131,7 @@ public class JadesPlatformService implements PlatformService {
                 } catch (Exception ignored) {
                 }
                 return new AgentInfo(
-                    aid.getName(),
+                    aid.getLocalName(),
                     state,
                     ownership,
                     cid.getName(),
@@ -637,5 +658,554 @@ public class JadesPlatformService implements PlatformService {
             current = current.getCause();
         }
         return false;
+    }
+
+    // ============================================================
+    // DFService implementation
+    // ============================================================
+
+    private static final long DF_TIMEOUT_MS = 30000L;
+
+    private AID getDefaultDF() {
+        return impl.getDefaultDF();
+    }
+
+    @Override
+    public List<DFRegistrationInfo> listDFRegistrations() {
+        return searchDF(new DFAgentDescription(), new SearchConstraintsInfo(null, -1L));
+    }
+
+    @Override
+    public DFRegistrationInfo registerWithDF(String agentName, List<String> addresses,
+                                             List<DFServiceInfo> services) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        try {
+            AID dfAID = getDefaultDF();
+            if (dfAID == null) {
+                throw new IllegalStateException("No default DF available on this container");
+            }
+
+            DFAgentDescription dfd = new DFAgentDescription();
+            AID agentAID = new AID();
+            agentAID.setName(agentName);
+            dfd.setName(agentAID);
+
+            if (addresses != null) {
+                for (String addr : addresses) {
+                    agentAID.addAddresses(addr);
+                }
+            }
+
+            if (services != null) {
+                for (DFServiceInfo svc : services) {
+                    ServiceDescription sd = new ServiceDescription();
+                    sd.setType(svc.type);
+                    sd.setName(svc.name);
+                    if (svc.ownership != null) {
+                        sd.setOwnership(svc.ownership);
+                    }
+                    dfd.addServices(sd);
+                }
+            }
+
+            Register register = new Register();
+            register.setDescription(dfd);
+
+            ACLMessage reply = DFRequestAgent.execute(
+                agentManager, impl.getID(), dfAID, register,
+                FIPAManagementOntology.getInstance().getName(),
+                FIPAManagementVocabulary.REGISTER,
+                DF_TIMEOUT_MS
+            );
+
+            if (reply == null) {
+                throw new RuntimeException("No response from DF");
+            }
+            int perf = reply.getPerformative();
+            if (perf == ACLMessage.INFORM) {
+                DFAgentDescription registered = io.donbee.jade.domain.DFService.decodeDone(reply.getContent());
+                return new DFRegistrationInfo(registered);
+            } else {
+                throw new RuntimeException("DF registration failed: " + decodeFailure(reply));
+            }
+        } catch (FIPAException e) {
+            throw new RuntimeException("Failed to register with DF: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void deregisterFromDF(String agentName) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        try {
+            AID dfAID = getDefaultDF();
+            if (dfAID == null) {
+                throw new IllegalStateException("No default DF available on this container");
+            }
+
+            DFAgentDescription dfd = new DFAgentDescription();
+            AID agentAID = new AID();
+            agentAID.setName(agentName);
+            dfd.setName(agentAID);
+
+            Deregister deregister = new Deregister();
+            deregister.setDescription(dfd);
+
+            ACLMessage reply = DFRequestAgent.execute(
+                agentManager, impl.getID(), dfAID, deregister,
+                FIPAManagementOntology.getInstance().getName(),
+                FIPAManagementVocabulary.DEREGISTER,
+                DF_TIMEOUT_MS
+            );
+
+            if (reply == null) {
+                throw new RuntimeException("No response from DF");
+            }
+            int perf = reply.getPerformative();
+            if (perf == ACLMessage.INFORM) {
+                // Success
+            } else {
+                throw new RuntimeException("DF deregistration failed: " + decodeFailure(reply));
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        }
+    }
+
+    @Override
+    public DFRegistrationInfo getDFRegistration(String agentName) {
+        if (agentName == null || agentName.isEmpty()) {
+            throw new IllegalArgumentException("Agent name is required");
+        }
+        DFAgentDescription template = new DFAgentDescription();
+        AID agentAID = new AID();
+        agentAID.setName(agentName);
+        template.setName(agentAID);
+
+        List<DFRegistrationInfo> results = searchDF(template, new SearchConstraintsInfo(0L, 1L));
+        if (results.isEmpty()) {
+            throw new IllegalArgumentException("Agent not registered with DF: " + agentName);
+        }
+        return results.get(0);
+    }
+
+    @Override
+    public DFRegistrationInfo modifyDFRegistration(String agentName, List<String> addresses,
+                                                     List<DFServiceInfo> services) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        try {
+            AID dfAID = getDefaultDF();
+            if (dfAID == null) {
+                throw new IllegalStateException("No default DF available on this container");
+            }
+
+            DFAgentDescription dfd = new DFAgentDescription();
+            AID agentAID = new AID();
+            agentAID.setName(agentName);
+            dfd.setName(agentAID);
+
+            if (addresses != null) {
+                for (String addr : addresses) {
+                    agentAID.addAddresses(addr);
+                }
+            }
+
+            if (services != null) {
+                for (DFServiceInfo svc : services) {
+                    ServiceDescription sd = new ServiceDescription();
+                    sd.setType(svc.type);
+                    sd.setName(svc.name);
+                    if (svc.ownership != null) {
+                        sd.setOwnership(svc.ownership);
+                    }
+                    dfd.addServices(sd);
+                }
+            }
+
+            Modify modify = new Modify();
+            modify.setDescription(dfd);
+
+            ACLMessage reply = DFRequestAgent.execute(
+                agentManager, impl.getID(), dfAID, modify,
+                FIPAManagementOntology.getInstance().getName(),
+                FIPAManagementVocabulary.MODIFY,
+                DF_TIMEOUT_MS
+            );
+
+            if (reply == null) {
+                throw new RuntimeException("No response from DF");
+            }
+            int perf = reply.getPerformative();
+            if (perf == ACLMessage.INFORM) {
+                DFAgentDescription modified = io.donbee.jade.domain.DFService.decodeDone(reply.getContent());
+                return new DFRegistrationInfo(modified);
+            } else {
+                throw new RuntimeException("DF modification failed: " + decodeFailure(reply));
+            }
+        } catch (FIPAException e) {
+            throw new RuntimeException("Failed to modify DF registration: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<DFRegistrationInfo> searchDF(DFAgentDescription template, SearchConstraintsInfo constraints) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        try {
+            AID dfAID = getDefaultDF();
+            if (dfAID == null) {
+                throw new IllegalStateException("No default DF available on this container");
+            }
+
+            DFAgentDescription dfdTemplate = template;
+            SearchConstraints sc = new SearchConstraints();
+            if (constraints.maxResults != null) {
+                sc.setMaxResults(new Long(constraints.maxResults));
+            }
+            if (constraints.maxDepth != null) {
+                sc.setMaxDepth(new Long(constraints.maxDepth));
+            }
+
+            Search search = new Search();
+            search.setDescription(dfdTemplate);
+            search.setConstraints(sc);
+
+            ACLMessage reply = DFRequestAgent.execute(
+                agentManager, impl.getID(), dfAID, search,
+                FIPAManagementOntology.getInstance().getName(),
+                FIPAManagementVocabulary.SEARCH,
+                DF_TIMEOUT_MS
+            );
+
+            if (reply == null) {
+                throw new RuntimeException("No response from DF");
+            }
+            int perf = reply.getPerformative();
+            if (perf == ACLMessage.INFORM) {
+                DFAgentDescription[] results = io.donbee.jade.domain.DFService.decodeResult(reply.getContent());
+                List<DFRegistrationInfo> infos = new ArrayList<>();
+                for (DFAgentDescription r : results) {
+                    infos.add(new DFRegistrationInfo(r));
+                }
+                return infos;
+            } else {
+                throw new RuntimeException("DF search failed: " + decodeFailure(reply));
+            }
+        } catch (FIPAException e) {
+            throw new RuntimeException("Failed to search DF: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public DFRegistrationInfo getDFDescription() {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        try {
+            AID dfAID = getDefaultDF();
+            if (dfAID == null) {
+                throw new IllegalStateException("No default DF available on this container");
+            }
+
+            DFAgentDescription template = new DFAgentDescription();
+            template.setName(dfAID);
+
+            ACLMessage reply = DFRequestAgent.execute(
+                agentManager, impl.getID(), dfAID,
+                new Search(),
+                FIPAManagementOntology.getInstance().getName(),
+                FIPAManagementVocabulary.SEARCH,
+                DF_TIMEOUT_MS
+            );
+
+            if (reply == null) {
+                throw new RuntimeException("No response from DF");
+            }
+            if (reply.getPerformative() == ACLMessage.INFORM) {
+                DFAgentDescription[] results = io.donbee.jade.domain.DFService.decodeResult(reply.getContent());
+                if (results.length > 0) {
+                    return new DFRegistrationInfo(results[0]);
+                }
+                return new DFRegistrationInfo(dfAID.getName(), new ArrayList<>(), new ArrayList<>(), "");
+            } else {
+                throw new RuntimeException("DF search failed: " + decodeFailure(reply));
+            }
+        } catch (FIPAException e) {
+            throw new RuntimeException("Failed to get DF description: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public DFStatus getDFStatus() {
+        List<DFRegistrationInfo> registrations = listDFRegistrations();
+        int parentCount = 0;
+        int childCount = 0;
+        try {
+            parentCount = getDFParents().size();
+            childCount = getDFChildren().size();
+        } catch (RuntimeException e) {
+            // Federation data may be unavailable (e.g. not a main container);
+            // report zero counts rather than failing the status request.
+        }
+        String dfName = getDefaultDF() != null ? getDefaultDF().getName() : "unknown";
+        String containerName = impl.here() != null ? impl.here().getName() : "unknown";
+        return new DFStatus(
+            true,
+            dfName,
+            containerName,
+            registrations.size(),
+            parentCount,
+            childCount
+        );
+    }
+
+    private String decodeFailure(ACLMessage reply) {
+        if (reply == null) return "no response";
+        String content = reply.getContent();
+        if (content == null || content.isEmpty()) {
+            return ACLMessage.getPerformative(reply.getPerformative());
+        }
+        return ACLMessage.getPerformative(reply.getPerformative()) + ": " + content;
+    }
+
+    // ============================================================
+    // DFService federation implementation
+    // ============================================================
+
+    private AID aidFromName(String name) {
+        AID aid = new AID();
+        aid.setName(name);
+        return aid;
+    }
+
+    @Override
+    public List<DFParentInfo> getDFParents() {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        AID dfAID = getDefaultDF();
+        if (dfAID == null) {
+            throw new IllegalStateException("No default DF available on this container");
+        }
+
+        GetParents action = new GetParents();
+        DFRequestAgent.DFResponse resp = DFRequestAgent.executeFull(
+            agentManager, impl.getID(), dfAID, action,
+            DFAppletOntology.getInstance().getName(),
+            DF_TIMEOUT_MS
+        );
+
+        ACLMessage reply = resp.message;
+        if (reply == null) {
+            throw new RuntimeException("No response from DF");
+        }
+        if (reply.getPerformative() == ACLMessage.FAILURE) {
+            throw new RuntimeException("DF get-parents failed: " + decodeFailure(reply));
+        }
+        if (reply.getPerformative() != ACLMessage.INFORM) {
+            throw new RuntimeException("Unexpected reply from DF: " + ACLMessage.getPerformative(reply.getPerformative()));
+        }
+
+        List<DFParentInfo> parents = new ArrayList<>();
+        if (resp.decoded instanceof Result) {
+            Object value = ((Result) resp.decoded).getValue();
+            if (value instanceof io.donbee.jade.util.leap.List) {
+                io.donbee.jade.util.leap.Iterator it = ((io.donbee.jade.util.leap.List) value).iterator();
+                while (it.hasNext()) {
+                    Object elt = it.next();
+                    if (elt instanceof AID) {
+                        parents.add(toParentInfo((AID) elt));
+                    } else if (elt instanceof String) {
+                        parents.add(toParentInfo(aidFromName((String) elt)));
+                    }
+                }
+            }
+        }
+        return parents;
+    }
+
+    @Override
+    public List<DFParentInfo> getDFChildren() {
+        // Children are DFs (registered with this DF) that expose the "fipa-df"
+        // service type — mirroring the old DF GUI refresh logic.
+        List<DFRegistrationInfo> all = listDFRegistrations();
+        List<DFParentInfo> children = new ArrayList<>();
+        for (DFRegistrationInfo reg : all) {
+            if (isADF(reg)) {
+                children.add(toParentInfo(reg));
+            }
+        }
+        return children;
+    }
+
+    @Override
+    public DFParentInfo federateDF(String parentDFName, List<String> parentDFAddresses) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        AID dfAID = getDefaultDF();
+        if (dfAID == null) {
+            throw new IllegalStateException("No default DF available on this container");
+        }
+
+        AID parentAID = aidFromName(parentDFName);
+        if (parentAID.equals(dfAID)) {
+            throw new IllegalArgumentException("Self-federation not allowed");
+        }
+        if (parentDFAddresses != null) {
+            for (String addr : parentDFAddresses) {
+                parentAID.addAddresses(addr);
+            }
+        }
+
+        // Reuse this DF's own description for the federation registration
+        // (mirrors the old GUI, which federates using getDescriptionOfThisDF()).
+        DFAgentDescription dfd = toDFAgentDescription(getDFDescription());
+
+        Federate action = new Federate();
+        action.setDf(parentAID);
+        action.setDescription(dfd);
+
+        DFRequestAgent.DFResponse resp = DFRequestAgent.executeFull(
+            agentManager, impl.getID(), dfAID, action,
+            DFAppletOntology.getInstance().getName(),
+            DF_TIMEOUT_MS
+        );
+
+        ACLMessage reply = resp.message;
+        if (reply == null) {
+            throw new RuntimeException("No response from DF");
+        }
+        int perf = reply.getPerformative();
+        if (perf == ACLMessage.FAILURE || perf == ACLMessage.REFUSE) {
+            throw new RuntimeException("DF federation failed: " + decodeFailure(reply));
+        }
+        if (perf != ACLMessage.INFORM) {
+            throw new RuntimeException("Unexpected reply from DF: " + ACLMessage.getPerformative(perf));
+        }
+        return toParentInfo(parentAID);
+    }
+
+    @Override
+    public void deregisterParentDF(String parentDFName) {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        AID dfAID = getDefaultDF();
+        if (dfAID == null) {
+            throw new IllegalStateException("No default DF available on this container");
+        }
+
+        // Resolve the parent's contact addresses from the known parents so the
+        // DF can reach it. This mirrors how the DF stores parents when federating.
+        List<String> resolved = new ArrayList<>();
+        for (DFParentInfo p : getDFParents()) {
+            if (p.name != null && p.name.equals(parentDFName)) {
+                resolved = p.addresses;
+                break;
+            }
+        }
+
+        AID parentAID = aidFromName(parentDFName);
+        if (resolved != null) {
+            for (String addr : resolved) {
+                parentAID.addAddresses(addr);
+            }
+        }
+
+        // The description used to identify this DF on the parent = this DF's description.
+        DFAgentDescription dfd = toDFAgentDescription(getDFDescription());
+
+        DeregisterFrom action = new DeregisterFrom();
+        action.setDf(parentAID);
+        action.setDescription(dfd);
+
+        DFRequestAgent.DFResponse resp = DFRequestAgent.executeFull(
+            agentManager, impl.getID(), dfAID, action,
+            DFAppletOntology.getInstance().getName(),
+            DF_TIMEOUT_MS
+        );
+
+        ACLMessage reply = resp.message;
+        if (reply == null) {
+            throw new RuntimeException("No response from DF");
+        }
+        int perf = reply.getPerformative();
+        if (perf == ACLMessage.FAILURE || perf == ACLMessage.REFUSE) {
+            throw new RuntimeException("DF deregister-from-parent failed: " + decodeFailure(reply));
+        }
+        if (perf != ACLMessage.INFORM) {
+            throw new RuntimeException("Unexpected reply from DF: " + ACLMessage.getPerformative(perf));
+        }
+    }
+
+    @Override
+    public void deregisterChildDF(String childDFName) {
+        // A child DF is simply an agent registered with this DF; removing it
+        // is the standard Deregister operation (the DF removes it from its
+        // children list as part of DFDeregister when it is itself a DF).
+        deregisterFromDF(childDFName);
+    }
+
+    private static boolean isADF(DFRegistrationInfo reg) {
+        if (reg.services == null) {
+            return false;
+        }
+        for (DFServiceInfo svc : reg.services) {
+            if (svc.type != null && svc.type.equalsIgnoreCase("fipa-df")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static DFParentInfo toParentInfo(AID aid) {
+        List<String> addrs = new ArrayList<>();
+        if (aid.getAllAddresses() != null) {
+            io.donbee.jade.util.leap.Iterator it = aid.getAllAddresses();
+            while (it.hasNext()) {
+                addrs.add((String) it.next());
+            }
+        }
+        return new DFParentInfo(aid.getName(), addrs);
+    }
+
+    private static DFParentInfo toParentInfo(DFRegistrationInfo reg) {
+        List<String> addrs = reg.addresses != null ? new ArrayList<>(reg.addresses) : new ArrayList<>();
+        return new DFParentInfo(reg.name, addrs);
+    }
+
+    private static DFAgentDescription toDFAgentDescription(DFRegistrationInfo reg) {
+        DFAgentDescription dfd = new DFAgentDescription();
+        AID aid = new AID();
+        aid.setName(reg.name);
+        if (reg.addresses != null) {
+            for (String addr : reg.addresses) {
+                aid.addAddresses(addr);
+            }
+        }
+        dfd.setName(aid);
+        if (reg.services != null) {
+            for (DFServiceInfo svc : reg.services) {
+                ServiceDescription sd = new ServiceDescription();
+                if (svc.type != null) {
+                    sd.setType(svc.type);
+                }
+                if (svc.name != null) {
+                    sd.setName(svc.name);
+                }
+                if (svc.ownership != null) {
+                    sd.setOwnership(svc.ownership);
+                }
+                dfd.addServices(sd);
+            }
+        }
+        return dfd;
     }
 }
