@@ -65,11 +65,25 @@ The backend is a fork of JADE under the `io.donbee.jade` package. Key components
 
 A pnpm monorepo with two packages:
 
-- **`apps/frontend/`** — React 18 + Vite + TypeScript app. Served by nginx in Docker.
-- **`packages/shared/`** — Shared TypeScript library with an axios-based API client.
+- **`apps/frontend/`** — React 18 + Vite + TypeScript app. Uses Vitest + React Testing Library for tests.
+- **`packages/shared/`** — Shared TypeScript library with `HttpClient` interface (DIP), typed API clients per domain (PlatformAPI, ContainerAPI, AgentAPI, ToolAPI, RemotePlatformAPI), and TypeScript types for all API responses.
 
 ### Docker
 
 - **Backend**: Multi-stage build (Maven → JRE 21 Alpine). Runs `java -jar app.jar`.
 - **Frontend**: Multi-stage build (Node → pnpm install → Vite build → nginx Alpine).
 - **docker-compose.yml** — Both services on a single network; frontend depends on backend.
+
+## Testing
+
+**Backend:**
+```bash
+cd backend && JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 mvn test
+```
+
+**Frontend (unit + integration):**
+```bash
+cd frontend
+pnpm --filter shared test:run   # API client unit tests
+pnpm --filter frontend test     # App integration tests
+```
