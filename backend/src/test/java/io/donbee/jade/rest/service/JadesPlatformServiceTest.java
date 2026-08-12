@@ -68,6 +68,7 @@ public class JadesPlatformServiceTest {
         // Arrange
         AID aid1 = mock(AID.class);
         when(aid1.getName()).thenReturn("ams@127.0.0.1:1099/JADE");
+        when(aid1.getLocalName()).thenReturn("ams");
         when(aid1.getAllAddresses()).thenReturn(mock(io.donbee.jade.util.leap.Iterator.class));
 
         io.donbee.jade.util.leap.List mockAgentList = mock(io.donbee.jade.util.leap.List.class);
@@ -80,7 +81,7 @@ public class JadesPlatformServiceTest {
 
         // Assert
         assertThat(agents).hasSize(1);
-        assertThat(agents.get(0).name).isEqualTo("ams@127.0.0.1:1099/JADE");
+        assertThat(agents.get(0).name).isEqualTo("ams");
         assertThat(agents.get(0).state).isNull();
         assertThat(agents.get(0).ownership).isNull();
         assertThat(agents.get(0).container).isEqualTo("Main-Container");
@@ -123,7 +124,7 @@ public class JadesPlatformServiceTest {
 
         // Assert
         assertThat(agents).hasSize(1);
-        assertThat(agents.get(0).name).isEqualTo("ams@127.0.0.1:1099/JADE");
+        assertThat(agents.get(0).name).isEqualTo("ams");
         assertThat(agents.get(0).state).isEqualTo("active");
         assertThat(agents.get(0).ownership).isEqualTo("init");
         assertThat(agents.get(0).container).isEqualTo("Main-Container");
@@ -178,7 +179,7 @@ public class JadesPlatformServiceTest {
 
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.name).isEqualTo("ams@127.0.0.1:1099/JADE");
+        assertThat(result.name).isEqualTo("ams");
         assertThat(result.state).isEqualTo("active");
     }
 

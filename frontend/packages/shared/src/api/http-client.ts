@@ -7,6 +7,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 export interface HttpClient {
   get<T>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>;
   post<T>(url: string, body?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>;
+  put<T>(url: string, body?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>;
   patch<T>(url: string, body?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>;
   delete<T>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>;
 }
@@ -30,6 +31,10 @@ class AxiosHttpClient implements HttpClient {
 
   post<T>(url: string, body?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return this.client.post<T>(url, body, config);
+  }
+
+  put<T>(url: string, body?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return this.client.put<T>(url, body, config);
   }
 
   patch<T>(url: string, body?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {

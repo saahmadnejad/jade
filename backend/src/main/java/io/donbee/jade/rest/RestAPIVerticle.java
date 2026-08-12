@@ -21,6 +21,12 @@ import io.donbee.jade.rest.handler.ContainerMTPInstallHandler;
 import io.donbee.jade.rest.handler.ContainerMTPListHandler;
 import io.donbee.jade.rest.handler.ContainerMTPUNinstallHandler;
 import io.donbee.jade.rest.handler.ContainerSaveHandler;
+import io.donbee.jade.rest.handler.DFDescriptionHandler;
+import io.donbee.jade.rest.handler.DFRefreshHandler;
+import io.donbee.jade.rest.handler.DFSearchHandler;
+import io.donbee.jade.rest.handler.DFStatusHandler;
+import io.donbee.jade.rest.handler.DFederationHandler;
+import io.donbee.jade.rest.handler.DFRegistrationHandler;
 import io.donbee.jade.rest.handler.PlatformInfoHandler;
 import io.donbee.jade.rest.handler.RemotePlatformAddHandler;
 import io.donbee.jade.rest.handler.RemotePlatformAgentsHandler;
@@ -37,6 +43,7 @@ import io.donbee.jade.rest.handler.ShutdownHandler;
 import io.donbee.jade.rest.handler.VersionHandler;
 import io.donbee.jade.rest.service.JadesPlatformService;
 import io.donbee.jade.rest.service.PlatformService;
+import io.donbee.jade.rest.service.DFService;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
@@ -149,7 +156,7 @@ public class RestAPIVerticle extends AbstractVerticle {
         // Tools
         router.post(ApiRoutes.TOOLS_START).handler(new ToolLaunchHandler(service));
 
-        // Remote Platforms
+         // Remote Platforms
         router.get(ApiRoutes.PLATFORMS).handler(new RemotePlatformListHandler(service));
         router.post(ApiRoutes.PLATFORMS).handler(new RemotePlatformAddHandler(service));
         router.post(ApiRoutes.PLATFORM_FETCH).handler(new RemotePlatformFetchHandler(service));
@@ -157,6 +164,25 @@ public class RestAPIVerticle extends AbstractVerticle {
         router.get(ApiRoutes.PLATFORM_DESCRIPTION).handler(new RemotePlatformDescriptionHandler(service));
         router.post(ApiRoutes.PLATFORM_REFRESH).handler(new RemotePlatformDescriptionHandler(service));
         router.get(ApiRoutes.PLATFORM_AGENTS).handler(new RemotePlatformAgentsHandler(service));
+
+        // DF (Directory Facilitator)
+        DFService dfService = (DFService) service;
+        router.get(ApiRoutes.DF_REGISTRATIONS).handler(new DFRegistrationHandler(dfService, DFRegistrationHandler.Mode.LIST));
+        router.post(ApiRoutes.DF_REGISTRATIONS).handler(new DFRegistrationHandler(dfService, DFRegistrationHandler.Mode.REGISTER));
+        router.get(ApiRoutes.DF_REGISTRATION_BY_NAME).handler(new DFRegistrationHandler(dfService, DFRegistrationHandler.Mode.VIEW));
+        router.put(ApiRoutes.DF_REGISTRATION_BY_NAME).handler(new DFRegistrationHandler(dfService, DFRegistrationHandler.Mode.MODIFY));
+        router.delete(ApiRoutes.DF_REGISTRATION_BY_NAME).handler(new DFRegistrationHandler(dfService, DFRegistrationHandler.Mode.DEREGISTER));
+        router.post(ApiRoutes.DF_SEARCH).handler(new DFSearchHandler(dfService));
+        router.get(ApiRoutes.DF_DESCRIPTION).handler(new DFDescriptionHandler(dfService));
+        router.post(ApiRoutes.DF_REFRESH).handler(new DFRefreshHandler(dfService));
+        router.get(ApiRoutes.DF_GUI_STATUS).handler(new DFStatusHandler(dfService));
+
+        // DF Federation
+        router.get(ApiRoutes.DF_FEDERATION_PARENTS).handler(new DFederationHandler(dfService, DFederationHandler.Mode.PARENTS));
+        router.get(ApiRoutes.DF_FEDERATION_CHILDREN).handler(new DFederationHandler(dfService, DFederationHandler.Mode.CHILDREN));
+        router.post(ApiRoutes.DF_FEDERATION).handler(new DFederationHandler(dfService, DFederationHandler.Mode.FEDERATE));
+        router.delete(ApiRoutes.DF_FEDERATION_PARENT_BY_NAME).handler(new DFederationHandler(dfService, DFederationHandler.Mode.DEREGISTER_PARENT));
+        router.delete(ApiRoutes.DF_FEDERATION_CHILDREN_BY_NAME).handler(new DFederationHandler(dfService, DFederationHandler.Mode.DEREGISTER_CHILD));
     }
 
     private AgentContainer extractImpl() {
