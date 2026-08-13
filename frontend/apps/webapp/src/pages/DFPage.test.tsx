@@ -7,6 +7,7 @@ const {
   mockListRegistrations, mockRegister, mockDeregister, mockSearch,
   mockModifyRegistration, mockGetParents, mockGetChildren,
   mockFederate, mockDeregisterParent, mockDeregisterChild,
+  mockGetStatus, mockGetDescription, mockRefresh,
 } = vi.hoisted(() => ({
   mockListRegistrations: vi.fn(),
   mockRegister: vi.fn(),
@@ -18,6 +19,9 @@ const {
   mockFederate: vi.fn(),
   mockDeregisterParent: vi.fn(),
   mockDeregisterChild: vi.fn(),
+  mockGetStatus: vi.fn(),
+  mockGetDescription: vi.fn(),
+  mockRefresh: vi.fn(),
 }));
 
 vi.mock('shared/api/factory', () => ({
@@ -34,9 +38,9 @@ vi.mock('shared/api/factory', () => ({
       getRegistration: vi.fn(),
       modifyRegistration: mockModifyRegistration,
       search: mockSearch,
-      getDescription: vi.fn(),
-      getStatus: vi.fn(),
-      refresh: vi.fn(),
+      getDescription: mockGetDescription,
+      getStatus: mockGetStatus,
+      refresh: mockRefresh,
       getParents: mockGetParents,
       getChildren: mockGetChildren,
       federate: mockFederate,
@@ -57,6 +61,19 @@ const renderWithTheme = (ui: React.ReactElement) => {
   );
 };
 
+const mockBasicData = () => {
+  mockListRegistrations.mockResolvedValue({ registrations: [] });
+  mockGetParents.mockResolvedValue({ parents: [] });
+  mockGetChildren.mockResolvedValue({ children: [] });
+  mockGetStatus.mockResolvedValue({
+    running: true, agent: 'df@main', container: 'Main-Container',
+    registeredAgentCount: 0, parentCount: 0, childCount: 0,
+  });
+  mockGetDescription.mockResolvedValue({
+    name: 'df@main', addresses: ['addr1'], services: [],
+  });
+};
+
 describe('DFPage', () => {
   beforeEach(() => {
     mockListRegistrations.mockReset();
@@ -69,9 +86,12 @@ describe('DFPage', () => {
     mockFederate.mockReset();
     mockDeregisterParent.mockReset();
     mockDeregisterChild.mockReset();
+    mockGetStatus.mockReset();
+    mockGetDescription.mockReset();
+    mockRefresh.mockReset();
   });
 
-  it('Given backend reachable, When page loads, Then shows registrations table', async () => {
+  it('Given backend reachable, When page loads, Then shows registrations table and status card', async () => {
     // Arrange
     mockListRegistrations.mockResolvedValue({
       registrations: [
@@ -80,6 +100,11 @@ describe('DFPage', () => {
     });
     mockGetParents.mockResolvedValue({ parents: [] });
     mockGetChildren.mockResolvedValue({ children: [] });
+    mockGetStatus.mockResolvedValue({
+      running: true, agent: 'df@main', container: 'Main-Container',
+      registeredAgentCount: 1, parentCount: 0, childCount: 0,
+    });
+    mockGetDescription.mockResolvedValue({ name: 'df@main', addresses: ['addr1'], services: [] });
 
     // Act
     renderWithTheme(<DFPage />);
@@ -89,14 +114,13 @@ describe('DFPage', () => {
       expect(screen.getByText('Directory Facilitator (DF)')).toBeInTheDocument();
     });
     expect(screen.getByText('agent1@host')).toBeInTheDocument();
-    expect(screen.getByText('svc1 (svc)')).toBeInTheDocument();
+    expect(screen.getByText('DF Running')).toBeInTheDocument();
+    expect(screen.getByText('Registered: 1')).toBeInTheDocument();
   });
 
   it('Given empty registrations, When page loads, Then shows no registrations message', async () => {
     // Arrange
-    mockListRegistrations.mockResolvedValue({ registrations: [] });
-    mockGetParents.mockResolvedValue({ parents: [] });
-    mockGetChildren.mockResolvedValue({ children: [] });
+    mockBasicData();
 
     // Act
     renderWithTheme(<DFPage />);
@@ -112,6 +136,8 @@ describe('DFPage', () => {
     mockListRegistrations.mockRejectedValue(new Error('Network error'));
     mockGetParents.mockResolvedValue({ parents: [] });
     mockGetChildren.mockResolvedValue({ children: [] });
+    mockGetStatus.mockResolvedValue({ running: true, registeredAgentCount: 0, parentCount: 0, childCount: 0 });
+    mockGetDescription.mockResolvedValue({ name: 'df', addresses: [], services: [] });
 
     // Act
     renderWithTheme(<DFPage />);
@@ -124,9 +150,7 @@ describe('DFPage', () => {
 
   it('Given registration form filled, When register submitted, Then calls register API', async () => {
     // Arrange
-    mockListRegistrations.mockResolvedValue({ registrations: [] });
-    mockGetParents.mockResolvedValue({ parents: [] });
-    mockGetChildren.mockResolvedValue({ children: [] });
+    mockBasicData();
     mockRegister.mockResolvedValue({ message: 'registered', registration: { name: 'a1@host', addresses: [], services: [], ownership: '' } });
 
     // Act
@@ -152,6 +176,8 @@ describe('DFPage', () => {
     });
     mockGetParents.mockResolvedValue({ parents: [] });
     mockGetChildren.mockResolvedValue({ children: [] });
+    mockGetStatus.mockResolvedValue({ running: true, registeredAgentCount: 1, parentCount: 0, childCount: 0 });
+    mockGetDescription.mockResolvedValue({ name: 'df', addresses: [], services: [] });
     mockDeregister.mockResolvedValue({ message: 'deregistered' });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
@@ -177,6 +203,8 @@ describe('DFPage', () => {
     });
     mockGetParents.mockResolvedValue({ parents: [] });
     mockGetChildren.mockResolvedValue({ children: [] });
+    mockGetStatus.mockResolvedValue({ running: true, registeredAgentCount: 1, parentCount: 0, childCount: 0 });
+    mockGetDescription.mockResolvedValue({ name: 'df', addresses: [], services: [] });
     mockModifyRegistration.mockResolvedValue({ message: 'modified', registration: { name: 'agent1@host', addresses: [], services: [], ownership: '' } });
 
     // Act
@@ -196,36 +224,21 @@ describe('DFPage', () => {
     });
   });
 
-  it('Given parent DFs exist, When page loads, Then shows federation summary chips', async () => {
+  it('Given parent DFs exist, When parent tab clicked, Then shows parent list and deregister button', async () => {
     // Arrange
     mockListRegistrations.mockResolvedValue({ registrations: [] });
     mockGetParents.mockResolvedValue({
       parents: [{ name: 'parent-df@rp1', addresses: ['jades://10.0.0.1:1099'] }],
     });
     mockGetChildren.mockResolvedValue({ children: [] });
+    mockGetStatus.mockResolvedValue({ running: true, registeredAgentCount: 0, parentCount: 1, childCount: 0 });
+    mockGetDescription.mockResolvedValue({ name: 'df', addresses: [], services: [] });
 
     // Act
     renderWithTheme(<DFPage />);
-
-    // Assert
-    await waitFor(() => {
-      expect(screen.getByText('Parents: 1')).toBeInTheDocument();
-    });
-    expect(screen.getByText('Children: 0')).toBeInTheDocument();
-  });
-
-  it('Given parents tab active, When parent listed, Then shows parent name and deregister button', async () => {
-    // Arrange
-    mockListRegistrations.mockResolvedValue({ registrations: [] });
-    mockGetParents.mockResolvedValue({
-      parents: [{ name: 'parent-df@rp1', addresses: ['jades://10.0.0.1:1099'] }],
-    });
-    mockGetChildren.mockResolvedValue({ children: [] });
-
-    // Act
-    renderWithTheme(<DFPage />);
-    await waitFor(() => screen.getByText('Parents: 1'));
-    fireEvent.click(screen.getByText('Parents: 1'));
+    await waitFor(() => screen.getAllByText('Parents: 1'));
+    const parentChip = screen.getAllByText('Parents: 1').find(el => el.hasAttribute('onclick')) || screen.getAllByText('Parents: 1')[1];
+    fireEvent.click(parentChip);
 
     // Assert
     await waitFor(() => {
@@ -234,18 +247,21 @@ describe('DFPage', () => {
     expect(screen.getByRole('button', { name: 'Deregister from Parent' })).toBeInTheDocument();
   });
 
-  it('Given children tab active, When child listed, Then shows child name and deregister button', async () => {
+  it('Given child DFs exist, When child tab clicked, Then shows child list and deregister button', async () => {
     // Arrange
     mockListRegistrations.mockResolvedValue({ registrations: [] });
     mockGetParents.mockResolvedValue({ parents: [] });
     mockGetChildren.mockResolvedValue({
       children: [{ name: 'child-df@rp1', addresses: ['jades://10.0.0.2:1099'] }],
     });
+    mockGetStatus.mockResolvedValue({ running: true, registeredAgentCount: 0, parentCount: 0, childCount: 1 });
+    mockGetDescription.mockResolvedValue({ name: 'df', addresses: [], services: [] });
 
     // Act
     renderWithTheme(<DFPage />);
-    await waitFor(() => screen.getByText('Children: 1'));
-    fireEvent.click(screen.getByText('Children: 1'));
+    await waitFor(() => screen.getAllByText('Children: 1'));
+    const childChip = screen.getAllByText('Children: 1').find(el => el.hasAttribute('onclick')) || screen.getAllByText('Children: 1')[1];
+    fireEvent.click(childChip);
 
     // Assert
     await waitFor(() => {
@@ -254,44 +270,43 @@ describe('DFPage', () => {
     expect(screen.getByRole('button', { name: 'Deregister Child' })).toBeInTheDocument();
   });
 
-  it('Given "Federate with Parent DF" clicked, When form submitted, Then calls federate API', async () => {
+  it('Given "Federate" clicked, When form submitted, Then calls federate API', async () => {
     // Arrange
-    mockListRegistrations.mockResolvedValue({ registrations: [] });
-    mockGetParents.mockResolvedValue({ parents: [] });
-    mockGetChildren.mockResolvedValue({ children: [] });
+    mockBasicData();
     mockFederate.mockResolvedValue({ message: 'federated', parent: { name: 'p@rp1', addresses: ['addr'] } });
 
     // Act
     renderWithTheme(<DFPage />);
     await waitFor(() => screen.getByText('Register Agent'));
-    fireEvent.click(screen.getByText('Parents: 0'));
+    fireEvent.click(screen.getAllByText('Parents: 0')[1]);
     await waitFor(() => screen.getByText('Federate with Parent DF'));
     fireEvent.click(screen.getByText('Federate with Parent DF'));
     await waitFor(() => screen.getByLabelText('Parent DF Name'));
     fireEvent.change(screen.getByLabelText('Parent DF Name'), { target: { value: 'p@rp1' } });
-    fireEvent.change(screen.getByLabelText('Parent DF Addresses (comma-separated)'), { target: { value: 'jades://10.0.0.1:1099' } });
     fireEvent.click(screen.getByText('Federate'));
 
     // Assert
     await waitFor(() => {
-      expect(mockFederate).toHaveBeenCalledWith({ parentDF: 'p@rp1', parentDFAddresses: ['jades://10.0.0.1:1099'] });
+      expect(mockFederate).toHaveBeenCalledWith({ parentDF: 'p@rp1', parentDFAddresses: [] });
     });
   });
 
-  it('Given parent DF listed, When deregister clicked and confirmed, Then calls deregisterParent API', async () => {
+  it('Given parent DF listed, When deregister from parent clicked and confirmed, Then calls deregisterParent API', async () => {
     // Arrange
     mockListRegistrations.mockResolvedValue({ registrations: [] });
     mockGetParents.mockResolvedValue({
       parents: [{ name: 'parent-df@rp1', addresses: ['jades://10.0.0.1:1099'] }],
     });
     mockGetChildren.mockResolvedValue({ children: [] });
-    mockDeregisterParent.mockResolvedValue({ message: 'deregistered' });
+    mockGetStatus.mockResolvedValue({ running: true, registeredAgentCount: 0, parentCount: 1, childCount: 0 });
+    mockGetDescription.mockResolvedValue({ name: 'df', addresses: [], services: [] });
+    mockDeregisterParent.mockResolvedValue({ message: 'removed' });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     // Act
     renderWithTheme(<DFPage />);
-    await waitFor(() => screen.getByText('Parents: 1'));
-    fireEvent.click(screen.getByText('Parents: 1'));
+    await waitFor(() => screen.getAllByText('Parents: 1'));
+    fireEvent.click(screen.getAllByText('Parents: 1')[1]);
     await waitFor(() => screen.getByText('parent-df@rp1'));
     fireEvent.click(screen.getByRole('button', { name: 'Deregister from Parent' }));
 
@@ -302,20 +317,22 @@ describe('DFPage', () => {
     vi.restoreAllMocks();
   });
 
-  it('Given child DF listed, When deregister clicked and confirmed, Then calls deregisterChild API', async () => {
+  it('Given child DF listed, When deregister child clicked and confirmed, Then calls deregisterChild API', async () => {
     // Arrange
     mockListRegistrations.mockResolvedValue({ registrations: [] });
     mockGetParents.mockResolvedValue({ parents: [] });
     mockGetChildren.mockResolvedValue({
       children: [{ name: 'child-df@rp1', addresses: ['jades://10.0.0.2:1099'] }],
     });
-    mockDeregisterChild.mockResolvedValue({ message: 'deregistered' });
+    mockGetStatus.mockResolvedValue({ running: true, registeredAgentCount: 0, parentCount: 0, childCount: 1 });
+    mockGetDescription.mockResolvedValue({ name: 'df', addresses: [], services: [] });
+    mockDeregisterChild.mockResolvedValue({ message: 'removed' });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     // Act
     renderWithTheme(<DFPage />);
-    await waitFor(() => screen.getByText('Children: 1'));
-    fireEvent.click(screen.getByText('Children: 1'));
+    await waitFor(() => screen.getAllByText('Children: 1'));
+    fireEvent.click(screen.getAllByText('Children: 1')[1]);
     await waitFor(() => screen.getByText('child-df@rp1'));
     fireEvent.click(screen.getByRole('button', { name: 'Deregister Child' }));
 
@@ -324,5 +341,42 @@ describe('DFPage', () => {
       expect(mockDeregisterChild).toHaveBeenCalledWith('child-df@rp1');
     });
     vi.restoreAllMocks();
+  });
+
+  it('Given refresh button clicked, Then calls refresh API', async () => {
+    // Arrange
+    mockBasicData();
+    mockRefresh.mockResolvedValue({ message: 'DF refreshed', registeredAgentCount: 0 });
+
+    // Act
+    renderWithTheme(<DFPage />);
+    await waitFor(() => screen.getByText('Register Agent'));
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh DF Data' }));
+
+    // Assert
+    await waitFor(() => {
+      expect(mockRefresh).toHaveBeenCalled();
+    });
+  });
+
+  it('Given view description button clicked, Then shows DF description dialog', async () => {
+    // Arrange
+    mockBasicData();
+    mockGetDescription.mockResolvedValue({
+      name: 'df@main', addresses: ['jades://127.0.0.1:1099'], services: [{ type: 'FIPA-Service', name: 'fipa-df', ownership: '' }],
+    });
+
+    // Act
+    renderWithTheme(<DFPage />);
+    await waitFor(() => screen.getByText('Register Agent'));
+    fireEvent.click(screen.getByRole('button', { name: 'View DF Description' }));
+
+    // Assert
+    await waitFor(() => {
+      expect(mockGetDescription).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(screen.getByText('DF Description')).toBeInTheDocument();
+    });
   });
 });

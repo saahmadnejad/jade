@@ -18,6 +18,8 @@ import {
   type DFRegistrationListResponse,
   type DFParentInfo,
   type DfFederateRequest,
+  type DFStatusResponse,
+  type DFDescriptionResponse,
 } from 'shared';
 
 interface TabPanelProps {
@@ -39,6 +41,8 @@ export default function DFPage() {
   const [registrations, setRegistrations] = useState<DFRegistrationInfo[]>([]);
   const [parents, setParents] = useState<DFParentInfo[]>([]);
   const [children, setChildren] = useState<DFParentInfo[]>([]);
+  const [dfStatus, setDfStatus] = useState<DFStatusResponse | null>(null);
+  const [dfDescription, setDfDescription] = useState<DFDescriptionResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
@@ -47,6 +51,7 @@ export default function DFPage() {
   const [modifyOpen, setModifyOpen] = useState(false);
   const [modifyTarget, setModifyTarget] = useState<DFRegistrationInfo | null>(null);
   const [federateOpen, setFederateOpen] = useState(false);
+  const [descOpen, setDescOpen] = useState(false);
   const [registerForm, setRegisterForm] = useState({
     name: '',
     addresses: '',
@@ -68,14 +73,18 @@ export default function DFPage() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [regData, parentData, childData] = await Promise.all([
+      const [regData, parentData, childData, statusData, descData] = await Promise.all([
         api.df.listRegistrations(),
         api.df.getParents(),
         api.df.getChildren(),
+        api.df.getStatus(),
+        api.df.getDescription(),
       ]);
       setRegistrations(regData.registrations || []);
       setParents(parentData.parents || []);
       setChildren(childData.children || []);
+      setDfStatus(statusData);
+      setDfDescription(descData);
     } catch (e: any) {
       setSnackbar({ open: true, message: `Failed to fetch DF data: ${e.message || 'unknown error'}`, severity: 'error' });
     } finally {
@@ -96,6 +105,28 @@ export default function DFPage() {
       setSnackbar({ open: true, message: `Failed to fetch DF registrations: ${e.message || 'unknown error'}`, severity: 'error' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDfStatus = async () => {
+    try {
+      const status = await api.df.getStatus();
+      setDfStatus(status);
+    } catch (e) {
+      console.error('Failed to fetch DF status', e);
+    }
+  };
+
+  const handleRefreshDf = async () => {
+    setActionLoading('refresh');
+    try {
+      const resp = await api.df.refresh();
+      setSnackbar({ open: true, message: `DF refreshed: ${resp.registeredAgentCount} registered agents`, severity: 'success' });
+      fetchAll();
+    } catch (e: any) {
+      setSnackbar({ open: true, message: `DF refresh failed: ${e.message || 'unknown error'}`, severity: 'error' });
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -254,9 +285,26 @@ export default function DFPage() {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h4">Directory Facilitator (DF)</Typography>
         <Box display="flex" gap={1}>
-          <Tooltip title="Refresh">
-            <IconButton onClick={fetchAll} disabled={loading}>
+          <Tooltip title="Refresh DF Data">
+            <IconButton onClick={handleRefreshDf} disabled={loading || !!actionLoading}>
               <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="View DF Description">
+            <IconButton
+              color="info"
+              size="small"
+              onClick={async () => {
+                try {
+                  const desc = await api.df.getDescription();
+                  setDfDescription(desc);
+                  setDescOpen(true);
+                } catch (e: any) {
+                  setSnackbar({ open: true, message: `Failed to load DF description: ${e.message || 'unknown error'}`, severity: 'error' });
+                }
+              }}
+            >
+              <SearchIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           <Button variant="outlined" onClick={() => setSearchOpen(true)} startIcon={<SearchIcon />}>
@@ -267,6 +315,23 @@ export default function DFPage() {
           </Button>
         </Box>
       </Box>
+
+      {dfStatus && (
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
+            <Chip
+              label={dfStatus.running ? 'DF Running' : 'DF Not Running'}
+              color={dfStatus.running ? 'success' : 'default'}
+              size="small"
+            />
+            {dfStatus.agent && <Chip label={`Agent: ${dfStatus.agent}`} size="small" variant="outlined" />}
+            {dfStatus.container && <Chip label={`Container: ${dfStatus.container}`} size="small" variant="outlined" />}
+            {dfStatus.registeredAgentCount !== undefined && <Chip label={`Registered: ${dfStatus.registeredAgentCount}`} size="small" variant="outlined" />}
+            {dfStatus.parentCount !== undefined && <Chip label={`Parents: ${dfStatus.parentCount}`} size="small" variant="outlined" />}
+            {dfStatus.childCount !== undefined && <Chip label={`Children: ${dfStatus.childCount}`} size="small" variant="outlined" />}
+          </Box>
+        </Paper>
+      )}
 
       <Box display="flex" mb={2} gap={1}>
         <Chip
@@ -559,6 +624,30 @@ export default function DFPage() {
           <Button onClick={handleFederate} variant="contained" disabled={!federateForm.parentDF}>
             Federate
           </Button>
+        </DialogActions>
+       </Dialog>
+
+      <Dialog open={descOpen} onClose={() => setDescOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>DF Description</DialogTitle>
+        <DialogContent>
+          {dfDescription && (
+            <Box display="flex" flexDirection="column" gap={1} pt={1}>
+              <Typography><strong>Name:</strong> {dfDescription.name}</Typography>
+              <Typography><strong>Addresses:</strong> {dfDescription.addresses?.join(', ') || 'N/A'}</Typography>
+              <Typography><strong>Services:</strong>
+                {dfDescription.services && dfDescription.services.length > 0 ? (
+                  <Box display="flex" gap={1} mt={1} flexWrap="wrap">
+                    {dfDescription.services.map((svc, i) => (
+                      <Chip key={i} label={`${svc.name || svc.type} (${svc.type})`} size="small" />
+                    ))}
+                  </Box>
+                ) : 'N/A'}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDescOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
 
