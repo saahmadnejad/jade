@@ -3,20 +3,50 @@ import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, CircularProgress, IconButton,
   Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Button, Snackbar, Alert, Chip,
+  TextField, Button, Snackbar, Alert, Chip, Tabs, Tab,
 } from '@mui/material';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { api, type DFRegistrationInfo, type DFServiceInfo, type DFRegistrationListResponse } from 'shared';
+import SearchIcon from '@mui/icons-material/Search';
+import PublicIcon from '@mui/icons-material/Public';
+import {
+  api,
+  type DFRegistrationInfo,
+  type DFServiceInfo,
+  type DFRegistrationListResponse,
+  type DFParentInfo,
+  type DfFederateRequest,
+} from 'shared';
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index } = props;
+  return (
+    <div hidden={value !== index} style={{ display: value === index ? 'block' : 'none' }}>
+      {value === index && <Box pt={2}>{children}</Box>}
+    </div>
+  );
+}
 
 export default function DFPage() {
   const [registrations, setRegistrations] = useState<DFRegistrationInfo[]>([]);
+  const [parents, setParents] = useState<DFParentInfo[]>([]);
+  const [children, setChildren] = useState<DFParentInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [tabValue, setTabValue] = useState(0);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [modifyOpen, setModifyOpen] = useState(false);
+  const [modifyTarget, setModifyTarget] = useState<DFRegistrationInfo | null>(null);
+  const [federateOpen, setFederateOpen] = useState(false);
   const [registerForm, setRegisterForm] = useState({
     name: '',
     addresses: '',
@@ -27,9 +57,35 @@ export default function DFPage() {
     serviceName: '',
     serviceType: '',
   });
+  const [federateForm, setFederateForm] = useState({
+    parentDF: '',
+    parentDFAddresses: '',
+  });
   const [snackbar, setSnackbar] = useState<{open: boolean; message: string; severity: 'success' | 'error'}>({
     open: false, message: '', severity: 'success',
   });
+
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const [regData, parentData, childData] = await Promise.all([
+        api.df.listRegistrations(),
+        api.df.getParents(),
+        api.df.getChildren(),
+      ]);
+      setRegistrations(regData.registrations || []);
+      setParents(parentData.parents || []);
+      setChildren(childData.children || []);
+    } catch (e: any) {
+      setSnackbar({ open: true, message: `Failed to fetch DF data: ${e.message || 'unknown error'}`, severity: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAll();
+  }, []);
 
   const fetchRegistrations = async () => {
     setLoading(true);
@@ -42,10 +98,6 @@ export default function DFPage() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchRegistrations();
-  }, []);
 
   const handleRegister = async () => {
     try {
@@ -88,6 +140,30 @@ export default function DFPage() {
     }
   };
 
+  const handleModify = async () => {
+    if (!modifyTarget) return;
+    try {
+      const services: DFServiceInfo[] = [];
+      if (registerForm.serviceType) {
+        services.push({
+          type: registerForm.serviceType,
+          name: registerForm.serviceName || '',
+          ownership: '',
+        });
+      }
+      await api.df.modifyRegistration(modifyTarget.name, {
+        addresses: registerForm.addresses ? registerForm.addresses.split(',').map(s => s.trim()).filter(Boolean) : [],
+        services: services.length > 0 ? services : undefined,
+      });
+      setSnackbar({ open: true, message: `Registration for '${modifyTarget.name}' modified`, severity: 'success' });
+      setModifyOpen(false);
+      setModifyTarget(null);
+      fetchRegistrations();
+    } catch (e: any) {
+      setSnackbar({ open: true, message: `Modify failed: ${e.message || 'unknown error'}`, severity: 'error' });
+    }
+  };
+
   const handleSearch = async () => {
     try {
       const resp = await api.df.search({
@@ -104,6 +180,67 @@ export default function DFPage() {
     }
   };
 
+  const handleFederate = async () => {
+    try {
+      const request: DfFederateRequest = {
+        parentDF: federateForm.parentDF,
+        parentDFAddresses: federateForm.parentDFAddresses
+          ? federateForm.parentDFAddresses.split(',').map(s => s.trim()).filter(Boolean)
+          : [],
+      };
+      await api.df.federate(request);
+      setSnackbar({ open: true, message: `DF federated with '${federateForm.parentDF}'`, severity: 'success' });
+      setFederateOpen(false);
+      setFederateForm({ parentDF: '', parentDFAddresses: '' });
+      setParents([...parents, { name: federateForm.parentDF, addresses: request.parentDFAddresses }]);
+    } catch (e: any) {
+      setSnackbar({ open: true, message: `Federation failed: ${e.message || 'unknown error'}`, severity: 'error' });
+    }
+  };
+
+  const handleDeregisterParent = async (name: string) => {
+    const confirmed = window.confirm(`Deregister from parent DF '${name}'?`);
+    if (!confirmed) return;
+
+    setActionLoading('deregisterParent:' + name);
+    try {
+      await api.df.deregisterParent(name);
+      setSnackbar({ open: true, message: `Deregistered from parent DF '${name}'`, severity: 'success' });
+      setParents(parents.filter(p => p.name !== name));
+    } catch (e: any) {
+      setSnackbar({ open: true, message: `Deregister parent failed: ${e.message || 'unknown error'}`, severity: 'error' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDeregisterChild = async (name: string) => {
+    const confirmed = window.confirm(`Deregister child DF '${name}' from this DF?`);
+    if (!confirmed) return;
+
+    setActionLoading('deregisterChild:' + name);
+    try {
+      await api.df.deregisterChild(name);
+      setSnackbar({ open: true, message: `Child DF '${name}' deregistered`, severity: 'success' });
+      setChildren(children.filter(c => c.name !== name));
+    } catch (e: any) {
+      setSnackbar({ open: true, message: `Deregister child failed: ${e.message || 'unknown error'}`, severity: 'error' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleModifyClick = (reg: DFRegistrationInfo) => {
+    setModifyTarget(reg);
+    setRegisterForm({
+      name: reg.name,
+      addresses: reg.addresses?.join(', ') || '',
+      serviceType: reg.services?.[0]?.type || '',
+      serviceName: reg.services?.[0]?.name || '',
+    });
+    setModifyOpen(true);
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -118,11 +255,11 @@ export default function DFPage() {
         <Typography variant="h4">Directory Facilitator (DF)</Typography>
         <Box display="flex" gap={1}>
           <Tooltip title="Refresh">
-            <IconButton onClick={fetchRegistrations} disabled={loading}>
+            <IconButton onClick={fetchAll} disabled={loading}>
               <RefreshIcon />
             </IconButton>
           </Tooltip>
-          <Button variant="outlined" onClick={() => setSearchOpen(true)}>
+          <Button variant="outlined" onClick={() => setSearchOpen(true)} startIcon={<SearchIcon />}>
             Search
           </Button>
           <Button variant="contained" onClick={() => setRegisterOpen(true)} startIcon={<AddIcon />}>
@@ -131,53 +268,162 @@ export default function DFPage() {
         </Box>
       </Box>
 
-      {registrations.length === 0 ? (
-        <Typography>No agents registered with DF</Typography>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Agent Name</TableCell>
-                <TableCell>Addresses</TableCell>
-                <TableCell>Services</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {registrations.map((reg) => (
-                <TableRow key={reg.name} hover>
-                  <TableCell>{reg.name}</TableCell>
-                  <TableCell>
-                    {reg.addresses && reg.addresses.length > 0
-                      ? reg.addresses.map(addr => <Chip key={addr} label={addr} size="small" sx={{ mr: 0.5, mb: 0.5 }} />)
-                      : 'N/A'}
-                  </TableCell>
-                  <TableCell>
-                    {reg.services && reg.services.length > 0 ? (
-                      reg.services.map(svc => (
-                        <Chip key={svc.name || svc.type} label={`${svc.name || svc.type} (${svc.type})`} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
-                      ))
-                    ) : 'N/A'}
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Deregister">
-                      <IconButton
-                        color="error"
-                        size="small"
-                        disabled={actionLoading === 'deregister:' + reg.name}
-                        onClick={() => handleDeregister(reg.name)}
-                      >
-                        <DeleteForeverIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
+      <Box display="flex" mb={2} gap={1}>
+        <Chip
+          icon={<PublicIcon />}
+          label={`Parents: ${parents.length}`}
+          size="small"
+          variant={tabValue === 1 ? 'filled' : 'outlined'}
+          onClick={() => setTabValue(1)}
+        />
+        <Chip
+          label={`Children: ${children.length}`}
+          size="small"
+          variant={tabValue === 2 ? 'filled' : 'outlined'}
+          onClick={() => setTabValue(2)}
+        />
+      </Box>
+
+      <TabPanel value={tabValue} index={0}>
+        {registrations.length === 0 ? (
+          <Typography>No agents registered with DF</Typography>
+        ) : (
+          <TableContainer component={Paper}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Agent Name</TableCell>
+                  <TableCell>Addresses</TableCell>
+                  <TableCell>Services</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+              </TableHead>
+              <TableBody>
+                {registrations.map((reg) => (
+                  <TableRow key={reg.name} hover>
+                    <TableCell>{reg.name}</TableCell>
+                    <TableCell>
+                      {reg.addresses && reg.addresses.length > 0
+                        ? reg.addresses.map(addr => <Chip key={addr} label={addr} size="small" sx={{ mr: 0.5, mb: 0.5 }} />)
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {reg.services && reg.services.length > 0 ? (
+                        reg.services.map(svc => (
+                          <Chip key={svc.type || svc.name} label={`${svc.name || svc.type} (${svc.type})`} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
+                        ))
+                      ) : 'N/A'}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Modify Registration">
+                        <IconButton
+                          color="info"
+                          size="small"
+                          disabled={actionLoading === 'modify:' + reg.name}
+                          onClick={() => handleModifyClick(reg)}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Deregister">
+                        <IconButton
+                          color="error"
+                          size="small"
+                          disabled={actionLoading === 'deregister:' + reg.name}
+                          onClick={() => handleDeregister(reg.name)}
+                        >
+                          <DeleteForeverIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={1}>
+        {parents.length === 0 ? (
+          <Typography>No parent DFs found</Typography>
+        ) : (
+          <TableContainer component={Paper}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Parent DF Name</TableCell>
+                  <TableCell>Addresses</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {parents.map((p) => (
+                  <TableRow key={p.name}>
+                    <TableCell>{p.name}</TableCell>
+                    <TableCell>{p.addresses.length > 0 ? p.addresses.join(', ') : 'N/A'}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Deregister from Parent">
+                        <IconButton
+                          color="error"
+                          size="small"
+                          disabled={actionLoading === 'deregisterParent:' + p.name}
+                          onClick={() => handleDeregisterParent(p.name)}
+                        >
+                          <DeleteForeverIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+        <Box mt={2}>
+          <Button variant="contained" onClick={() => setFederateOpen(true)} startIcon={<AddIcon />}>
+            Federate with Parent DF
+          </Button>
+        </Box>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={2}>
+        {children.length === 0 ? (
+          <Typography>No child DFs found</Typography>
+        ) : (
+          <TableContainer component={Paper}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Child DF Name</TableCell>
+                  <TableCell>Addresses</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {children.map((c) => (
+                  <TableRow key={c.name}>
+                    <TableCell>{c.name}</TableCell>
+                    <TableCell>{c.addresses.length > 0 ? c.addresses.join(', ') : 'N/A'}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Deregister Child">
+                        <IconButton
+                          color="error"
+                          size="small"
+                          disabled={actionLoading === 'deregisterChild:' + c.name}
+                          onClick={() => handleDeregisterChild(c.name)}
+                        >
+                          <DeleteForeverIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </TabPanel>
 
       <Dialog open={registerOpen} onClose={() => setRegisterOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Register Agent with DF</DialogTitle>
@@ -221,6 +467,45 @@ export default function DFPage() {
         </DialogActions>
       </Dialog>
 
+      <Dialog open={modifyOpen} onClose={() => setModifyOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Modify Registration</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+            <TextField
+              label="Agent Name"
+              value={registerForm.name}
+              disabled
+              fullWidth
+            />
+            <TextField
+              label="Addresses (comma-separated)"
+              value={registerForm.addresses}
+              onChange={e => setRegisterForm({ ...registerForm, addresses: e.target.value })}
+              fullWidth
+              helperText="Comma-separated agent addresses"
+            />
+            <TextField
+              label="Service Type"
+              value={registerForm.serviceType}
+              onChange={e => setRegisterForm({ ...registerForm, serviceType: e.target.value })}
+              fullWidth
+            />
+            <TextField
+              label="Service Name"
+              value={registerForm.serviceName}
+              onChange={e => setRegisterForm({ ...registerForm, serviceName: e.target.value })}
+              fullWidth
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setModifyOpen(false)}>Cancel</Button>
+          <Button onClick={handleModify} variant="contained" disabled={!modifyTarget}>
+            Modify
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={searchOpen} onClose={() => setSearchOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Search DF</DialogTitle>
         <DialogContent>
@@ -245,6 +530,34 @@ export default function DFPage() {
           <Button onClick={() => setSearchOpen(false)}>Cancel</Button>
           <Button onClick={handleSearch} variant="contained">
             Search
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={federateOpen} onClose={() => setFederateOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Federate with Parent DF</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+            <TextField
+              label="Parent DF Name"
+              value={federateForm.parentDF}
+              onChange={e => setFederateForm({ ...federateForm, parentDF: e.target.value })}
+              fullWidth
+              helperText="Full AID of the parent DF (e.g. df@remote-platform)"
+            />
+            <TextField
+              label="Parent DF Addresses (comma-separated)"
+              value={federateForm.parentDFAddresses}
+              onChange={e => setFederateForm({ ...federateForm, parentDFAddresses: e.target.value })}
+              fullWidth
+              helperText="e.g., jades://10.0.0.1:1099"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFederateOpen(false)}>Cancel</Button>
+          <Button onClick={handleFederate} variant="contained" disabled={!federateForm.parentDF}>
+            Federate
           </Button>
         </DialogActions>
       </Dialog>
