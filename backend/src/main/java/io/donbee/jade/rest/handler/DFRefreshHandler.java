@@ -7,7 +7,19 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for POST /api/df/refresh — refreshes all DF data.
+ * Handler for {@code POST /api/df/refresh} — refresh all DF data
+ * (registrations, federation counts).
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.dfgui.DFGUIRefreshAppletAction}
+ * triggered {@code DFGUI#refresh()}
+ * ({@code io.donbee.jade.tools.dfgui.DFGUI:786}), which accepted three
+ * {@code Iterator}s — registered agents, parent DFs, and child DFs —
+ * and repopulated the three table models
+ * ({@code registeredModel}, {@code parentModel}, {@code childrenModel}).
+ * This REST handler delegates to
+ * {@code DFService#getDFStatus()} which performs equivalent
+ * re-queries (search + get-parents + children enumeration).</p>
  */
 public class DFRefreshHandler implements Handler<RoutingContext> {
 

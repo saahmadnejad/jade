@@ -10,8 +10,33 @@ import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for POST /api/tools/{tool}/start — launch a GUI tool agent.
- * Tool agents are started using the same CreateAgent mechanism as regular agent deployment.
+ * Handler for {@code POST /api/tools/{tool}/start} — launch a GUI
+ * tool agent (sniffer, dummy, logger, introspector, or df-gui).
+ * Tool agents are started using the same CreateAgent mechanism as
+ * regular agent deployment.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * Tool launch was handled by dedicated Swing action classes in
+ * {@code io.donbee.jade.tools.rma}, each calling
+ * {@code rma.newAgent(...)} ({@code rma.java:475}):
+ * <ul>
+ *   <li><b>Sniffer:</b> {@code io.donbee.jade.tools.rma.SnifferAction}
+ *       — deployed {@code io.donbee.jade.tools.sniffer.Sniffer}.</li>
+ *   <li><b>DummyAgent:</b> {@code io.donbee.jade.tools.rma.DummyAgentAction}
+ *       — deployed {@code io.donbee.jade.tools.DummyAgent.DummyAgent}.</li>
+ *   <li><b>Logger:</b> {@code io.donbee.jade.tools.rma.LogManagerAgentAction}
+ *       — deployed {@code io.donbee.jade.tools.logging.LogManagerAgent}.</li>
+ *   <li><b>Introspector:</b> {@code io.donbee.jade.tools.rma.IntrospectorAction}
+ *       — deployed {@code io.donbee.jade.tools.introspector.Introspector}.</li>
+ *   <li><b>DF GUI:</b> {@code io.donbee.jade.tools.rma.ShowDFGuiAction}
+ *       — sent a {@link io.donbee.jade.domain.JADEAgentManagement.ShowGui}
+ *       action to the DF (instead of creating a new agent).</li>
+ * </ul>
+ * This handler uses {@code AgentManager#create()} (same as
+ * {@code rma.newAgent()}) for all tools. Note: the old
+ * {@code ShowDFGuiAction} sent a {@code ShowGui} action rather than
+ * creating a new agent; that path is not yet replicated here (see
+ * {@code io.donbee.jade.tools.dfgui.DFGUI}).</p>
  */
 public class ToolLaunchHandler implements Handler<RoutingContext> {
     private final PlatformService service;

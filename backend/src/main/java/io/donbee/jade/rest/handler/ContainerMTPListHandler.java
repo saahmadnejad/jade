@@ -9,7 +9,16 @@ import io.vertx.ext.web.RoutingContext;
 import java.util.List;
 
 /**
- * Handler for GET /api/containers/:name/mtps — list MTPs on a container.
+ * Handler for {@code GET /api/containers/:name/mtps} — list MTPs
+ * installed on a container.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.ManageMTPsAction} showed a Swing
+ * {@code ManageMTPsDialog} to list, install, and uninstall MTPs for
+ * a container. The raw data was obtained from
+ * {@code rma.installMTP}/{@code uninstallMTP} methods. This handler
+ * delegates to {@code AgentManager#containerMTPs()} via
+ * {@code JadesPlatformService#getMTPs()}.</p>
  */
 public class ContainerMTPListHandler implements Handler<RoutingContext> {
     private final PlatformService service;

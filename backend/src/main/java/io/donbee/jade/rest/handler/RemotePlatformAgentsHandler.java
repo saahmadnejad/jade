@@ -11,7 +11,21 @@ import io.vertx.ext.web.RoutingContext;
 import java.util.List;
 
 /**
- * Handler for GET /api/platforms/:name/agents — list agents on a remote platform.
+ * Handler for {@code GET /api/platforms/:name/agents} — list agents
+ * on a remote platform.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.RefreshAMSAgentAction} called
+ * {@code rma.refreshRemoteAgent(apDesc, amsAID)}
+ * ({@code rma.java:1080}), which sent a
+ * {@link io.donbee.jade.domain.FIPAAgentManagement.Search} action
+ * to the remote AMS (with an empty {@code AMSAgentDescription} and
+ * {@code maxResults = -1}) via an
+ * {@code handleRefreshRemoteAgentBehaviour}
+ * ({@code rma.java:138}). The results were displayed as
+ * {@code RemoteAgentNode} entries in the {@code MainWindow} tree.
+ * This handler delegates to
+ * {@code JadesPlatformService#searchRemotePlatformAgents()}.</p>
  */
 public class RemotePlatformAgentsHandler implements Handler<RoutingContext> {
     private final PlatformService service;

@@ -7,7 +7,21 @@ import io.vertx.ext.web.RoutingContext;
 import io.donbee.jade.rest.service.PlatformService;
 
 /**
- * Handler for the agent-list endpoint.
+ * Handler for the agent-list endpoint ({@code GET /api/agents}).
+ * Returns the list of agents running in the main container.
+ * With {@code ?detail=true} each entry includes state, ownership,
+ * container, and addresses.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * The agent tree was rendered by {@code io.donbee.jade.gui.AgentTree}
+ * / {@code AgentTreeModel} inside
+ * {@code io.donbee.jade.tools.rma.MainWindow}. Agents were discovered
+ * via AMS introspection events
+ * ({@code BornAgent}, {@code DeadAgent}, etc.) handled by
+ * {@code rma.AMSListenerBehaviour}
+ * ({@code io.donbee.jade.tools.rma.rma:170}). This handler
+ * instead calls {@code AgentManager#containerAgents()} (see
+ * {@code JadesPlatformService#getAgents()}).</p>
  */
 public class AgentListHandler implements Handler<RoutingContext> {
     private final PlatformService service;

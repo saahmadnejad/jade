@@ -8,6 +8,18 @@ import java.util.List;
  * Interface for Directory Facilitator (DF) data access.
  * Split from PlatformService to follow ISP — handlers that only need DF
  * operations don't depend on the full PlatformService interface.
+ *
+ * <p><b>Old GUI implementation:</b> The DF GUI was
+ * {@code io.donbee.jade.tools.dfgui.DFGUI}, a Swing application with
+ * three tabs (Registrations, Search Result, DF Federation). It
+ * communicated with the DF agent through
+ * {@code io.donbee.jade.domain.DFGUIAdapter}, posting
+ * {@code GuiEvent}s that were translated into FIPA management
+ * actions ({@code Register}, {@code Deregister}, {@code Modify},
+ * {@code Search}, {@code GetParents}, {@code Federate}).
+ * Each method here replicates one of those GUI-driven operations
+ * directly, using the {@code DFRequestAgent} helper to send
+ * synchronous ACL messages to the DF.</p>
  */
 public interface DFService {
 

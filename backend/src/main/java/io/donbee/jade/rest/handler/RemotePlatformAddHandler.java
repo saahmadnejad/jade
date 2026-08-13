@@ -9,7 +9,20 @@ import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for POST /api/platforms — add a remote platform via AMS AID.
+ * Handler for {@code POST /api/platforms} — add a remote platform
+ * via AMS AID.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.AddRemotePlatformAction} invoked
+ * an {@code AIDGui} dialog and then called
+ * {@code rma.addRemotePlatform(remoteAMS)} ({@code rma.java:976}),
+ * which sent a {@link io.donbee.jade.domain.FIPAAgentManagement.GetDescription}
+ * action to the remote AMS to retrieve the
+ * {@code APDescription}. The reply was handled by
+ * {@code handleAddRemotePlatformBehaviour}
+ * ({@code rma.java:111}) and displayed in the
+ * {@code MainWindow} tree. This handler delegates to
+ * {@code JadesPlatformService#addRemotePlatform()}.</p>
  */
 public class RemotePlatformAddHandler implements Handler<RoutingContext> {
     private final PlatformService service;

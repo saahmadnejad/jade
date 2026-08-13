@@ -10,7 +10,18 @@ import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for PATCH /api/agents/:name (change ownership).
+ * Handler for {@code PATCH /api/agents/:name} — change agent ownership.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.ChangeAgentOwnershipAction}
+ * invoked a {@code PwdDialog} and then called
+ * {@code rma.changeAgentOwnership(agentID, owner)}
+ * ({@code rma.java:611}), which sent a
+ * {@link io.donbee.jade.domain.FIPAAgentManagement.Modify} action with
+ * {@code AMSAgentDescription.ownership} set to the new owner, via
+ * {@code FIPAManagementOntology}. This handler delegates to
+ * {@code JadesPlatformService#changeAgentOwnership()} which replicates
+ * the same ACL messaging.</p>
  */
 public class AgentOwnershipHandler implements Handler<RoutingContext> {
     private final PlatformService service;

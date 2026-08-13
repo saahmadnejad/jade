@@ -7,9 +7,21 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for deploying a new agent via POST /api/agents.
- * Expected request body: {"name": "...", "class": "...", "args": [...]}
+ * Handler for deploying a new agent via {@code POST /api/agents}.
+ * Expected request body: {@code {"name": "...", "class": "...", "args": [...]}}
  * Returns 201 with the agent's info.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.StartNewAgentAction} invoked the
+ * {@code StartDialog} and then called
+ * {@code rma.newAgent(agentName, className, args, owner, container)}
+ * ({@code rma.java:475}). The old method built a
+ * {@link io.donbee.jade.domain.JADEAgentManagement.CreateAgent}
+ * action, set owner/credentials via the {@code SecurityService},
+ * encoded it with {@code JADEManagementOntology}, and sent it to the
+ * AMS via an {@code AMSClientBehaviour}. This handler delegates to
+ * {@code AgentManager#create()} through
+ * {@code JadesPlatformService#deployAgent()}.</p>
  */
 public class AgentDeployHandler implements Handler<RoutingContext> {
     private final PlatformService service;

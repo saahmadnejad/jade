@@ -8,6 +8,13 @@ import io.donbee.jade.mtp.MTPDescriptor;
 /**
  * Service interface for platform data access.
  * Follows DIP — high-level handlers depend on this abstraction.
+ *
+ * <p><b>Old GUI implementation:</b> The concrete methods in
+ * {@code JadesPlatformService} replace the callback methods in
+ * {@code io.donbee.jade.tools.rma.rma} (lines 468–1062), which was the
+ * central agent behind the old Swing RMA GUI. Each method here maps
+ * to a corresponding {@code rma.xxx()} method that sent FIPA management
+ * actions (via {@code AMSClientBehaviour}) to the AMS.</p>
  */
 public interface PlatformService {
 

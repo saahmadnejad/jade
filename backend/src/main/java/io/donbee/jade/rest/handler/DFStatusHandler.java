@@ -8,7 +8,20 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for GET /api/tools/df-gui/status — returns DF runtime status.
+ * Handler for {@code GET /api/tools/df-gui/status} — returns DF
+ * runtime status (running state, agent AID, container name,
+ * registration/federation counts).
+ *
+ * <p><b>Old GUI implementation:</b>
+ * The old DF GUI displayed status in a {@code JTextField} status bar
+ * via {@code DFGUI#showStatusMsg()}
+ * ({@code io.donbee.jade.tools.dfgui.DFGUI:615}). The counts were
+ * derived from {@code DFGUI#refresh()}
+ * ({@code io.donbee.jade.tools.dfgui.DFGUI:786}), which populated
+ * the {@code registeredModel}, {@code parentModel}, and
+ * {@code childrenModel} tables. This REST handler delegates to
+ * {@code DFService#getDFStatus()} which returns the same data
+ * programmatically.</p>
  */
 public class DFStatusHandler implements Handler<RoutingContext> {
 

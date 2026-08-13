@@ -7,7 +7,17 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for DELETE /api/platforms/:name — remove a remote platform.
+ * Handler for {@code DELETE /api/platforms/:name} — remove a remote
+ * platform.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.RemoveRemoteAMSAction} invoked
+ * {@code rma.removeRemotePlatform(apDesc)}
+ * ({@code rma.java:1072}), which called
+ * {@code myGUI.removeRemotePlatform(name)} to remove the platform
+ * from the {@code MainWindow} tree. The old implementation was a
+ * local GUI state change only (no AMS messaging). This handler
+ * delegates to {@code JadesPlatformService#removeRemotePlatform()}.</p>
  */
 public class RemotePlatformRemoveHandler implements Handler<RoutingContext> {
     private final PlatformService service;

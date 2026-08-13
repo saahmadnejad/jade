@@ -12,7 +12,19 @@ import io.vertx.ext.web.RoutingContext;
 import java.util.Map;
 
 /**
- * Handler for POST /api/agents/:name/move and POST /api/agents/clone.
+ * Handler for {@code POST /api/agents/:name/move} — migrate an agent
+ * to a different container.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.MoveAgentAction} (labelled
+ * "Migrate Agent") invoked the {@code MoveDialog} and then called
+ * {@code rma.moveAgent(agentAid, container)}
+ * ({@code rma.java:741}). The old method built a
+ * {@link io.donbee.jade.domain.mobility.MoveAction} with a
+ * {@code MobileAgentDescription}, encoded it with
+ * {@code MobilityOntology}, and sent it to the AMS. This handler
+ * delegates to {@code AgentManager#move()} via
+ * {@code JadesPlatformService#moveAgent()}.</p>
  */
 public class AgentMoveHandler implements Handler<RoutingContext> {
     private final PlatformService service;

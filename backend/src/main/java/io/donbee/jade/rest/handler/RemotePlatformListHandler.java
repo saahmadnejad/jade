@@ -11,7 +11,17 @@ import io.vertx.ext.web.RoutingContext;
 import java.util.List;
 
 /**
- * Handler for GET /api/platforms — list remote platforms.
+ * Handler for {@code GET /api/platforms} — list remote platforms
+ * known to this platform.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * The remote platform folder was managed by
+ * {@code io.donbee.jade.tools.rma.MainWindow}, which displayed a
+ * "Remote Platforms" node in the {@code AgentTree}. Platforms were
+ * added via {@code rma.addRemotePlatform(AID)} ({@code rma.java:976})
+ * and stored in {@code myPlatformProfile} (an {@code APDescription}).
+ * This handler returns the same data via
+ * {@code JadesPlatformService#getRemotePlatforms()}.</p>
  */
 public class RemotePlatformListHandler implements Handler<RoutingContext> {
     private final PlatformService service;

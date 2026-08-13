@@ -13,11 +13,44 @@ import java.util.List;
 
 /**
  * Handler for DF registration management endpoints:
- * GET /api/df/registrations         — List all registrations
- * POST /api/df/registrations        — Register an agent
- * GET /api/df/registrations/{name}  — View a specific registration
- * PUT /api/df/registrations/{name}  — Modify a registration
- * DELETE /api/df/registrations/{name} — Deregister an agent
+ * <ul>
+ *   <li>{@code GET /api/df/registrations}         — List all registrations</li>
+ *   <li>{@code POST /api/df/registrations}        — Register an agent</li>
+ *   <li>{@code GET /api/df/registrations/{name}}  — View a specific registration</li>
+ *   <li>{@code PUT /api/df/registrations/{name}}  — Modify a registration</li>
+ *   <li>{@code DELETE /api/df/registrations/{name}} — Deregister an agent</li>
+ * </ul>
+ *
+ * <p><b>Old GUI implementation:</b> The old DF GUI was
+ * {@code io.donbee.jade.tools.dfgui.DFGUI}, a Swing application with
+ * three tabs (Registrations, Search Result, DF Federation). The
+ * registration table ({@code DFGUI.registeredTable}) was populated by
+ * {@code DFGUI#refresh()}, which called
+ * {@code DFGUIAdapter#getAllAgentsRegistered()} (via
+ * {@code DFGUIAdapter}.
+ * <ul>
+ *   <li><b>List:</b> {@code DFGUI.java:786} {@code refresh()} method.</li>
+ *   <li><b>Register:</b> {@code io.donbee.jade.tools.dfgui.DFGUIRegisterAction}
+ *       ({@code actionPerformed}), which used a {@code DFAgentDscDlg}
+ *       to collect the agent description and posted a
+ *       {@code DFGUIAdapter.REGISTER} GuiEvent.</li>
+ *   <li><b>View:</b> {@code io.donbee.jade.tools.dfgui.DFGUIViewAction},
+ *       which retrieved the description via
+ *       {@code DFGUIAdapter#getDFAgentDsc(AID)} and displayed it in a
+ *       {@code DFAgentDscDlg}.</li>
+ *   <li><b>Modify:</b> {@code io.donbee.jade.tools.dfgui.DFGUIModifyAction},
+ *       which retrieved the old description, showed it in a
+ *       {@code DFAgentDscDlg}, then posted a
+ *       {@code DFGUIAdapter.MODIFY} GuiEvent.</li>
+ *   <li><b>Deregister:</b> {@code io.donbee.jade.tools.dfgui.DFGUIDeregisterAction},
+ *       which posted a {@code DFGUIAdapter.DEREGISTER} GuiEvent.</li>
+ * </ul>
+ * The old GUI used {@code DFGUIAdapter} (a Swing-specific adapter
+ * bridging to the DF agent) to translate GuiEvents into FIPA
+ * {@code Register}, {@code Deregister}, {@code Modify}, and
+ * {@code Search} ACL messages. This REST handler bypasses the GUI
+ * layer entirely, performing the same FIPA operations directly
+ * through {@code DFRequestAgent} (see {@code DFService} interface).</p>
  */
 public class DFRegistrationHandler implements Handler<RoutingContext> {
 
