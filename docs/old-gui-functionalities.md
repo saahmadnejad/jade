@@ -7,7 +7,7 @@ The old GUI source lives in:
 - `backend/src/main/java/io/donbee/jade/gui/` (shared Swing components)
 
 The new React GUI source lives in:
-- `frontend/apps/frontend/src/`
+- `frontend/apps/webapp/src/`
 
 ---
 
@@ -29,23 +29,23 @@ Purpose: Main platform administration GUI — central hub for managing container
 |---|--------------|----------|--------|-------|
 | 1.1 | Close RMA — detaches RMA agent from platform | [ ] | [ ] | |
 | 1.2 | Exit RMA — kills RMA agent and closes window | [ ] | [ ] | |
-| 1.3 | Shutdown Platform — shuts down entire JADE platform (with confirm dialog) | [ ] | [ ] | |
+| 1.3 | Shutdown Platform — shuts down entire JADE platform (with confirm dialog) | [x] | [x] | via AMS ShutdownPlatform |
 
 ### Menu: Actions — Agent Operations
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 1.4 | Start New Agent — create agent (name, class, container, owner, args) | [ ] | [ ] | via AMS CreateAgent |
-| 1.5 | Kill — forcefully terminate a selected agent | [ ] | [ ] | via AMS KillAgent |
-| 1.6 | Suspend Agent — suspend a running agent | [ ] | [ ] | via AMS Modify |
-| 1.7 | Resume Agent — resume a suspended agent | [ ] | [ ] | via AMS Modify |
+| 1.4 | Start New Agent — create agent (name, class, container, owner, args) | [x] | [x] | via AMS CreateAgent |
+| 1.5 | Kill — forcefully terminate a selected agent | [x] | [x] | via AMS KillAgent |
+| 1.6 | Suspend Agent — suspend a running agent | [x] | [x] | via AMS Modify |
+| 1.7 | Resume Agent — resume a suspended agent | [x] | [x] | via AMS Modify |
 | 1.8 | Custom Agent — custom action on an agent | [ ] | [ ] | |
-| 1.9 | Migrate Agent — move agent to another container | [ ] | [ ] | via MobilityOntology MoveAction |
-| 1.10 | Clone Agent — clone agent to a new container | [ ] | [ ] | via MobilityOntology CloneAction |
+| 1.9 | Migrate Agent — move agent to another container | [x] | [x] | via MobilityOntology MoveAction |
+| 1.10 | Clone Agent — clone agent to a new container | [x] | [x] | via MobilityOntology CloneAction |
 | 1.11 | Save Agent — persist agent state to a repository | [ ] | [ ] | via PersistenceOntology SaveAgent |
 | 1.12 | Load Agent — load agent from repository into container | [ ] | [ ] | via PersistenceOntology LoadAgent |
-| 1.13 | Freeze Agent — freeze agent (suspend + serialize to buffer) | [ ] | [ ] | via PersistenceOntology FreezeAgent |
-| 1.14 | Thaw Agent — thaw frozen agent back to live container | [ ] | [ ] | via PersistenceOntology ThawAgent |
-| 1.15 | Change Agent Ownership — change ownership of an agent | [ ] | [ ] | via AMS Modify |
+| 1.13 | Freeze Agent — freeze agent (suspend + serialize to buffer) | [x] | [x] | via PersistenceOntology FreezeAgent |
+| 1.14 | Thaw Agent — thaw frozen agent back to live container | [x] | [x] | via PersistenceOntology ThawAgent |
+| 1.15 | Change Agent Ownership — change ownership of an agent | [x] | [x] | via AMS Modify |
 | 1.16 | Register Remote Agent with local AMS | [ ] | [ ] | via AMS Register |
 
 ### Menu: Actions — Container Operations
@@ -159,9 +159,9 @@ Purpose: Visual tool for managing the Directory Facilitator (yellow pages servic
 ### Views (Tabbed)
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 3.1 | Registrations with this DF — table of agents registered with local DF | [ ] | [ ] | |
-| 3.2 | Search Result — results of last search operation | [ ] | [ ] | |
-| 3.3 | DF Federation — parent/child DF federation tables | [ ] | [ ] | |
+| 3.1 | Registrations with this DF — table of agents registered with local DF | [x] | [x] | |
+| 3.2 | Search Result — results of last search operation | [x] | [x] | |
+| 3.3 | DF Federation — parent/child DF federation tables | [x] | [x] | |
 
 ### Menu: General
 | # | Functionality | MIGRATED | TESTED | Notes |
@@ -172,16 +172,16 @@ Purpose: Visual tool for managing the Directory Facilitator (yellow pages servic
 ### Menu: Catalogue
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 3.6 | View — view full service description (DFA description) of selected agent | [ ] | [ ] | |
-| 3.7 | Modify — modify description of registered agent | [ ] | [ ] | |
-| 3.8 | Register — register a new agent with the DF (AID, addresses, services) | [ ] | [ ] | |
-| 3.9 | Deregister — deregister selected agent from DF | [ ] | [ ] | |
-| 3.10 | Search — search for agents (max depth, max results, description constraints) | [ ] | [ ] | |
+| 3.6 | View — view full service description (DFA description) of selected agent | [x] | [x] | Modify dialog pre-fills from registration |
+| 3.7 | Modify — modify description of registered agent | [x] | [x] | via DF modifyRegistration |
+| 3.8 | Register — register a new agent with the DF (AID, addresses, services) | [x] | [x] | |
+| 3.9 | Deregister — deregister selected agent from DF | [x] | [x] | |
+| 3.10 | Search — search for agents (max depth, max results, description constraints) | [x] | [x] | |
 
 ### Menu: Super DF
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 3.11 | Federate — federate this DF with another DF | [ ] | [ ] | |
+| 3.11 | Federate — federate this DF with another DF | [x] | [x] | via api.df.federate |
 
 ### Toolbar
 | # | Functionality | MIGRATED | TESTED | Notes |
@@ -426,6 +426,13 @@ Source: `backend/src/main/java/io/donbee/jade/rest/RestAPIVerticle.java`
 | 9.3 | `/api/platform` | GET | Platform metadata (ID, container name, isMain, AMS, default DF) | [x] | |
 | 9.4 | `/api/agents` | GET | List agents (add `?detail=true` for state/ownership/addresses) | [x] | `detail` param added |
 | 9.5 | `/api/containers` | GET | List all containers with addresses, ports, isMain | [x] | **NEW** endpoint |
+| 9.6 | `/api/df/registrations` | GET/POST | List and register agents with DF | [x] | |
+| 9.7 | `/api/df/registrations/:agentName` | GET/PUT/DELETE | View, modify, deregister a registration | [x] | |
+| 9.8 | `/api/df/federation` | GET/POST/DELETE | Parent/child DF listing, federate, deregister | [x] | |
+| 9.9 | `/api/platform/shutdown` | POST | Shutdown entire JADE platform | [x] | |
+| 9.10 | `/api/agents/:name/clone` | POST | Clone an agent to another container | [x] | Via POST `/api/agents/clone` |
+| 9.11 | `/api/agents/:name/move` | POST | Move an agent to another container | [x] | |
+| 9.12 | `/api/agents/:name` | PATCH | Change agent ownership | [x] | |
 
 **Note:** The old GUI communicates with the backend via ACL messages (FIPA protocols), not REST. The new React GUI must use REST. Many functionalities above require **new REST endpoints** to be added to `RestAPIVerticle.java`. Each migration task should include:
 1. Add/extend the REST endpoint in RestAPIVerticle
