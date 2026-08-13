@@ -41,44 +41,44 @@ Purpose: Main platform administration GUI — central hub for managing container
 | 1.8 | Custom Agent — custom action on an agent | [ ] | [ ] | |
 | 1.9 | Migrate Agent — move agent to another container | [x] | [x] | via MobilityOntology MoveAction |
 | 1.10 | Clone Agent — clone agent to a new container | [x] | [x] | via MobilityOntology CloneAction |
-| 1.11 | Save Agent — persist agent state to a repository | [ ] | [ ] | via PersistenceOntology SaveAgent |
-| 1.12 | Load Agent — load agent from repository into container | [ ] | [ ] | via PersistenceOntology LoadAgent |
+| 1.11 | Save Agent — persist agent state to a repository | [x] | [x] | via PersistenceOntology SaveAgent |
+| 1.12 | Load Agent — load agent from repository into container | [x] | [x] | via PersistenceOntology LoadAgent |
 | 1.13 | Freeze Agent — freeze agent (suspend + serialize to buffer) | [x] | [x] | via PersistenceOntology FreezeAgent |
 | 1.14 | Thaw Agent — thaw frozen agent back to live container | [x] | [x] | via PersistenceOntology ThawAgent |
 | 1.15 | Change Agent Ownership — change ownership of an agent | [x] | [x] | via AMS Modify |
-| 1.16 | Register Remote Agent with local AMS | [ ] | [ ] | via AMS Register |
+| 1.16 | Register Remote Agent with local AMS | [x] | [x] | via AMS Register |
 
 ### Menu: Actions — Container Operations
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 1.17 | Save Container — persist entire container state | [ ] | [ ] | via PersistenceOntology SaveContainer |
-| 1.18 | Load Container — load container from repository | [ ] | [ ] | via PersistenceOntology LoadContainer |
+| 1.17 | Save Container — persist entire container state | [x] | [x] | via PersistenceOntology SaveContainer |
+| 1.18 | Load Container — load container from repository | [x] | [x] | via PersistenceOntology LoadContainer |
 
 ### Menu: Tools — Tool Launch
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 1.19 | Start Sniffer — launch Sniffer tool on selected container | [ ] | [ ] | |
-| 1.20 | Start DummyAgent — launch Dummy Agent tool | [ ] | [ ] | |
-| 1.21 | Start LoggerAgent — launch Log Manager agent | [ ] | [ ] | |
-| 1.22 | Start IntrospectAgent — launch Introspector on selected agent | [ ] | [ ] | |
-| 1.23 | Show DFGui — open the Directory Facilitator GUI | [ ] | [ ] | |
+| 1.19 | Start Sniffer — launch Sniffer tool on selected container | [x] | [x] | via ToolsPage |
+| 1.20 | Start DummyAgent — launch Dummy Agent tool | [x] | [x] | via ToolsPage |
+| 1.21 | Start LoggerAgent — launch Log Manager agent | [x] | [x] | via ToolsPage |
+| 1.22 | Start IntrospectAgent — launch Introspector on selected agent | [x] | [x] | via ToolsPage |
+| 1.23 | Show DFGui — open the Directory Facilitator GUI | [x] | [x] | via ToolsPage |
 
 ### Menu: Remote Platforms
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 1.24 | Add Platform via AMS AID — add remote platform via AMS contact | [ ] | [ ] | GET /platform, FIPA request |
-| 1.25 | Add Platform via URL — add remote platform by fetching AP description URL | [ ] | [ ] | |
-| 1.26 | View AP Description — view platform description of remote platform | [ ] | [ ] | |
-| 1.27 | Refresh AP Description — refresh platform description | [ ] | [ ] | |
-| 1.28 | Remove Remote Platform — remove platform from tree | [ ] | [ ] | |
-| 1.29 | Refresh Agent List — refresh agent list for remote platform | [ ] | [ ] | |
+| 1.24 | Add Platform via AMS AID — add remote platform via AMS contact | [x] | [x] | via PlatformsPage |
+| 1.25 | Add Platform via URL — add remote platform by fetching AP description URL | [x] | [x] | via PlatformsPage fetch |
+| 1.26 | View AP Description — view platform description of remote platform | [x] | [x] | via PlatformsPage |
+| 1.27 | Refresh AP Description — refresh platform description | [x] | [x] | via PlatformsPage |
+| 1.28 | Remove Remote Platform — remove platform from tree | [x] | [x] | via PlatformsPage |
+| 1.29 | Refresh Agent List — refresh agent list for remote platform | [x] | [x] | via PlatformsPage |
 
 ### Menu: MTP Management
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 1.30 | Manage Installed MTPs — manage message transport protocols | [ ] | [ ] | |
-| 1.31 | Install a new MTP — install MTP on a container | [ ] | [ ] | via AMS InstallMTP |
-| 1.32 | Uninstall an MTP — uninstall MTP from container | [ ] | [ ] | via AMS UninstallMTP |
+| 1.30 | Manage Installed MTPs — manage message transport protocols | [x] | [x] | via ContainersPage MTP tab |
+| 1.31 | Install a new MTP — install MTP on a container | [x] | [x] | via AMS InstallMTP |
+| 1.32 | Uninstall an MTP — uninstall MTP from container | [x] | [x] | via AMS UninstallMTP |
 
 ### Tree View (AgentTree)
 | # | Functionality | MIGRATED | TESTED | Notes |
@@ -432,7 +432,18 @@ Source: `backend/src/main/java/io/donbee/jade/rest/RestAPIVerticle.java`
 | 9.9 | `/api/platform/shutdown` | POST | Shutdown entire JADE platform | [x] | |
 | 9.10 | `/api/agents/:name/clone` | POST | Clone an agent to another container | [x] | Via POST `/api/agents/clone` |
 | 9.11 | `/api/agents/:name/move` | POST | Move an agent to another container | [x] | |
-| 9.12 | `/api/agents/:name` | PATCH | Change agent ownership | [x] | |
+| 9.12 | `/api/agents/:name/save` | POST | Save agent state to a repository | [x] | |
+| 9.13 | `/api/agents/load` | POST | Load agent from repository into a container | [x] | |
+| 9.14 | `/api/agents/register-remote` | POST | Register a remote agent with local AMS | [x] | |
+| 9.15 | `/api/containers/:name/save` | POST | Save container state to a repository | [x] | |
+| 9.16 | `/api/containers/:name/load` | POST | Load container state from a repository | [x] | |
+| 9.17 | `/api/containers/:name/mtps` | POST | Install MTP on a container | [x] | |
+| 9.18 | `/api/containers/:name/mtps` | GET | List installed MTPs on a container | [x] | |
+| 9.19 | `/api/containers/:name/mtps/:address` | DELETE | Uninstall MTP from a container | [x] | |
+| 9.20 | `/api/tools/:tool/start` | POST | Start a GUI tool agent (sniffer, dummy, logger, introspector, df-gui) | [x] | |
+| 9.21 | `/api/df/registrations/:agentName` | PUT | Modify a DF registration | [x] | |
+| 9.22 | `/api/df/federation/:parentDFName` | DELETE | Deregister from a parent DF | [x] | |
+| 9.23 | `/api/df/federation/children/:childDFName` | DELETE | Deregister a child DF | [x] | |
 
 **Note:** The old GUI communicates with the backend via ACL messages (FIPA protocols), not REST. The new React GUI must use REST. Many functionalities above require **new REST endpoints** to be added to `RestAPIVerticle.java`. Each migration task should include:
 1. Add/extend the REST endpoint in RestAPIVerticle
