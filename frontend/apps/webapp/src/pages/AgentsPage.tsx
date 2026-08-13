@@ -5,12 +5,15 @@ import {
   Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Button, Snackbar, Alert,
 } from '@mui/material';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import DeleteForeverIcon from '@mui/icons-material/Delete';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AcUnitIcon from '@mui/icons-material/AcUnit';
 import AcUnitOutlinedIcon from '@mui/icons-material/AcUnitOutlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import MergeIcon from '@mui/icons-material/Merge';
+import LockIcon from '@mui/icons-material/Lock';
 import { api, type AgentInfo, type AgentListResponse } from 'shared';
 
 export default function AgentsPage() {
@@ -19,6 +22,15 @@ export default function AgentsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [deployOpen, setDeployOpen] = useState(false);
   const [deployForm, setDeployForm] = useState({ name: '', class: '', args: '' });
+  const [cloneOpen, setCloneOpen] = useState(false);
+  const [cloneForm, setCloneForm] = useState({ newName: '', container: '' });
+  const [cloneTarget, setCloneTarget] = useState<string | null>(null);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [moveForm, setMoveForm] = useState({ targetContainer: '' });
+  const [moveTarget, setMoveTarget] = useState<string | null>(null);
+  const [ownershipOpen, setOwnershipOpen] = useState(false);
+  const [ownershipForm, setOwnershipForm] = useState({ ownership: '' });
+  const [ownershipTarget, setOwnershipTarget] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{open: boolean; message: string; severity: 'success' | 'error'}>({
     open: false, message: '', severity: 'success',
   });
@@ -67,6 +79,43 @@ export default function AgentsPage() {
     } catch (e: any) {
       setSnackbar({ open: true, message: `Deploy failed - ${e.message || 'unknown error'}`, severity: 'error' });
     }
+  };
+
+  const handleClone = async () => {
+    if (!cloneTarget) return;
+    await handleAction(
+      () => api.agents.clone({
+        name: cloneTarget.split('@')[0],
+        newName: cloneForm.newName,
+        container: cloneForm.container || undefined,
+      }),
+      'clone',
+      cloneTarget
+    );
+    setCloneOpen(false);
+    setCloneForm({ newName: '', container: '' });
+  };
+
+  const handleMove = async () => {
+    if (!moveTarget) return;
+    await handleAction(
+      () => api.agents.move(moveTarget, { container: moveForm.targetContainer }),
+      'move',
+      moveTarget
+    );
+    setMoveOpen(false);
+    setMoveForm({ targetContainer: '' });
+  };
+
+  const handleOwnership = async () => {
+    if (!ownershipTarget) return;
+    await handleAction(
+      () => api.agents.changeOwnership(ownershipTarget, { ownership: ownershipForm.ownership }),
+      'ownership',
+      ownershipTarget
+    );
+    setOwnershipOpen(false);
+    setOwnershipForm({ ownership: '' });
   };
 
   if (loading) {
@@ -185,6 +234,36 @@ export default function AgentsPage() {
                         <AcUnitOutlinedIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="Clone Agent">
+                      <IconButton
+                        color="secondary"
+                        size="small"
+                        disabled={actionLoading === 'clone:' + agent.name}
+                        onClick={() => { setCloneTarget(agent.name); setCloneOpen(true); }}
+                      >
+                        <ContentCopyIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Move Agent">
+                      <IconButton
+                        color="secondary"
+                        size="small"
+                        disabled={actionLoading === 'move:' + agent.name}
+                        onClick={() => { setMoveTarget(agent.name); setMoveOpen(true); }}
+                      >
+                        <MergeIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Change Ownership">
+                      <IconButton
+                        color="secondary"
+                        size="small"
+                        disabled={actionLoading === 'ownership:' + agent.name}
+                        onClick={() => { setOwnershipTarget(agent.name); setOwnershipOpen(true); }}
+                      >
+                        <LockIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -223,6 +302,76 @@ export default function AgentsPage() {
           <Button onClick={() => setDeployOpen(false)}>Cancel</Button>
           <Button onClick={handleDeploy} variant="contained" disabled={!deployForm.name || !deployForm.class}>
             Deploy
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={cloneOpen} onClose={() => setCloneOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Clone Agent</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+            <TextField
+              label="New Agent Name"
+              value={cloneForm.newName}
+              onChange={e => setCloneForm({ ...cloneForm, newName: e.target.value })}
+              fullWidth
+              helperText="Name for the cloned agent"
+            />
+            <TextField
+              label="Target Container (optional)"
+              value={cloneForm.container}
+              onChange={e => setCloneForm({ ...cloneForm, container: e.target.value })}
+              fullWidth
+              helperText="Leave empty to use the same container"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCloneOpen(false)}>Cancel</Button>
+          <Button onClick={handleClone} variant="contained" disabled={!cloneForm.newName}>
+            Clone
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={moveOpen} onClose={() => setMoveOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Move Agent</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+            <TextField
+              label="Target Container"
+              value={moveForm.targetContainer}
+              onChange={e => setMoveForm({ ...moveForm, targetContainer: e.target.value })}
+              fullWidth
+              helperText="Container to move the agent to"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMoveOpen(false)}>Cancel</Button>
+          <Button onClick={handleMove} variant="contained" disabled={!moveForm.targetContainer}>
+            Move
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={ownershipOpen} onClose={() => setOwnershipOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Change Agent Ownership</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+            <TextField
+              label="New Ownership"
+              value={ownershipForm.ownership}
+              onChange={e => setOwnershipForm({ ...ownershipForm, ownership: e.target.value })}
+              fullWidth
+              helperText="New ownership identifier for the agent"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOwnershipOpen(false)}>Cancel</Button>
+          <Button onClick={handleOwnership} variant="contained" disabled={!ownershipForm.ownership}>
+            Change
           </Button>
         </DialogActions>
       </Dialog>
