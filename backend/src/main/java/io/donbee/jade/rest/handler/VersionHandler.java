@@ -7,7 +7,16 @@ import io.donbee.jade.rest.service.PlatformService;
 import io.donbee.jade.core.VersionManager;
 
 /**
- * Handler for the version endpoint.
+ * Handler for the version endpoint ({@code GET /api/version}).
+ * Returns JADE version, revision, and date extracted from
+ * {@link io.donbee.jade.core.VersionManager}.
+ *
+ * <p><b>Old GUI implementation:</b> The old RMA tool displayed version
+ * information through {@code io.donbee.jade.gui.AboutJadeAction} and
+ * {@code io.donbee.jade.Version}. The underlying version data is read
+ * from the same {@code VersionManager} (a.k.a. {@code Version}}
+ * singleton), which reads the {@code version.properties} file bundled
+ * in the JADE JAR.</p>
  */
 public class VersionHandler implements Handler<RoutingContext> {
     @Override

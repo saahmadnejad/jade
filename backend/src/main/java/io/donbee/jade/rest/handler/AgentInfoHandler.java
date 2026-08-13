@@ -7,7 +7,17 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for retrieving a single agent by name.
+ * Handler for retrieving a single agent by name
+ * ({@code GET /api/agents/:name}).
+ *
+ * <p><b>Old GUI implementation:</b> Agent detail was displayed in
+ * {@code io.donbee.jade.gui.AgentTree.AgentNode}, populated by
+ * {@code rma.AMSListenerBehaviour} when an {@code BornAgent}
+ * introspection event arrived ({@code rma.java:200}). The agent state
+ * and ownership were obtained from
+ * {@code AMSAgentDescription} via the AMS. This handler calls the same
+ * {@code agentManager.getAMSDescription()} path through
+ * {@code JadesPlatformService#getAgent()}.</p>
  */
 public class AgentInfoHandler implements Handler<RoutingContext> {
     private final PlatformService service;

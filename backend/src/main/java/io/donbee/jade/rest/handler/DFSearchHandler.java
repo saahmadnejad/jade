@@ -16,8 +16,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Handler for DF search: POST /api/df/search
- * Searches for agents registered with the DF matching the given template and constraints.
+ * Handler for DF search: {@code POST /api/df/search}.
+ * Searches for agents registered with the DF matching the given
+ * template and constraints.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.dfgui.DFGUISearchAction}
+ * ({@code actionPerformed}) used a {@code ConstraintDlg} to collect
+ * search constraints (max depth, max results) and a
+ * {@code DFAgentDscDlg} to collect the search template, then posted
+ * a {@code DFGUIAdapter.SEARCH} GuiEvent to the DF agent. The DF agent
+ * performed the search via {@code io.donbee.jade.domain.DFService#search()}
+ * (the static helper in the domain package, not this REST service)
+ * and returned results to the GUI. This REST handler delegates to
+ * {@code DFService#searchDF()} which performs the same search but
+ * through the synchronous {@code DFRequestAgent} helper.</p>
  */
 public class DFSearchHandler implements Handler<RoutingContext> {
 

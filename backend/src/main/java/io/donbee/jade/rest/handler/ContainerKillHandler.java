@@ -6,8 +6,19 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for deleting a container via DELETE /api/containers/:name.
- * The Main Container cannot be killed (use shutdown instead).
+ * Handler for deleting a container via {@code DELETE /api/containers/:name}.
+ * The Main Container cannot be killed (use {@link ShutdownHandler} instead).
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.KillAction} dispatched container kills
+ * from the tree's popup menu ({@code PopupMenuContainer}). When invoked
+ * on a container node, it called
+ * {@code rma.killContainer(name)} ({@code rma.java:716}), which built
+ * a {@link io.donbee.jade.domain.JADEAgentManagement.KillContainer}
+ * action and sent it to the AMS via an
+ * {@code AMSClientBehaviour}. This handler delegates to
+ * {@code PlatformService#killContainer()} which uses
+ * {@code AgentManager#killContainer()} in the service layer.</p>
  */
 public class ContainerKillHandler implements io.vertx.core.Handler<RoutingContext> {
     private final PlatformService service;

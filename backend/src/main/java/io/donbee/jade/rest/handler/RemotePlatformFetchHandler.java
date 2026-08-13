@@ -8,7 +8,19 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for POST /api/platforms/fetch — add a remote platform by URL.
+ * Handler for {@code POST /api/platforms/fetch} — add a remote platform
+ * by fetching its AP description from a URL.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.AddRemotePlatformFromURLAction}
+ * (labelled "Add Platform via URL") showed a {@code StringDlg} to
+ * collect the URL, then called
+ * {@code rma.addRemotePlatformFromURL(url)}
+ * ({@code rma.java:1003}). The old method fetched the URL content,
+ * parsed the FIPA-SL {@code APDescription} from the response, created
+ * an AMS {@code AID} with addresses from the platform services, and
+ * added it to the {@code MainWindow} tree. This handler delegates to
+ * {@code JadesPlatformService#fetchRemotePlatform()}.</p>
  */
 public class RemotePlatformFetchHandler implements Handler<RoutingContext> {
     private final PlatformService service;

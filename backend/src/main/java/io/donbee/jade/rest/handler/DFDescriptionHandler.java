@@ -12,7 +12,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Handler for GET /api/df/description — returns the DF's own agent description.
+ * Handler for {@code GET /api/df/description} — returns the local
+ * DF's own {@code DFAgentDescription}.
+ *
+ * <p><b>Old GUI implementation:</b> The old DF GUI obtained this
+ * description via
+ * {@code DFGUIAdapter#getDescriptionOfThisDF()}
+ * ({@code io.donbee.jade.domain.DFGUIAdapter}). This method returned
+ * the {@code DFAgentDescription} that the DF agent exposes about itself.
+ * The description was displayed in the "Super DF" / federation tab
+ * of {@code io.donbee.jade.tools.dfgui.DFGUI}. This REST handler
+ * delegates to {@code DFService#getDFDescription()} which performs the
+ * same lookup via a FIPA {@code Search} action.</p>
  */
 public class DFDescriptionHandler implements Handler<RoutingContext> {
 

@@ -4,6 +4,59 @@
 - Core platform/agents/containers → [rma-api.md](rma-api.md)
 - Shared components → [shared-components-api.md](shared-components-api.md)
 
+## Old GUI Implementation References
+
+Every REST handler class in `io.donbee.jade.rest.handler` includes a
+**`<b>Old GUI implementation</b>`** JavaDoc section that names the
+old Swing class, the old method/callback, the FIPA protocol/ontology
+used, and the service-layer method the handler delegates to. This
+allows developers to compare the old and new implementations side by side.
+
+### Handler-to-Old-GUI Mapping
+
+| REST Handler | Old Swing GUI Class(es) | RMA/DFGUI Method |
+|---|---|---|
+| `HealthHandler` | (new — no Swing equivalent) | RMA connection check (`rma.setup`) |
+| `VersionHandler` | `io.donbee.jade.gui.AboutJadeAction` | `VersionManager` / `io.donbee.jade.Version` |
+| `PlatformInfoHandler` | `io.donbee.jade.tools.rma.MainWindow` | `rma.viewAPDescription()` |
+| `ShutdownHandler` | `io.donbee.jade.tools.rma.ShutDownAction` | `rma.shutDownPlatform()` |
+| `ContainerListHandler` | `io.donbee.jade.gui.AgentTreeModel` | `rma.AMSListenerBehaviour` (AddedContainer) |
+| `ContainerInfoHandler` | `io.donbee.jade.gui.AgentTree.ContainerNode` | `rma.AMSListenerBehaviour` |
+| `ContainerKillHandler` | `io.donbee.jade.tools.rma.KillAction` | `rma.killContainer()` |
+| `ContainerSaveHandler` | `io.donbee.jade.tools.rma.SaveContainerAction` | `rma.saveContainer()` |
+| `ContainerLoadHandler` | `io.donbee.jade.tools.rma.LoadContainerAction` | `rma.loadContainer()` |
+| `ContainerMTPInstallHandler` | `io.donbee.jade.tools.rma.InstallMTPAction` | `rma.installMTP()` |
+| `ContainerMTPListHandler` | `io.donbee.jade.tools.rma.ManageMTPsAction` | `ManageMTPsDialog` |
+| `ContainerMTPUNinstallHandler` | `io.donbee.jade.tools.rma.UninstallMTPAction` | `rma.uninstallMTP()` |
+| `AgentListHandler` | `io.donbee.jade.gui.AgentTreeModel` | `rma.AMSListenerBehaviour` (BornAgent) |
+| `AgentInfoHandler` | `io.donbee.jade.gui.AgentTree.AgentNode` | `rma.AMSListenerBehaviour` |
+| `AgentDeployHandler` | `io.donbee.jade.tools.rma.StartNewAgentAction` | `rma.newAgent()` |
+| `AgentActionHandler` (kill) | `io.donbee.jade.tools.rma.KillAction` | `rma.killAgent()` |
+| `AgentActionHandler` (suspend) | `io.donbee.jade.tools.rma.SuspendAction` | `rma.suspendAgent()` |
+| `AgentActionHandler` (resume) | `io.donbee.jade.tools.rma.ResumeAction` | `rma.resumeAgent()` |
+| `AgentCloneHandler` | `io.donbee.jade.tools.rma.CloneAgentAction` | `rma.cloneAgent()` |
+| `AgentMoveHandler` | `io.donbee.jade.tools.rma.MoveAgentAction` | `rma.moveAgent()` |
+| `AgentSaveLoadHandler` (save) | `io.donbee.jade.tools.rma.SaveAgentAction` | `rma.saveAgent()` |
+| `AgentSaveLoadHandler` (load) | `io.donbee.jade.tools.rma.LoadAgentAction` | `rma.loadAgent()` |
+| `AgentFreezeThawHandler` (freeze) | `io.donbee.jade.tools.rma.FreezeAgentAction` | `rma.freezeAgent()` |
+| `AgentFreezeThawHandler` (thaw) | `io.donbee.jade.tools.rma.ThawAgentAction` | `rma.thawAgent()` |
+| `AgentOwnershipHandler` | `io.donbee.jade.tools.rma.ChangeAgentOwnershipAction` | `rma.changeAgentOwnership()` |
+| `AgentRegisterRemoteHandler` | `io.donbee.jade.tools.rma.RegisterRemoteAgentAction` | `rma.registerRemoteAgentWithAMS()` |
+| `ToolLaunchHandler` | `SnifferAction`, `DummyAgentAction`, `LogManagerAgentAction`, `IntrospectorAction`, `ShowDFGuiAction` | `rma.newAgent()` |
+| `RemotePlatformListHandler` | `io.donbee.jade.tools.rma.MainWindow` | `rma.addRemotePlatform()` |
+| `RemotePlatformAddHandler` | `io.donbee.jade.tools.rma.AddRemotePlatformAction` | `rma.addRemotePlatform()` |
+| `RemotePlatformFetchHandler` | `io.donbee.jade.tools.rma.AddRemotePlatformFromURLAction` | `rma.addRemotePlatformFromURL()` |
+| `RemotePlatformRemoveHandler` | `io.donbee.jade.tools.rma.RemoveRemoteAMSAction` | `rma.removeRemotePlatform()` |
+| `RemotePlatformDescriptionHandler` | `io.donbee.jade.tools.rma.ViewAPDescriptionAction`, `RefreshAMSAgentAction` | `rma.viewAPDescription()` |
+| `RemotePlatformAgentsHandler` | `io.donbee.jade.tools.rma.RefreshAMSAgentAction` | `rma.refreshRemoteAgent()` |
+| `DFRegistrationHandler` | `io.donbee.jade.tools.dfgui.DFGUIRegisterAction`, `DFGUIViewAction`, `DFGUIModifyAction`, `DFGUIDeregisterAction` | `DFGUIAdapter` GuiEvents |
+| `DFSearchHandler` | `io.donbee.jade.tools.dfgui.DFGUISearchAction` | `DFGUIAdapter.SEARCH` |
+| `DFDescriptionHandler` | `io.donbee.jade.domain.DFGUIAdapter` | `getDescriptionOfThisDF()` |
+| `DFRefreshHandler` | `io.donbee.jade.tools.dfgui.DFGUIRefreshAppletAction` | `DFGUI.refresh()` |
+| `DFStatusHandler` | `io.donbee.jade.tools.dfgui.DFGUI` | `DFGUI.showStatusMsg()` |
+| `DFederationHandler` (all modes) | `io.donbee.jade.tools.dfgui.DFGUIFederateAction`, `DFGUIDeregisterAction` | `DFGUIAdapter.FEDERATE` |
+| `JsonFailureHandler` | `rma.showErrorDialog()` | `AMSClientBehaviour` error handlers |
+
 ## Endpoints Not Covered in Other Docs
 
 These endpoints are implemented but not specified in other API docs:

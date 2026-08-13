@@ -10,7 +10,19 @@ import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for POST /api/agents/clone.
+ * Handler for {@code POST /api/agents/clone}.
+ * Clones an agent to a new container (and optionally a new name).
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.CloneAgentAction} invoked the
+ * {@code MoveDialog} and then called
+ * {@code rma.cloneAgent(agentAid, newAgentName, container)}
+ * ({@code rma.java:769}). The old method built a
+ * {@link io.donbee.jade.domain.mobility.CloneAction}
+ * with a {@code MobileAgentDescription}, encoded it with
+ * {@code MobilityOntology}, and sent it to the AMS. This handler
+ * delegates to {@code AgentManager#copy()} via
+ * {@code JadesPlatformService#cloneAgent()}.</p>
  */
 public class AgentCloneHandler implements Handler<RoutingContext> {
     private final PlatformService service;

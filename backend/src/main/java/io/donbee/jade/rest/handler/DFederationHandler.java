@@ -13,11 +13,44 @@ import java.util.List;
 
 /**
  * Handler for DF federation endpoints:
- * GET  /api/df/federation/parents                — List parent DFs this DF federated with
- * GET  /api/df/federation/children               — List child DFs federated with this DF
- * POST /api/df/federation                        — Federate this DF with a parent DF
- * DELETE /api/df/federation/{parentDFName}      — Deregister this DF from a parent DF
- * DELETE /api/df/federation/children/{childDFName} — Deregister a child DF from this DF
+ * <ul>
+ *   <li>{@code GET  /api/df/federation/parents}               — List parent DFs</li>
+ *   <li>{@code GET  /api/df/federation/children}              — List child DFs</li>
+ *   <li>{@code POST /api/df/federation}                       — Federate with a parent DF</li>
+ *   <li>{@code DELETE /api/df/federation/{parentDFName}}      — Deregister from a parent DF</li>
+ *   <li>{@code DELETE /api/df/federation/children/{childDFName}} — Deregister a child DF</li>
+ * </ul>
+ *
+ * <p><b>Old GUI implementation:</b> The federation tables were part of
+ * {@code io.donbee.jade.tools.dfgui.DFGUI} (the "DF Federation" tab),
+ * populated by {@code DFGUI#refresh()}
+ * ({@code io.donbee.jade.tools.dfgui.DFGUI:786}).
+ * <ul>
+ *   <li><b>Parents:</b> Populated from
+ *       {@code DFGUIAdapter#getParents()} via a
+ *       {@code GetParents} action ({@code DFGUIManagement} ontology).
+ *       New parents were added via
+ *       {@code io.donbee.jade.tools.dfgui.DFGUIFederateAction},
+ *       which collected the parent AID via {@code AIDGui} and the
+ *       description via {@code DFAgentDscDlg}, then posted a
+ *       {@code DFGUIAdapter.FEDERATE} GuiEvent.</li>
+ *   <li><b>Children:</b> Children were DFs (registered with this DF
+ *       that expose the {@code "fipa-df"} service type) — identified
+ *       during the {@code refresh()} search, not via a dedicated
+ *       API. The old GUI filtered registrations by service type.</li>
+ *   <li><b>Deregister parent:</b> Done via
+ *       {@code io.donbee.jade.tools.dfgui.DFGUIDeregisterAction}
+ *       when {@code kind == DFGUI.PARENT_VIEW}, which posted a
+ *       {@code DeregisterFrom} action to the selected parent DF.</li>
+ *   <li><b>Deregister child:</b> Same deregister action when
+ *       {@code kind == DFGUI.CHILDREN_VIEW} — a standard
+ *       {@code Deregister} from this DF.</li>
+ * </ul>
+ * This REST handler delegates to {@code DFService} methods
+ * ({@code getDFParents()}, {@code getDFChildren()},
+ * {@code federateDF()}, {@code deregisterParentDF()},
+ * {@code deregisterChildDF()}) which replicate the same FIPA
+ * {@code DFGUIManagement} ontology operations.</p>
  */
 public class DFederationHandler implements Handler<RoutingContext> {
 

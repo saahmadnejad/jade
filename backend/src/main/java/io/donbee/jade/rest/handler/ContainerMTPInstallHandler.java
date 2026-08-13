@@ -7,7 +7,18 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for POST /api/containers/:name/mtps — install an MTP on a container.
+ * Handler for {@code POST /api/containers/:name/mtps} — install an MTP
+ * (Message Transport Protocol) on a container.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.InstallMTPAction} invoked
+ * {@code rma.installMTP(containerName)} ({@code rma.java:927}), which
+ * showed a Swing {@code InstallMTPDialog} to gather arguments, then sent
+ * an {@link io.donbee.jade.domain.JADEAgentManagement.InstallMTP}
+ * action to the AMS. This handler accepts the same {@code className}
+ * and {@code address} via JSON body and delegates to
+ * {@code AgentManager#installMTP()} (see
+ * {@code JadesPlatformService#installMTP()}).</p>
  */
 public class ContainerMTPInstallHandler implements Handler<RoutingContext> {
     private final PlatformService service;

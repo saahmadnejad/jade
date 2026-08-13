@@ -8,7 +8,21 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for GET/PUT /api/platforms/:name/description — get or refresh a remote platform description.
+ * Handler for {@code GET /api/platforms/:name/description} (and
+ * {@code POST} to refresh) — get or refresh a remote platform's
+ * AP description.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.ViewAPDescriptionAction} called
+ * {@code rma.viewAPDescription(apDesc, title)}
+ * ({@code rma.java:1068}), which showed the
+ * {@code APDescription} in a Swing dialog via
+ * {@code MainWindow.viewAPDescriptionDialog()}.
+ * {@code RefreshAMSAgentAction} ({@code rma.java:33}) called
+ * {@code rma.refreshRemoteAgent(apDesc, amsAID)}
+ * ({@code rma.java:1080}), which re-requested the
+ * {@code APDescription} from the remote AMS. This handler delegates
+ * to {@code JadesPlatformService#getRemotePlatformDescription()}.</p>
  */
 public class RemotePlatformDescriptionHandler implements Handler<RoutingContext> {
     private final PlatformService service;

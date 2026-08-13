@@ -7,7 +7,17 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for retrieving a single container by name.
+ * Handler for retrieving a single container by name
+ * ({@code GET /api/containers/:name}).
+ *
+ * <p><b>Old GUI implementation:</b> Container detail was displayed in
+ * {@code io.donbee.jade.gui.AgentTree.ContainerNode}, populated by
+ * {@code rma.AMSListenerBehaviour} when an {@code AddedContainer}
+ * introspection event arrived ({@code rma.java:182}). The container's
+ * address and port came from the {@code ContainerID} in the event.
+ * This handler retrieves the same data via
+ * {@code AgentManager#containerIDs()} (see
+ * {@code JadesPlatformService#getContainer()}).</p>
  */
 public class ContainerInfoHandler implements Handler<RoutingContext> {
     private final PlatformService service;

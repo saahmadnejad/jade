@@ -5,7 +5,7 @@ This document provides guidance for AI agents (like Claude/opencode) working on 
 ## Project Overview
 
 Jade is a fork of JADE (Java Agent DEvelopment Framework) — a multi-agent system framework
-under the `ir.donbee.jade` package. It targets Java 21+ with virtual threads.
+under the `io.donbee.jade` package. It targets Java 21+ with virtual threads.
 
 The project has two main parts:
 1. **Backend** (`backend/`) — Java/Maven, 1015 source files, builds to `backend/target/backend.jar`
@@ -85,7 +85,7 @@ podman compose down                           # Stop containers
 - `backend/src/main/java/io/donbee/jade/rest/RestAPIVerticle.java` — Vert.x REST verticle
 - `backend/src/main/java/io/donbee/jade/core/Profile.java` — Profile constants (incl. `REST_PORT`)
 - `backend/src/main/java/io/donbee/jade/core/ProfileImpl.java` — Profile implementation
-- `backend/src/main/java/ir/donbee/jade/core/FullResourceManager.java` — Virtual thread management
+- `backend/src/main/java/io/donbee/jade/core/FullResourceManager.java` — Virtual thread management
 - `frontend/apps/frontend/src/App.tsx` — Root React component
 - `frontend/packages/shared/src/api/client.ts` — Axios API client
 - `docker/Dockerfile.backend` — Backend Docker build
@@ -161,3 +161,47 @@ void Given_..._When_..._Then_() {
 6. 2XX = success, 4XX = client error, 5XX = server error
 7. Each endpoint documented with input/output JSON schema in `docs/api/`
 8. **Docs consistency rule**: Before every commit, verify all API docs are consistent and follow a single goal. Update doc specs first, then verify docs match the code. No commit is complete without this verification step.
+
+### Old GUI Implementation References in JavaDoc (REST API Handlers)
+The old JADE platform was administered via **Swing-based GUI tools** — the
+RMA tool (`io.donbee.jade.tools.rma` package), the DF GUI
+(`io.donbee.jade.tools.dfgui` package), the Sniffer, Introspector,
+Dummy Agent, and Log Manager — all living under `backend/src/main/java/io/donbee/jade/tools/`
+and `backend/src/main/java/io/donbee/jade/gui/`.
+
+The new Vert.x REST API handlers in
+`backend/src/main/java/io/donbee/jade/rest/handler/` are the modern
+replacements. To help developers understand **how** the old Swing code
+achieved the same effect and to facilitate comparison, **every REST
+handler class** in `io.donbee.jade.rest.handler` **must** include a
+JavaDoc block with a `<b>Old GUI implementation</b>` section that:
+
+- Names the **old Swing class** that performed the same function
+  (e.g. `io.donbee.jade.tools.rma.KillAction`).
+- Names the **old method** or callback that was called
+  (e.g. `rma.killAgent(AID)` at `rma.java:644`).
+- Describes the **old FIPA protocol / ontology** used
+  (e.g. `JADEManagementOntology` → `KillAgent` action, sent via
+  `AMSClientBehaviour`).
+- States which **service-layer method** the handler delegates to
+  (e.g. `PlatformService#killAgent()`).
+
+This rule applies to **every new handler** that replaces Swing GUI
+functionality. For endpoints that are **new** (no Swing equivalent —
+currently only `/api/health`), note "No direct Swing GUI equivalent"
+and name the closest old code as context.
+
+Example format:
+```java
+/**
+ * Handler for DELETE /api/agents/:name — kill an agent.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.KillAction} (doAction) called
+ * {@code rma.killAgent(id)} ({@code rma.java:644}), which sent a
+ * {@code KillAgent} action via {@code JADEManagementOntology} to the
+ * AMS through an {@code AMSClientBehaviour}. This handler delegates to
+ * {@code PlatformService#killAgent()} which uses
+ * {@code AgentManager#kill()}.</p>
+ */
+```

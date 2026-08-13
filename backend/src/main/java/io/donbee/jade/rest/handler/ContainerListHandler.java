@@ -7,7 +7,18 @@ import io.vertx.ext.web.RoutingContext;
 import io.donbee.jade.rest.service.PlatformService;
 
 /**
- * Handler for the container-list endpoint.
+ * Handler for the container-list endpoint ({@code GET /api/containers}).
+ * Returns all containers known to the platform along with their address,
+ * port, and main-container flag.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * The container tree was rendered by {@code io.donbee.jade.gui.AgentTree}
+ * / {@code AgentTreeModel} inside {@code io.donbee.jade.tools.rma.MainWindow}.
+ * Containers were discovered via AMS introspection events
+ * ({@code AddedContainer}, {@code RemovedContainer}) handled by
+ * {@code rma.AMSListenerBehaviour} in {@code rma.java:170}. This handler
+ * instead calls {@code AgentManager#containerIDs()} (see
+ * {@code JadesPlatformService#getContainers()}).</p>
  */
 public class ContainerListHandler implements Handler<RoutingContext> {
     private final PlatformService service;

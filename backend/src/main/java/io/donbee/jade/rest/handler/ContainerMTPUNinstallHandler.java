@@ -7,7 +7,18 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for DELETE /api/containers/:name/mtps/:address — uninstall an MTP from a container.
+ * Handler for {@code DELETE /api/containers/:name/mtps/:address} —
+ * uninstall an MTP from a container.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.UninstallMTPAction} invoked
+ * {@code rma.uninstallMTP(containerName)} ({@code rma.java:948}),
+ * which showed a {@code ManageMTPsDialog} and then called
+ * {@code rma.uninstallMTP(containerName, address)} (line 956), sending
+ * an {@link io.donbee.jade.domain.JADEAgentManagement.UninstallMTP}
+ * action to the AMS. This handler delegates to
+ * {@code AgentManager#uninstallMTP()} via
+ * {@code JadesPlatformService#uninstallMTP()}.</p>
  */
 public class ContainerMTPUNinstallHandler implements Handler<RoutingContext> {
     private final PlatformService service;

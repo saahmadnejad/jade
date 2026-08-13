@@ -9,7 +9,22 @@ import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for POST /api/agents/register-remote — register a remote agent with the local AMS.
+ * Handler for {@code POST /api/agents/register-remote} — register a
+ * remote agent with the local AMS.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.RegisterRemoteAgentAction}
+ * called
+ * {@code rma.registerRemoteAgentWithAMS(amsDesc)}
+ * ({@code rma.java:1114}), which built a
+ * {@link io.donbee.jade.domain.FIPAAgentManagement.Register} action
+ * with an {@code AMSAgentDescription}, encoded it with
+ * {@code FIPAManagementOntology}, and sent it to the AMS via an
+ * {@code AMSClientBehaviour}. The old action received the
+ * {@code AMSAgentDescription} from the tree's
+ * {@code RemoteAgentNode}. This handler accepts the agent AID and
+ * addresses as JSON fields and delegates to
+ * {@code JadesPlatformService#registerRemoteAgent()}.</p>
  */
 public class AgentRegisterRemoteHandler implements Handler<RoutingContext> {
     private final PlatformService service;

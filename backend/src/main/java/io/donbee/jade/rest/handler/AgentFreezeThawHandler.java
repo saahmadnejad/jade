@@ -12,7 +12,31 @@ import io.vertx.ext.web.RoutingContext;
 import java.util.Map;
 
 /**
- * Handler for POST /api/agents/:name/freeze and POST /api/agents/:name/thaw.
+ * Handler for agent freeze/thaw:
+ * {@code POST /api/agents/:name/freeze} and
+ * {@code POST /api/agents/:name/thaw}.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * <ul>
+ *   <li><b>Freeze:</b> {@code io.donbee.jade.tools.rma.FreezeAgentAction}
+ *       called {@code rma.freezeAgent(agentAid, "JADE-DB")}
+ *       ({@code rma.java:849}), which sent a
+ *       {@link io.donbee.jade.domain.persistence.FreezeAgent} action
+ *       via {@code PersistenceOntology}. The old action did not collect
+ *       a buffer-container name from the user; it only asked for a
+ *       repository.</li>
+ *   <li><b>Thaw:</b> {@code io.donbee.jade.tools.rma.ThawAgentAction}
+ *       called {@code rma.thawAgent(agentAid, "JADE-DB", newContainer)}
+ *       ({@code rma.java:873}), which sent a
+ *       {@link io.donbee.jade.domain.persistence.ThawAgent} action
+ *       via {@code PersistenceOntology}. The old action prompted for
+ *       the target container via {@code JOptionPane.showInputDialog}.</li>
+ * </ul>
+ * This handler accepts both {@code container} and {@code repository}
+ * in the JSON body (an enhancement over the old hardcoded repository).
+ * The service-layer methods ({@code JadesPlatformService#freezeAgent()},
+ * {@code #thawAgent()}) replicate the same AMS ACL messaging via
+ * {@code PersistenceOntology}.</p>
  */
 public class AgentFreezeThawHandler implements Handler<RoutingContext> {
     private final PlatformService service;

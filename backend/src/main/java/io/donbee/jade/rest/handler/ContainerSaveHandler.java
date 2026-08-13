@@ -7,7 +7,16 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for POST /api/containers/:name/save — save a container to a repository.
+ * Handler for {@code POST /api/containers/:name/save} — save a container
+ * to a repository.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.SaveContainerAction} invoked
+ * {@code rma.saveContainer(name, "JADE-DB")} ({@code rma.java:669}).
+ * The old action hardcoded the repository as {@code "JADE-DB"}; this
+ * handler allows the caller to specify an arbitrary repository. Both
+ * send a {@link io.donbee.jade.domain.persistence.SaveContainer}
+ * action via the {@code PersistenceOntology} to the AMS.</p>
  */
 public class ContainerSaveHandler implements Handler<RoutingContext> {
     private final PlatformService service;

@@ -7,7 +7,16 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for POST /api/containers/:name/load — load a container from a repository.
+ * Handler for {@code POST /api/containers/:name/load} — load a container
+ * from a repository.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * {@code io.donbee.jade.tools.rma.LoadContainerAction} invoked
+ * {@code rma.loadContainer(name, "JADE-DB")} ({@code rma.java:692}).
+ * The old action hardcoded {@code "JADE-DB"} as the repository; this
+ * handler accepts a caller-supplied repository. Both send a
+ * {@link io.donbee.jade.domain.persistence.LoadContainer} action via
+ * the {@code PersistenceOntology} to the AMS.</p>
  */
 public class ContainerLoadHandler implements Handler<RoutingContext> {
     private final PlatformService service;

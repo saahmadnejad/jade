@@ -6,7 +6,30 @@ import io.vertx.ext.web.RoutingContext;
 import io.donbee.jade.rest.service.PlatformService;
 
 /**
- * Handler for individual agent lifecycle actions: kill, suspend, resume.
+ * Handler for individual agent lifecycle actions: kill, suspend, resume
+ * ({@code DELETE /api/agents/:name},
+ * {@code POST /api/agents/:name/suspend},
+ * {@code POST /api/agents/:name/resume}).
+ *
+ * <p><b>Old GUI implementation:</b>
+ * <ul>
+ *   <li><b>Kill:</b> {@code io.donbee.jade.tools.rma.KillAction}
+ *       ({@code doAction(AgentNode)}) called
+ *       {@code rma.killAgent(id)} ({@code rma.java:644}), which sent a
+ *       {@link io.donbee.jade.domain.JADEAgentManagement.KillAgent}
+ *       action to the AMS via {@code AMSClientBehaviour}.</li>
+ *   <li><b>Suspend:</b> {@code io.donbee.jade.tools.rma.SuspendAction}
+ *       called {@code rma.suspendAgent(id)} ({@code rma.java:552}),
+ *       which sent a {@link io.donbee.jade.domain.FIPAAgentManagement.Modify}
+ *       action with {@code AMSAgentDescription.state = SUSPENDED} via
+ *       {@code FIPAManagementOntology}.</li>
+ *   <li><b>Resume:</b> {@code io.donbee.jade.tools.rma.ResumeAction}
+ *       called {@code rma.resumeAgent(id)} ({@code rma.java:586}),
+ *       which sent a {@code Modify} action with
+ *       {@code state = ACTIVE}.</li>
+ * </ul>
+ * This handler delegates to {@code AgentManager#kill()},
+ * {@code #suspend()}, and {@code #activate()} in the service layer.</p>
  */
 public class AgentActionHandler implements Handler<RoutingContext> {
     private final PlatformService service;

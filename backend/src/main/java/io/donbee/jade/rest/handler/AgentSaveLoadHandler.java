@@ -10,7 +10,29 @@ import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for POST /api/agents/:name/save and POST /api/agents/load.
+ * Handler for agent persistence:
+ * {@code POST /api/agents/:name/save} and
+ * {@code POST /api/agents/load}.
+ *
+ * <p><b>Old GUI implementation:</b>
+ * <ul>
+ *   <li><b>Save:</b> {@code io.donbee.jade.tools.rma.SaveAgentAction}
+ *       called {@code rma.saveAgent(agentAid, "JADE-DB")}
+ *       ({@code rma.java:798}), which sent a
+ *       {@link io.donbee.jade.domain.persistence.SaveAgent} action
+ *       via {@code PersistenceOntology} to the AMS.</li>
+ *   <li><b>Load:</b> {@code io.donbee.jade.tools.rma.LoadAgentAction}
+ *       called {@code rma.loadAgent(agentAid, "JADE-DB", container)}
+ *       ({@code rma.java:822}), which sent a
+ *       {@link io.donbee.jade.domain.persistence.LoadAgent} action
+ *       via {@code PersistenceOntology}. The old action used an
+ *       {@code AIDGui} dialog to collect the agent AID; this handler
+ *       accepts the name as a JSON field instead.</li>
+ * </ul>
+ * Both old actions hardcoded {@code "JADE-DB"} as the repository;
+ * this handler accepts a caller-supplied repository. The service-layer
+ * methods ({@code JadesPlatformService#saveAgent()},
+ * {@code #loadAgent()}) replicate the same AMS ACL messaging.</p>
  */
 public class AgentSaveLoadHandler implements Handler<RoutingContext> {
     private final PlatformService service;
