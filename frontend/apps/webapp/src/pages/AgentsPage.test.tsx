@@ -5,7 +5,7 @@ import AgentsPage from './AgentsPage';
 
 const {
   mockList, mockKill, mockSuspend, mockResume, mockFreeze, mockThaw, mockDeploy,
-  mockClone, mockMove, mockChangeOwnership,
+  mockClone, mockMove, mockChangeOwnership, mockSave, mockLoad,
 } = vi.hoisted(() => ({
   mockList: vi.fn(),
   mockKill: vi.fn(),
@@ -17,6 +17,8 @@ const {
   mockClone: vi.fn(),
   mockMove: vi.fn(),
   mockChangeOwnership: vi.fn(),
+  mockSave: vi.fn(),
+  mockLoad: vi.fn(),
 }));
 
 vi.mock('shared/api/factory', () => ({
@@ -34,8 +36,8 @@ vi.mock('shared/api/factory', () => ({
       thaw: mockThaw,
       clone: mockClone,
       move: mockMove,
-      save: vi.fn(),
-      load: vi.fn(),
+       save: mockSave,
+      load: mockLoad,
       changeOwnership: mockChangeOwnership,
       registerRemote: vi.fn(),
     },
@@ -79,6 +81,8 @@ describe('AgentsPage', () => {
     mockClone.mockReset();
     mockMove.mockReset();
     mockChangeOwnership.mockReset();
+    mockSave.mockReset();
+    mockLoad.mockReset();
   });
 
   it('Given backend reachable, When page loads, Then shows agent list', async () => {
@@ -216,6 +220,94 @@ describe('AgentsPage', () => {
     // Assert
     await waitFor(() => {
       expect(mockChangeOwnership).toHaveBeenCalledWith('rma@main', { ownership: 'new-owner' });
+       expect(mockChangeOwnership).toHaveBeenCalledWith('rma@main', { ownership: 'new-owner' });
+    });
+  });
+
+  describe('Save Agent', () => {
+    it('Given agent list loaded, When save button clicked and repository entered, Then calls save API', async () => {
+      // Arrange
+      mockList.mockResolvedValue({
+        agents: [
+          { name: 'rma@main', state: 'ACTIVE', ownership: 'init', container: 'Main-Container', addresses: [] },
+        ],
+      });
+      mockSave.mockResolvedValue({ message: 'saved' });
+
+      // Act
+      renderWithTheme(<AgentsPage />);
+      await waitFor(() => screen.getByText('rma@main'));
+      const saveButton = screen.getByRole('button', { name: 'Save Agent' });
+      fireEvent.click(saveButton);
+      await waitFor(() => screen.getByLabelText('Repository'));
+      fireEvent.change(screen.getByLabelText('Repository'), { target: { value: 'file:///tmp/repo' } });
+      fireEvent.click(screen.getByText('Save'));
+
+      // Assert
+      await waitFor(() => {
+        expect(mockSave).toHaveBeenCalledWith('rma@main', 'file:///tmp/repo');
+      });
+    });
+
+    it('Given save dialog open and repository empty, Then Save button is disabled', async () => {
+      // Arrange
+      mockList.mockResolvedValue({
+        agents: [
+          { name: 'rma@main', state: 'ACTIVE', ownership: 'init', container: 'Main-Container', addresses: [] },
+        ],
+      });
+
+      // Act
+      renderWithTheme(<AgentsPage />);
+      await waitFor(() => screen.getByText('rma@main'));
+      fireEvent.click(screen.getByRole('button', { name: 'Save Agent' }));
+      await waitFor(() => screen.getByLabelText('Repository'));
+      fireEvent.change(screen.getByLabelText('Repository'), { target: { value: '' } });
+
+      // Assert
+      const saveButton = screen.getByRole('button', { name: 'Save' });
+      expect(saveButton).toBeDisabled();
+    });
+  });
+
+  describe('Load Agent', () => {
+    it('Given empty form, When load button clicked and form filled, Then calls load API', async () => {
+      // Arrange
+      mockList.mockResolvedValue({ agents: [] });
+      mockLoad.mockResolvedValue({ message: 'loaded', name: 'fresh@main' });
+      mockList
+        .mockResolvedValueOnce({ agents: [] })
+        .mockResolvedValueOnce({ agents: [{ name: 'fresh@main', state: 'ACTIVE', ownership: 'init', container: 'main', addresses: [] }] });
+
+      // Act
+      renderWithTheme(<AgentsPage />);
+      await waitFor(() => screen.getByText('Agents'));
+      fireEvent.click(screen.getByRole('button', { name: 'Load Agent' }));
+      await waitFor(() => screen.getByLabelText('Agent Name'));
+      fireEvent.change(screen.getByLabelText('Agent Name'), { target: { value: 'fresh' } });
+      fireEvent.change(screen.getByLabelText('Container'), { target: { value: 'main' } });
+      fireEvent.change(screen.getByLabelText('Repository'), { target: { value: 'file:///tmp/repo' } });
+      fireEvent.click(screen.getByText('Load'));
+
+      // Assert
+      await waitFor(() => {
+        expect(mockLoad).toHaveBeenCalledWith('fresh', 'main', 'file:///tmp/repo');
+      });
+    });
+
+    it('Given load dialog open and required fields empty, Then Load button is disabled', async () => {
+      // Arrange
+      mockList.mockResolvedValue({ agents: [] });
+
+      // Act
+      renderWithTheme(<AgentsPage />);
+      await waitFor(() => screen.getByText('No agents found'));
+      fireEvent.click(screen.getByRole('button', { name: 'Load Agent' }));
+      await waitFor(() => screen.getByLabelText('Agent Name'));
+
+      // Assert
+      const loadButton = screen.getByRole('button', { name: 'Load' });
+      expect(loadButton).toBeDisabled();
     });
   });
 });

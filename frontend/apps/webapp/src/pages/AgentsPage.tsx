@@ -14,6 +14,8 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import MergeIcon from '@mui/icons-material/Merge';
 import LockIcon from '@mui/icons-material/Lock';
+import SaveIcon from '@mui/icons-material/Save';
+import UploadIcon from '@mui/icons-material/Upload';
 import { api, type AgentInfo, type AgentListResponse } from 'shared';
 
 export default function AgentsPage() {
@@ -31,6 +33,11 @@ export default function AgentsPage() {
   const [ownershipOpen, setOwnershipOpen] = useState(false);
   const [ownershipForm, setOwnershipForm] = useState({ ownership: '' });
   const [ownershipTarget, setOwnershipTarget] = useState<string | null>(null);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [saveForm, setSaveForm] = useState({ repository: 'default' });
+  const [saveTarget, setSaveTarget] = useState<string | null>(null);
+  const [loadOpen, setLoadOpen] = useState(false);
+  const [loadForm, setLoadForm] = useState({ name: '', container: '', repository: 'default' });
   const [snackbar, setSnackbar] = useState<{open: boolean; message: string; severity: 'success' | 'error'}>({
     open: false, message: '', severity: 'success',
   });
@@ -118,6 +125,31 @@ export default function AgentsPage() {
     setOwnershipForm({ ownership: '' });
   };
 
+  const handleSave = async () => {
+    if (!saveTarget) return;
+    const agentName = saveTarget;
+    await handleAction(
+      () => api.agents.save(agentName, saveForm.repository),
+      'save',
+      agentName
+    );
+    setSaveOpen(false);
+    setSaveForm({ repository: '' });
+    setSaveTarget(null);
+  };
+
+  const handleLoad = async () => {
+    try {
+      await api.agents.load(loadForm.name, loadForm.container, loadForm.repository);
+      setSnackbar({ open: true, message: `Agent '${loadForm.name}' loaded`, severity: 'success' });
+      setLoadOpen(false);
+      setLoadForm({ name: '', container: '', repository: '' });
+      fetchAgents();
+    } catch (e: any) {
+      setSnackbar({ open: true, message: `Load failed - ${e.message || 'unknown error'}`, severity: 'error' });
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -136,6 +168,9 @@ export default function AgentsPage() {
               <RefreshIcon />
             </IconButton>
           </Tooltip>
+          <Button variant="contained" onClick={() => setLoadOpen(true)}>
+            Load Agent
+          </Button>
           <Button variant="contained" onClick={() => setDeployOpen(true)}>
             Deploy Agent
           </Button>
@@ -254,16 +289,26 @@ export default function AgentsPage() {
                         <MergeIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Change Ownership">
-                      <IconButton
-                        color="secondary"
-                        size="small"
-                        disabled={actionLoading === 'ownership:' + agent.name}
-                        onClick={() => { setOwnershipTarget(agent.name); setOwnershipOpen(true); }}
-                      >
-                        <LockIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                     <Tooltip title="Change Ownership">
+                       <IconButton
+                         color="secondary"
+                         size="small"
+                         disabled={actionLoading === 'ownership:' + agent.name}
+                         onClick={() => { setOwnershipTarget(agent.name); setOwnershipOpen(true); }}
+                       >
+                         <LockIcon fontSize="small" />
+                       </IconButton>
+                     </Tooltip>
+                     <Tooltip title="Save Agent">
+                       <IconButton
+                         color="secondary"
+                         size="small"
+                         disabled={actionLoading === 'save:' + agent.name}
+                         onClick={() => { setSaveTarget(agent.name); setSaveOpen(true); }}
+                       >
+                         <SaveIcon fontSize="small" />
+                       </IconButton>
+                     </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -372,6 +417,62 @@ export default function AgentsPage() {
           <Button onClick={() => setOwnershipOpen(false)}>Cancel</Button>
           <Button onClick={handleOwnership} variant="contained" disabled={!ownershipForm.ownership}>
             Change
+          </Button>
+        </DialogActions>
+       </Dialog>
+
+      <Dialog open={saveOpen} onClose={() => setSaveOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Save Agent</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+            <TextField
+              label="Repository"
+              value={saveForm.repository}
+              onChange={e => setSaveForm({ ...saveForm, repository: e.target.value })}
+              fullWidth
+              helperText="Repository URL to save the agent state to"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSaveOpen(false)}>Cancel</Button>
+          <Button onClick={handleSave} variant="contained" disabled={!saveForm.repository}>
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={loadOpen} onClose={() => setLoadOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Load Agent</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+            <TextField
+              label="Agent Name"
+              value={loadForm.name}
+              onChange={e => setLoadForm({ ...loadForm, name: e.target.value })}
+              fullWidth
+              helperText="Name for the loaded agent"
+            />
+            <TextField
+              label="Container"
+              value={loadForm.container}
+              onChange={e => setLoadForm({ ...loadForm, container: e.target.value })}
+              fullWidth
+              helperText="Container to load the agent into"
+            />
+            <TextField
+              label="Repository"
+              value={loadForm.repository}
+              onChange={e => setLoadForm({ ...loadForm, repository: e.target.value })}
+              fullWidth
+              helperText="Repository URL to load the agent state from"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLoadOpen(false)}>Cancel</Button>
+          <Button onClick={handleLoad} variant="contained" disabled={!loadForm.name || !loadForm.container || !loadForm.repository}>
+            Load
           </Button>
         </DialogActions>
       </Dialog>
