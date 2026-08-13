@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Card, CardContent, Chip, CircularProgress } from '@mui/material';
+import { Box, Typography, Card, CardContent, Chip, CircularProgress, Button } from '@mui/material';
 import { api, type HealthStatus, type PlatformInfo } from 'shared';
 
 export default function DashboardPage() {
@@ -26,6 +26,16 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
+  const handleShutdown = async () => {
+    const confirmed = window.confirm('Shutdown the entire JADE platform? This cannot be undone.');
+    if (!confirmed) return;
+    try {
+      await api.platform.shutdown();
+    } catch (e) {
+      console.error('Shutdown failed', e);
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -46,11 +56,19 @@ export default function DashboardPage() {
         Platform Dashboard
       </Typography>
 
-      <Box display="flex" gap={2} mb={2}>
+      <Box display="flex" gap={2} mb={2} alignItems="center">
         <Chip
           label={health?.status === 'ok' ? 'Healthy' : 'Unhealthy'}
           color={health?.status === 'ok' ? 'success' : 'error'}
         />
+        <Button
+          variant="outlined"
+          color="error"
+          size="small"
+          onClick={handleShutdown}
+        >
+          Shutdown Platform
+        </Button>
       </Box>
 
       {platform && (
