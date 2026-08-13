@@ -5,7 +5,7 @@ import AgentsPage from './AgentsPage';
 
 const {
   mockList, mockKill, mockSuspend, mockResume, mockFreeze, mockThaw, mockDeploy,
-  mockClone, mockMove, mockChangeOwnership, mockSave, mockLoad,
+  mockClone, mockMove, mockChangeOwnership, mockSave, mockLoad, mockRegisterRemote,
 } = vi.hoisted(() => ({
   mockList: vi.fn(),
   mockKill: vi.fn(),
@@ -19,6 +19,7 @@ const {
   mockChangeOwnership: vi.fn(),
   mockSave: vi.fn(),
   mockLoad: vi.fn(),
+  mockRegisterRemote: vi.fn(),
 }));
 
 vi.mock('shared/api/factory', () => ({
@@ -39,7 +40,7 @@ vi.mock('shared/api/factory', () => ({
        save: mockSave,
       load: mockLoad,
       changeOwnership: mockChangeOwnership,
-      registerRemote: vi.fn(),
+      registerRemote: mockRegisterRemote,
     },
     tools: { start: vi.fn() },
     platforms: { list: vi.fn(), add: vi.fn(), fetch: vi.fn(), remove: vi.fn(), getDescription: vi.fn(), refreshDescription: vi.fn(), listAgents: vi.fn() },
@@ -83,6 +84,7 @@ describe('AgentsPage', () => {
     mockChangeOwnership.mockReset();
     mockSave.mockReset();
     mockLoad.mockReset();
+    mockRegisterRemote.mockReset();
   });
 
   it('Given backend reachable, When page loads, Then shows agent list', async () => {
@@ -308,6 +310,44 @@ describe('AgentsPage', () => {
       // Assert
       const loadButton = screen.getByRole('button', { name: 'Load' });
       expect(loadButton).toBeDisabled();
+    });
+  });
+
+  describe('Register Remote Agent', () => {
+    it('Given agent list loaded, When register remote button clicked and form submitted, Then calls registerRemote API', async () => {
+      // Arrange
+      mockList.mockResolvedValue({ agents: [] });
+      mockRegisterRemote.mockResolvedValue({ message: 'registered' });
+      mockList.mockResolvedValueOnce({ agents: [] }).mockResolvedValueOnce({ agents: [{ name: 'remote@container', state: 'ACTIVE', ownership: 'init', container: 'main', addresses: ['rmi://host:1099'] }] });
+
+      // Act
+      renderWithTheme(<AgentsPage />);
+      await waitFor(() => screen.getByText('Register Remote'));
+      fireEvent.click(screen.getByRole('button', { name: 'Register Remote' }));
+      await waitFor(() => screen.getByLabelText('Remote Agent AID'));
+      fireEvent.change(screen.getByLabelText('Remote Agent AID'), { target: { value: 'remote@container' } });
+      fireEvent.change(screen.getByLabelText('Addresses (comma-separated)'), { target: { value: 'rmi://host:1099' } });
+      fireEvent.click(screen.getByText('Register'));
+
+      // Assert
+      await waitFor(() => {
+        expect(mockRegisterRemote).toHaveBeenCalledWith({ aid: 'remote@container', addresses: ['rmi://host:1099'] });
+      });
+    });
+
+    it('Given register remote dialog open and AID empty, Then Register button is disabled', async () => {
+      // Arrange
+      mockList.mockResolvedValue({ agents: [] });
+
+      // Act
+      renderWithTheme(<AgentsPage />);
+      await waitFor(() => screen.getByText('Register Remote'));
+      fireEvent.click(screen.getByRole('button', { name: 'Register Remote' }));
+      await waitFor(() => screen.getByLabelText('Remote Agent AID'));
+
+      // Assert
+      const registerButton = screen.getByRole('button', { name: 'Register' });
+      expect(registerButton).toBeDisabled();
     });
   });
 });

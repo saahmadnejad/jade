@@ -16,6 +16,7 @@ import MergeIcon from '@mui/icons-material/Merge';
 import LockIcon from '@mui/icons-material/Lock';
 import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
+import PublicIcon from '@mui/icons-material/Public';
 import { api, type AgentInfo, type AgentListResponse } from 'shared';
 
 export default function AgentsPage() {
@@ -38,6 +39,8 @@ export default function AgentsPage() {
   const [saveTarget, setSaveTarget] = useState<string | null>(null);
   const [loadOpen, setLoadOpen] = useState(false);
   const [loadForm, setLoadForm] = useState({ name: '', container: '', repository: 'default' });
+  const [registerRemoteOpen, setRegisterRemoteOpen] = useState(false);
+  const [registerRemoteForm, setRegisterRemoteForm] = useState({ aid: '', addresses: '' });
   const [snackbar, setSnackbar] = useState<{open: boolean; message: string; severity: 'success' | 'error'}>({
     open: false, message: '', severity: 'success',
   });
@@ -150,6 +153,21 @@ export default function AgentsPage() {
     }
   };
 
+  const handleRegisterRemote = async () => {
+    try {
+      const addresses = registerRemoteForm.addresses
+        ? registerRemoteForm.addresses.split(',').map(s => s.trim()).filter(Boolean)
+        : undefined;
+      await api.agents.registerRemote({ aid: registerRemoteForm.aid, addresses });
+      setSnackbar({ open: true, message: `Remote agent '${registerRemoteForm.aid}' registered`, severity: 'success' });
+      setRegisterRemoteOpen(false);
+      setRegisterRemoteForm({ aid: '', addresses: '' });
+      fetchAgents();
+    } catch (e: any) {
+      setSnackbar({ open: true, message: `Register remote failed - ${e.message || 'unknown error'}`, severity: 'error' });
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -168,6 +186,9 @@ export default function AgentsPage() {
               <RefreshIcon />
             </IconButton>
           </Tooltip>
+          <Button variant="contained" onClick={() => setRegisterRemoteOpen(true)}>
+            Register Remote
+          </Button>
           <Button variant="contained" onClick={() => setLoadOpen(true)}>
             Load Agent
           </Button>
@@ -473,6 +494,34 @@ export default function AgentsPage() {
           <Button onClick={() => setLoadOpen(false)}>Cancel</Button>
           <Button onClick={handleLoad} variant="contained" disabled={!loadForm.name || !loadForm.container || !loadForm.repository}>
             Load
+          </Button>
+        </DialogActions>
+       </Dialog>
+
+      <Dialog open={registerRemoteOpen} onClose={() => setRegisterRemoteOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Register Remote Agent</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+            <TextField
+              label="Remote Agent AID"
+              value={registerRemoteForm.aid}
+              onChange={e => setRegisterRemoteForm({ ...registerRemoteForm, aid: e.target.value })}
+              fullWidth
+              helperText="The AID (Agent Identifier) of the remote agent, e.g. agent@container"
+            />
+            <TextField
+              label="Addresses (comma-separated)"
+              value={registerRemoteForm.addresses}
+              onChange={e => setRegisterRemoteForm({ ...registerRemoteForm, addresses: e.target.value })}
+              fullWidth
+              helperText="Optional: comma-separated addresses of the remote agent"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRegisterRemoteOpen(false)}>Cancel</Button>
+          <Button onClick={handleRegisterRemote} variant="contained" disabled={!registerRemoteForm.aid}>
+            Register
           </Button>
         </DialogActions>
       </Dialog>
