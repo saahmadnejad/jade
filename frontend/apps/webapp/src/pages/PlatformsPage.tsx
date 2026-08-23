@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, CircularProgress, Chip,
+  TableHead, TableRow, Paper, Chip,
   IconButton, Tooltip, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Button, Snackbar, Alert,
 } from '@mui/material';
@@ -16,6 +16,7 @@ import {
   type RemotePlatformAddRequest,
   type RemotePlatformFetchRequest,
 } from 'shared';
+import TopProgressBar from '../components/TopProgressBar';
 
 export default function PlatformsPage() {
   const [platforms, setPlatforms] = useState<RemotePlatformInfo[]>([]);
@@ -111,11 +112,7 @@ export default function PlatformsPage() {
   };
 
   if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
-    );
+    return <TopProgressBar />;
   }
 
   return (

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, CircularProgress, IconButton,
+  TableHead, TableRow, Paper, IconButton,
   Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Button, Snackbar, Alert, Chip, Tabs, Tab,
 } from '@mui/material';
@@ -21,6 +21,7 @@ import {
   type DFStatusResponse,
   type DFDescriptionResponse,
 } from 'shared';
+import TopProgressBar from '../components/TopProgressBar';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -273,11 +274,7 @@ export default function DFPage() {
   };
 
   if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
-    );
+    return <TopProgressBar />;
   }
 
   return (

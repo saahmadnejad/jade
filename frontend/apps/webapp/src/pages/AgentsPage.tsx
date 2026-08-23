@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, CircularProgress, IconButton,
+  TableHead, TableRow, Paper, IconButton,
   Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Button, Snackbar, Alert,
 } from '@mui/material';
@@ -18,6 +18,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
 import PublicIcon from '@mui/icons-material/Public';
 import { api, type AgentInfo, type AgentListResponse } from 'shared';
+import TopProgressBar from '../components/TopProgressBar';
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<AgentInfo[]>([]);
@@ -169,11 +170,7 @@ export default function AgentsPage() {
   };
 
   if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
-    );
+    return <TopProgressBar />;
   }
 
   return (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Card, CardContent, Chip, CircularProgress, Button } from '@mui/material';
+import { Box, Typography, Card, CardContent, Chip, Button } from '@mui/material';
 import { api, type HealthStatus, type PlatformInfo } from 'shared';
+import TopProgressBar from '../components/TopProgressBar';
 
 export default function DashboardPage() {
   const [health, setHealth] = useState<HealthStatus | null>(null);
@@ -37,11 +38,7 @@ export default function DashboardPage() {
   };
 
   if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
-    );
+    return <TopProgressBar />;
   }
 
   if (error) {

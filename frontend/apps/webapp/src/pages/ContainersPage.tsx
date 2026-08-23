@@ -18,6 +18,7 @@ import {
   type MTPInfo,
   type MTPListResponse,
 } from 'shared';
+import TopProgressBar from '../components/TopProgressBar';
 
 export default function ContainersPage() {
   const [containers, setContainers] = useState<ContainerInfo[]>([]);
@@ -136,11 +137,7 @@ export default function ContainersPage() {
   };
 
   if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
-    );
+    return <TopProgressBar />;
   }
 
   return (
