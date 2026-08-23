@@ -1,197 +1,148 @@
 # AGENTS.md — Jade Project Guidelines
 
-This document provides guidance for AI agents (like Claude/opencode) working on the Jade project.
-
 ## Project Overview
 
-Jade is a fork of JADE (Java Agent DEvelopment Framework) — a multi-agent system framework
-under the `io.donbee.jade` package. It targets Java 21+ with virtual threads.
+Jade is a fork of JADE (Java Agent DEvelopment Framework) — a multi-agent framework under the
+`io.donbee.jade` package, targeting Java 21 with virtual threads.
 
-The project has two main parts:
-1. **Backend** (`backend/`) — Java/Maven, 1015 source files, builds to `backend/target/backend.jar`
-2. **Frontend** (`frontend/`) — pnpm monorepo: React app (`apps/frontend/`) + shared TS lib (`packages/shared/`)
+- **Backend** (`backend/`) — Java/Maven, builds to `backend/target/backend.jar` (shade uber jar)
+- **Frontend** (`frontend/`) — pnpm monorepo: React app at **`frontend/apps/webapp/`**
+  (package name: `webapp`) + shared TS lib at `frontend/packages/shared/` (package name: `shared`)
+- **Migration state**: old Swing GUI tools are being replaced by a Vert.x REST API + React UI.
+  Track progress in `docs/old-gui-functionalities.md`; API specs live in `docs/api/*.md`.
 
 ## Build & Test Commands
 
 ```bash
 # Backend
-cd backend && mvn package -DskipTests        # Build uber jar
-cd backend && mvn test                          # Run tests (if any exist)
+cd backend && mvn package -DskipTests     # Build uber jar
+cd backend && mvn test                    # 38 test files exist under src/test/java
+# If mvn picks the wrong JDK:
+cd backend && JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 mvn test
 
-# Frontend
-cd frontend && pnpm install && pnpm build      # Build for production
-cd frontend && pnpm --filter frontend dev       # Dev server (port 3000)
+# Frontend (from frontend/)
+pnpm --filter webapp dev          # Vite dev server, port 3000
+pnpm --filter webapp test:run     # webapp tests (non-watch)
+pnpm --filter shared test:run     # shared package tests
+pnpm --filter webapp exec eslint src --ext .ts,.tsx   # lint webapp
 
-# Docker
-podman compose up --build -d                  # Start both containers
-podman compose down                           # Stop containers
+# Run a single Vitest file:
+cd frontend/apps/webapp && npx vitest run src/pages/AgentsPage.test.tsx
+
+# Docker (podman, compose file at repo root)
+podman compose up --build -d
+podman compose down
 ```
 
-## Key Conventions
+### Command gotchas
 
-### Backend (Java)
+- The root `frontend/package.json` scripts (`pnpm build`, `pnpm dev`) use
+  `pnpm --filter frontend`, which matches **nothing** — no package is named `frontend`.
+  Always filter by `webapp` or `shared`.
+- `pnpm --filter webapp test` runs Vitest in **watch mode** and will hang a non-interactive
+  session. Use `test:run` or `npx vitest run`.
+- Frontend tests mock the API layer with `vi.mock('shared/api/factory', ...)`. New API methods
+  must be added to that mock object in every page test or tests crash on undefined calls.
 
-- **Source root**: `backend/src/main/java/io/donbee/jade/`
-- **Java version**: 21 (virtual threads via `Thread.ofVirtual()`)
-- **Build tool**: Maven (`pom.xml` at `backend/pom.xml`)
-- **Main class**: `io.donbee.jade.Boot` (declared in pom.xml shade plugin)
-- **Dependencies**: JacORB 3.9, commons-codec 1.18.0, Vert.x 4.5.10 (core, web, web-client)
-- **Package**: All code under `io.donbee.jade.*`
-- **REST API**: Built-in Vert.x REST server, started on Main Container. Endpoints:
-  - `GET /api/health` — health check
-  - `GET /api/version` — JADE version info
-  - `GET /api/platform` — platform metadata (ID, container name, AMS, DF)
-  - `GET /api/agents` — list of agents in the main container
-  - Configurable via `Profile.REST_PORT` (default 8080, pass as `-rest-port <n>` on CLI)
-- **REST source**: `backend/src/main/java/io/donbee/jade/rest/`
+## Architecture Notes
 
-### Frontend (TypeScript)
+### Backend (`io.donbee.jade.*`)
 
-- **Package manager**: pnpm (workspaces at `frontend/` root)
-- **Build tool**: Vite 5
-- **Framework**: React 18 with TypeScript
-- **Linting**: ESLint + TypeScript, strict mode
-- **File naming**: `.ts` for modules, `.tsx` for React components
+- Main class: `io.donbee.jade.Boot` (CLI args + REST startup). Local run:
+  `cd backend && mvn compile exec:java -Dexec.mainClass="io.donbee.jade.Boot"`
+- REST API: Vert.x server on port 8080 (`Profile.REST_PORT`, CLI `-rest-port <n>`), started only
+  on the Main Container. ~38 endpoints under `/api/*` covering platform, containers, agents,
+  tools, remote platforms, and DF.
+- Wiring: `rest/RestAPIVerticle.java` only wires routes; route paths are constants in
+  `rest/ApiRoutes.java`; logic lives in one class per endpoint in `rest/handler/`; delegation to
+  service layer (`PlatformService`, DF services).
+- Dependencies: JacORB 3.9, commons-codec 1.18.0, Vert.x 4.5.10.
+- Threads use `Thread.ofVirtual()` (Java 21 virtual threads).
+
+### Frontend
+
+- React 18 + TypeScript + Vite 5 + MUI (v9.x, dark theme), ESLint strict.
+  Note: MUI deps are declared at the `frontend/` workspace root, not in `apps/webapp/package.json`.
+- Pages live in `frontend/apps/webapp/src/pages/` (AgentsPage, ContainersPage, PlatformsPage,
+  DFPage, DashboardPage, ToolsPage); each page has a co-located `.test.tsx`.
+- API access is via the `shared` package: `import { api } from 'shared'`. Domain clients
+  (`api.agents`, `api.containers`, `api.platforms`, `api.df`, `api.tools`, `api.platform`) are
+  built by `packages/shared/src/api/factory.ts` over an injectable `HttpClient`
+  (`http-client.ts`, axios). Types live in `packages/shared/src/api/types.ts`.
+- SPA only — no server-side routing; nginx serves index.html fallback and proxies `/api`.
 
 ### Docker
 
-- Dockerfiles live in `docker/`
-- `docker-compose.yml` lives at the **repo root**
-- Backend: multi-stage (Maven → JRE 21 Alpine)
-- Frontend: multi-stage (Node → pnpm → Vite build → nginx Alpine)
-- Backend exposes RMI port 1099 (mapped to host 10990)
-- Frontend exposed on port 80 (mapped to host 3000)
+- Dockerfiles in `docker/`, compose file at repo root.
+- Backend RMI 1099 → host 10990; frontend nginx 80 → host 3000; backend REST reachable at
+  `http://localhost:8080/api`.
 
-## Common Tasks
+### Key Files
 
-### Adding a new Docker change
-1. Edit `docker/Dockerfile.{backend|frontend}` or `docker-compose.yml`
-2. Run `podman compose up --build -d` to rebuild and restart
-3. Verify with `podman compose ps` and `curl`
+- `backend/src/main/java/io/donbee/jade/rest/RestAPIVerticle.java` — REST route wiring
+- `backend/src/main/java/io/donbee/jade/rest/ApiRoutes.java` — all route path constants
+- `backend/src/main/java/io/donbee/jade/rest/handler/` — one handler class per endpoint
+- `backend/src/main/java/io/donbee/jade/core/Profile(Impl).java` — config constants/impl
+- `frontend/packages/shared/src/api/factory.ts` — builds the `api` object
+- `docs/old-gui-functionalities.md` — migration tracker (update checkboxes when features ship)
+- `docs/api/*.md` — REST endpoint specs; update before/with code changes
 
-### Adding a frontend page
-1. Create a component in `frontend/apps/frontend/src/`
-2. Use the `shared` package for API calls: `import { fetchData } from 'shared'`
-3. Route via Vite's `index.html` entry point (SPA — no server-side routing)
+## Coding Standards
 
-### Modifying the backend
-1. Edit Java files in `backend/src/main/java/io/donbee/jade/`
-2. Test locally: `cd backend && mvn compile exec:java -Dexec.mainClass="io.donbee.jade.Boot"`
-3. Rebuild Docker with `podman compose up --build -d`
+### Architecture (SOLID)
 
-## Important Files
+- **SRP**: `RestAPIVerticle` wires routes only; handler logic goes in dedicated handler classes;
+  handlers delegate to service-layer interfaces.
+- **OCP/DIP**: new endpoints = new handler classes; high-level code depends on abstractions
+  (e.g., shared package's `HttpClient` interface), injected via constructors.
+- **ISP/LSP**: split fat manager interfaces; mocks must be behaviorally substitutable.
 
-- `backend/src/main/java/io/donbee/jade/Boot.java` — Entry point, CLI arg parsing, REST API startup
-- `backend/src/main/java/io/donbee/jade/rest/RestAPIVerticle.java` — Vert.x REST verticle
-- `backend/src/main/java/io/donbee/jade/core/Profile.java` — Profile constants (incl. `REST_PORT`)
-- `backend/src/main/java/io/donbee/jade/core/ProfileImpl.java` — Profile implementation
-- `backend/src/main/java/io/donbee/jade/core/FullResourceManager.java` — Virtual thread management
-- `frontend/apps/frontend/src/App.tsx` — Root React component
-- `frontend/packages/shared/src/api/client.ts` — Axios API client
-- `docker/Dockerfile.backend` — Backend Docker build
-- `docker/Dockerfile.frontend` — Frontend Docker build
+### Tests (mandatory for new code)
 
-## Coding Standards (Software Architect Role)
+Follow Arrange-Act-Assert with Given-When-Then naming:
 
-When working on this project, act as a **software architect** who values robustness, reusability, and adherence to SOLID principles:
-
-### SOLID Principles
-- **Single Responsibility (SRP)**: Each class should have exactly one reason to change. Extract route handlers, data services, and model builders into separate classes. E.g., `RestAPIVerticle` should only wire routes; delegate handler logic to dedicated handler/service classes.
-- **Open/Closed (OCP)**: Use interfaces and abstractions so new endpoints can be added without modifying existing handler classes.
-- **Liskov Substitution (LSP)**: When implementing service interfaces, ensure substitutability (e.g., mock services for testing should behave identically).
-- **Interface Segregation (ISP)**: Avoid fat interfaces. Split `AgentManager` into focused interfaces if possible.
-- **Dependency Inversion (DIP)**: High-level handlers should depend on abstractions (interfaces), not concrete JADE backend classes. Inject dependencies via constructors.
-
-### Test-First Approach with AAA Pattern
-All new code must include tests following the **Arrange-Act-Assert** pattern:
-
-#### Naming Convention (TDD-style Given-When-Then)
 ```java
-// Java / JUnit 5
-@DisplayName("When authenticated user requests agent list with detail=true, Then agents with state and ownership are returned")
+// Java / JUnit 5 + Mockito
 @Test
 void Given_UserIsAuthenticated_When_AgentListRequestedWithDetail_Then_ResponseIncludesStateAndOwnership() {
-    // Arrange
-    ...
-    // Act
-    ...
-    // Assert
-    ...
+    // --- Arrange --- / --- Act --- / --- Assert ---
 }
 ```
 
 ```typescript
-// TypeScript / Vitest
+// Vitest + React Testing Library
 it('Given an authenticated user, When the agent list endpoint is called with detail=true, Then the response includes agent state and ownership', () => {
-  // Arrange
-  ...
-  // Act
-  ...
-  // Assert
-  ...
+  // Arrange / Act / Assert
 });
 ```
 
-#### Test Structure (AAA)
-```java
-@Test
-void Given_..._When_..._Then_() {
-    // --- Arrange --- (setup mocks, fixtures, test data)
-    // --- Act ---     (execute the unit under test)
-    // --- Assert ---  (verify expected outcome)
-}
-```
-
-### Backend Test Strategy
-- **Unit tests**: Use Mockito to mock `AgentManager`, `AgentContainer`, etc. Test handler/service classes in isolation.
-- **Integration tests**: Use Vert.x `VertxUnit` / `WebTestClient` to test REST endpoints end-to-end against an in-memory JADE runtime (or a mock platform).
-- **Test layout**: `src/test/java/...` following the same package structure as `src/main/java`.
-
-### Frontend Test Strategy
-- **Unit tests**: Vitest + React Testing Library. Mock `axios` calls. Test component rendering, error states, and prop handling.
-- **Integration tests**: Test full API client → component data flow with mocked responses.
-- **Test layout**: `apps/frontend/src/**/*.test.tsx`, `packages/shared/src/**/*.test.ts`.
+- Backend layout: mirror packages under `src/test/java`; unit-test handlers with mocked
+  services; integration-test endpoints against an in-memory/mock runtime.
+- Frontend layout: `apps/webapp/src/**/*.test.tsx`, `packages/shared/src/**/*.test.ts`;
+  mock axios/API factory, cover success, error, and disabled-button/validation states.
 
 ### REST API Design Rules
-1. RESTful resource naming (`/api/agents`, `/api/containers`)
-2. HTTP methods map to CRUD: GET (read), POST (create), PUT (update), DELETE (delete), PATCH (partial)
-3. Paginated responses for lists (`limit`, `offset` query params)
-4. Consistent error response format: `{"error": "message", "code": 404}`
-5. All endpoints return JSON with `Content-Type: application/json`
-6. 2XX = success, 4XX = client error, 5XX = server error
-7. Each endpoint documented with input/output JSON schema in `docs/api/`
-8. **Docs consistency rule**: Before every commit, verify all API docs are consistent and follow a single goal. Update doc specs first, then verify docs match the code. No commit is complete without this verification step.
 
-### Old GUI Implementation References in JavaDoc (REST API Handlers)
-The old JADE platform was administered via **Swing-based GUI tools** — the
-RMA tool (`io.donbee.jade.tools.rma` package), the DF GUI
-(`io.donbee.jade.tools.dfgui` package), the Sniffer, Introspector,
-Dummy Agent, and Log Manager — all living under `backend/src/main/java/io/donbee/jade/tools/`
-and `backend/src/main/java/io/donbee/jade/gui/`.
+1. Resource naming (`/api/agents`, `/api/containers`); HTTP verbs map to CRUD/PATCH semantics.
+2. Error responses always: `{"error": "message", "code": <status>}` via the global failure
+   handler; all responses JSON.
+3. Every endpoint documented with input/output JSON schema in `docs/api/`.
+4. **Docs consistency rule**: update the doc spec first, then verify docs match code before any
+   commit touching the REST API. No commit is complete without this check.
 
-The new Vert.x REST API handlers in
-`backend/src/main/java/io/donbee/jade/rest/handler/` are the modern
-replacements. To help developers understand **how** the old Swing code
-achieved the same effect and to facilitate comparison, **every REST
-handler class** in `io.donbee.jade.rest.handler` **must** include a
-JavaDoc block with a `<b>Old GUI implementation</b>` section that:
+### Old GUI JavaDoc Requirement (REST handlers)
 
-- Names the **old Swing class** that performed the same function
-  (e.g. `io.donbee.jade.tools.rma.KillAction`).
-- Names the **old method** or callback that was called
-  (e.g. `rma.killAgent(AID)` at `rma.java:644`).
-- Describes the **old FIPA protocol / ontology** used
-  (e.g. `JADEManagementOntology` → `KillAgent` action, sent via
-  `AMSClientBehaviour`).
-- States which **service-layer method** the handler delegates to
-  (e.g. `PlatformService#killAgent()`).
+Every REST handler class in `io.donbee.jade.rest.handler` **must** include a JavaDoc block with
+a `<b>Old GUI implementation</b>` section that names:
 
-This rule applies to **every new handler** that replaces Swing GUI
-functionality. For endpoints that are **new** (no Swing equivalent —
-currently only `/api/health`), note "No direct Swing GUI equivalent"
-and name the closest old code as context.
+- the old Swing class performing the same function,
+- the old method/callback (with file:line where known),
+- the FIPA protocol / ontology used,
+- the service-layer method this handler delegates to.
 
-Example format:
+For genuinely new endpoints (no Swing equivalent), note "No direct Swing GUI equivalent" and
+name the closest old code as context. Example:
+
 ```java
 /**
  * Handler for DELETE /api/agents/:name — kill an agent.
@@ -205,3 +156,6 @@ Example format:
  * {@code AgentManager#kill()}.</p>
  */
 ```
+
+Old Swing sources for reference: `backend/src/main/java/io/donbee/jade/tools/` (rma, dfgui,
+sniffer, introspector, logging, DummyAgent) and `backend/src/main/java/io/donbee/jade/gui/`.
