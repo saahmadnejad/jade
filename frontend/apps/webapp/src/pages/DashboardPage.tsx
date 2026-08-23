@@ -1,39 +1,45 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Card, CardContent, Chip, Button } from '@mui/material';
+import { Box, Card, CardContent, Chip, Alert, Button, Typography } from '@mui/material';
 import { api, type HealthStatus, type PlatformInfo } from 'shared';
+import PageHeader from '../components/PageHeader';
 import TopProgressBar from '../components/TopProgressBar';
+import NotificationSnackbar, { useFeedback } from '../components/NotificationSnackbar';
 
 export default function DashboardPage() {
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [platform, setPlatform] = useState<PlatformInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { feedback, notify, close } = useFeedback();
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [healthData, platformData] = await Promise.all([
+        api.platform.health(),
+        api.platform.getInfo(),
+      ]);
+      setHealth(healthData);
+      setPlatform(platformData);
+    } catch (e) {
+      setError('Failed to connect to backend');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [healthData, platformData] = await Promise.all([
-          api.platform.health(),
-          api.platform.getInfo(),
-        ]);
-        setHealth(healthData);
-        setPlatform(platformData);
-      } catch (e) {
-        setError('Failed to connect to backend');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
   const handleShutdown = async () => {
-    const confirmed = window.confirm('Shutdown the entire JADE platform? This cannot be undone.');
-    if (!confirmed) return;
+    if (!window.confirm('Shutdown the entire JADE platform? This cannot be undone.')) return;
     try {
       await api.platform.shutdown();
-    } catch (e) {
-      console.error('Shutdown failed', e);
+      notify('Platform shutdown initiated', 'success');
+    } catch (e: any) {
+      notify(`Shutdown failed - ${e.message || 'unknown error'}`, 'error');
     }
   };
 
@@ -41,34 +47,28 @@ export default function DashboardPage() {
     return <TopProgressBar />;
   }
 
-  if (error) {
-    return (
-      <Typography color="error">{error}</Typography>
-    );
-  }
-
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Platform Dashboard
-      </Typography>
+      <PageHeader
+        title="Platform Dashboard"
+        actions={
+          <>
+            <Chip
+              label={health?.status === 'ok' ? 'Healthy' : 'Unhealthy'}
+              color={health?.status === 'ok' ? 'success' : 'error'}
+            />
+            <Button variant="outlined" color="error" onClick={handleShutdown}>
+              Shutdown Platform
+            </Button>
+          </>
+        }
+      />
 
-      <Box display="flex" gap={2} mb={2} alignItems="center">
-        <Chip
-          label={health?.status === 'ok' ? 'Healthy' : 'Unhealthy'}
-          color={health?.status === 'ok' ? 'success' : 'error'}
-        />
-        <Button
-          variant="outlined"
-          color="error"
-          size="small"
-          onClick={handleShutdown}
-        >
-          Shutdown Platform
-        </Button>
-      </Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+      )}
 
-      {platform && (
+      {platform && !error && (
         <Card>
           <CardContent>
             <Typography variant="h6">Platform Info</Typography>
@@ -82,6 +82,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      <NotificationSnackbar feedback={feedback} onClose={close} />
     </Box>
   );
 }

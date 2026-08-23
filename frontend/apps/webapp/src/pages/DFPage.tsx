@@ -3,7 +3,7 @@ import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton,
   Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Button, Snackbar, Alert, Chip, Tabs, Tab,
+  TextField, Button, Chip, Tabs, Tab,
 } from '@mui/material';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import AddIcon from '@mui/icons-material/Add';
@@ -22,6 +22,9 @@ import {
   type DFDescriptionResponse,
 } from 'shared';
 import TopProgressBar from '../components/TopProgressBar';
+import PageHeader from '../components/PageHeader';
+import EmptyState from '../components/EmptyState';
+import NotificationSnackbar, { useFeedback } from '../components/NotificationSnackbar';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -67,9 +70,7 @@ export default function DFPage() {
     parentDF: '',
     parentDFAddresses: '',
   });
-  const [snackbar, setSnackbar] = useState<{open: boolean; message: string; severity: 'success' | 'error'}>({
-    open: false, message: '', severity: 'success',
-  });
+  const { feedback, notify, close } = useFeedback();
 
   const fetchAll = async () => {
     setLoading(true);
@@ -87,7 +88,7 @@ export default function DFPage() {
       setDfStatus(statusData);
       setDfDescription(descData);
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Failed to fetch DF data: ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Failed to fetch DF data: ${e.message || 'unknown error'}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -103,7 +104,7 @@ export default function DFPage() {
       const data: DFRegistrationListResponse = await api.df.listRegistrations();
       setRegistrations(data.registrations || []);
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Failed to fetch DF registrations: ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Failed to fetch DF registrations: ${e.message || 'unknown error'}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -122,10 +123,10 @@ export default function DFPage() {
     setActionLoading('refresh');
     try {
       const resp = await api.df.refresh();
-      setSnackbar({ open: true, message: `DF refreshed: ${resp.registeredAgentCount} registered agents`, severity: 'success' });
+      notify(`DF refreshed: ${resp.registeredAgentCount} registered agents`, 'success');
       fetchAll();
     } catch (e: any) {
-      setSnackbar({ open: true, message: `DF refresh failed: ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`DF refresh failed: ${e.message || 'unknown error'}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -147,12 +148,12 @@ export default function DFPage() {
         addresses: registerForm.addresses ? registerForm.addresses.split(',').map(s => s.trim()).filter(Boolean) : [],
         services: services.length > 0 ? services : undefined,
       });
-      setSnackbar({ open: true, message: `Agent '${registerForm.name}' registered with DF`, severity: 'success' });
+      notify(`Agent '${registerForm.name}' registered with DF`, 'success');
       setRegisterOpen(false);
       setRegisterForm({ name: '', addresses: '', serviceType: '', serviceName: '' });
       fetchRegistrations();
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Registration failed: ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Registration failed: ${e.message || 'unknown error'}`, 'error');
     }
   };
 
@@ -163,10 +164,10 @@ export default function DFPage() {
     setActionLoading('deregister:' + agentName);
     try {
       await api.df.deregister(agentName);
-      setSnackbar({ open: true, message: `Agent '${agentName}' deregistered`, severity: 'success' });
+      notify(`Agent '${agentName}' deregistered`, 'success');
       fetchRegistrations();
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Deregister failed: ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Deregister failed: ${e.message || 'unknown error'}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -187,12 +188,12 @@ export default function DFPage() {
         addresses: registerForm.addresses ? registerForm.addresses.split(',').map(s => s.trim()).filter(Boolean) : [],
         services: services.length > 0 ? services : undefined,
       });
-      setSnackbar({ open: true, message: `Registration for '${modifyTarget.name}' modified`, severity: 'success' });
+      notify(`Registration for '${modifyTarget.name}' modified`, 'success');
       setModifyOpen(false);
       setModifyTarget(null);
       fetchRegistrations();
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Modify failed: ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Modify failed: ${e.message || 'unknown error'}`, 'error');
     }
   };
 
@@ -208,7 +209,7 @@ export default function DFPage() {
       setSearchOpen(false);
       setSearchForm({ serviceName: '', serviceType: '' });
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Search failed: ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Search failed: ${e.message || 'unknown error'}`, 'error');
     }
   };
 
@@ -221,12 +222,12 @@ export default function DFPage() {
           : [],
       };
       await api.df.federate(request);
-      setSnackbar({ open: true, message: `DF federated with '${federateForm.parentDF}'`, severity: 'success' });
+      notify(`DF federated with '${federateForm.parentDF}'`, 'success');
       setFederateOpen(false);
       setFederateForm({ parentDF: '', parentDFAddresses: '' });
       setParents([...parents, { name: federateForm.parentDF, addresses: request.parentDFAddresses }]);
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Federation failed: ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Federation failed: ${e.message || 'unknown error'}`, 'error');
     }
   };
 
@@ -237,10 +238,10 @@ export default function DFPage() {
     setActionLoading('deregisterParent:' + name);
     try {
       await api.df.deregisterParent(name);
-      setSnackbar({ open: true, message: `Deregistered from parent DF '${name}'`, severity: 'success' });
+      notify(`Deregistered from parent DF '${name}'`, 'success');
       setParents(parents.filter(p => p.name !== name));
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Deregister parent failed: ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Deregister parent failed: ${e.message || 'unknown error'}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -253,10 +254,10 @@ export default function DFPage() {
     setActionLoading('deregisterChild:' + name);
     try {
       await api.df.deregisterChild(name);
-      setSnackbar({ open: true, message: `Child DF '${name}' deregistered`, severity: 'success' });
+      notify(`Child DF '${name}' deregistered`, 'success');
       setChildren(children.filter(c => c.name !== name));
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Deregister child failed: ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Deregister child failed: ${e.message || 'unknown error'}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -279,39 +280,41 @@ export default function DFPage() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h4">Directory Facilitator (DF)</Typography>
-        <Box display="flex" gap={1}>
-          <Tooltip title="Refresh DF Data">
-            <IconButton onClick={handleRefreshDf} disabled={loading || !!actionLoading}>
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="View DF Description">
-            <IconButton
-              color="info"
-              size="small"
-              onClick={async () => {
-                try {
-                  const desc = await api.df.getDescription();
-                  setDfDescription(desc);
-                  setDescOpen(true);
-                } catch (e: any) {
-                  setSnackbar({ open: true, message: `Failed to load DF description: ${e.message || 'unknown error'}`, severity: 'error' });
-                }
-              }}
-            >
-              <SearchIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Button variant="outlined" onClick={() => setSearchOpen(true)} startIcon={<SearchIcon />}>
-            Search
-          </Button>
-          <Button variant="contained" onClick={() => setRegisterOpen(true)} startIcon={<AddIcon />}>
-            Register Agent
-          </Button>
-        </Box>
-      </Box>
+      <PageHeader
+        title="Directory Facilitator (DF)"
+        actions={
+          <>
+            <Tooltip title="Refresh DF Data">
+              <IconButton onClick={handleRefreshDf} disabled={loading || !!actionLoading}>
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="View DF Description">
+              <IconButton
+                color="info"
+                size="small"
+                onClick={async () => {
+                  try {
+                    const desc = await api.df.getDescription();
+                    setDfDescription(desc);
+                    setDescOpen(true);
+                  } catch (e: any) {
+                    notify(`Failed to load DF description: ${e.message || 'unknown error'}`, 'error');
+                  }
+                }}
+              >
+                <SearchIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Button variant="outlined" onClick={() => setSearchOpen(true)} startIcon={<SearchIcon />}>
+              Search
+            </Button>
+            <Button variant="contained" onClick={() => setRegisterOpen(true)} startIcon={<AddIcon />}>
+              Register Agent
+            </Button>
+          </>
+        }
+      />
 
       {dfStatus && (
         <Paper sx={{ p: 2, mb: 2 }}>
@@ -648,15 +651,7 @@ export default function DFPage() {
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={5000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      <NotificationSnackbar feedback={feedback} onClose={close} />
     </Box>
   );
 }

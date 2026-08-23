@@ -1,24 +1,24 @@
 import { useState } from 'react';
 import {
-  Box, Typography, Button, Chip, Grid, CircularProgress,
+  Box, Button, Grid, CircularProgress,
 } from '@mui/material';
 import { api } from 'shared';
+import PageHeader from '../components/PageHeader';
+import NotificationSnackbar, { useFeedback } from '../components/NotificationSnackbar';
 
 const tools = ['sniffer', 'dummy', 'logger', 'introspector', 'df-gui'];
 
 export default function ToolsPage() {
   const [launching, setLaunching] = useState<string | null>(null);
-  const [launched, setLaunched] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { feedback, notify, close } = useFeedback();
 
   const handleLaunch = async (tool: string) => {
     setLaunching(tool);
-    setError(null);
     try {
       await api.tools.start(tool, { container: 'Main-Container' });
-      setLaunched(tool);
-    } catch (e) {
-      setError(`Failed to launch ${tool}`);
+      notify(`${tool} started`, 'success');
+    } catch (e: any) {
+      notify(`Failed to launch ${tool} - ${e.message || 'unknown error'}`, 'error');
     } finally {
       setLaunching(null);
     }
@@ -26,17 +26,7 @@ export default function ToolsPage() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Tools
-      </Typography>
-
-      {error && (
-        <Typography color="error" gutterBottom>{error}</Typography>
-      )}
-
-      {launched && (
-        <Chip label={`${launched} started`} color="success" sx={{ mb: 2 }} />
-      )}
+      <PageHeader title="Tools" />
 
       <Grid container spacing={2}>
         {tools.map((tool) => (
@@ -53,6 +43,8 @@ export default function ToolsPage() {
           </Grid>
         ))}
       </Grid>
+
+      <NotificationSnackbar feedback={feedback} onClose={close} />
     </Box>
   );
 }

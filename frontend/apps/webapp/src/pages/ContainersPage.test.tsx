@@ -124,8 +124,9 @@ describe('ContainersPage', () => {
     });
   });
 
-  it('Given secondary container listed, When kill button clicked, Then calls kill API', async () => {
+  it('Given secondary container listed, When kill button clicked and confirmed, Then calls kill API', async () => {
     // Arrange
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
     mockContainers([
       { name: 'Node1', address: '192.168.1.1', port: '1099', isMain: false },
     ]);
@@ -141,6 +142,23 @@ describe('ContainersPage', () => {
     await waitFor(() => {
       expect(mockKill).toHaveBeenCalledWith('Node1');
     });
+  });
+
+  it('Given secondary container listed, When kill button clicked and dismissed, Then kill API is not called', async () => {
+    // Arrange
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    mockContainers([
+      { name: 'Node1', address: '192.168.1.1', port: '1099', isMain: false },
+    ]);
+
+    // Act
+    renderWithTheme(<ContainersPage />);
+    await waitFor(() => screen.getByText('Node1'));
+    const killButton = screen.getByRole('button', { name: 'Kill Container' });
+    fireEvent.click(killButton);
+
+    // Assert
+    expect(mockKill).not.toHaveBeenCalled();
   });
 
   it('Given container listed, When save button clicked and repository entered, Then calls save API', async () => {

@@ -132,8 +132,9 @@ describe('AgentsPage', () => {
     });
   });
 
-  it('Given agent list loaded, When kill button clicked, Then calls kill API', async () => {
+  it('Given agent list loaded, When kill button clicked and confirmed, Then calls kill API', async () => {
     // Arrange
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
     mockList.mockResolvedValue({
       agents: [
         { name: 'rma@main', state: 'ACTIVE', ownership: 'init', container: 'Main-Container', addresses: [] },
@@ -151,6 +152,25 @@ describe('AgentsPage', () => {
     await waitFor(() => {
       expect(mockKill).toHaveBeenCalledWith('rma@main');
     });
+  });
+
+  it('Given agent list loaded, When kill button clicked and dismissed, Then kill API is not called', async () => {
+    // Arrange
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    mockList.mockResolvedValue({
+      agents: [
+        { name: 'rma@main', state: 'ACTIVE', ownership: 'init', container: 'Main-Container', addresses: [] },
+      ],
+    });
+
+    // Act
+    renderWithTheme(<AgentsPage />);
+    await waitFor(() => screen.getByText('rma@main'));
+    const killButton = screen.getByRole('button', { name: 'Kill Agent' });
+    fireEvent.click(killButton);
+
+    // Assert
+    expect(mockKill).not.toHaveBeenCalled();
   });
 
   it('Given agent list loaded, When clone button clicked and form submitted, Then calls clone API', async () => {

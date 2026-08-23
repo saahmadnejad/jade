@@ -3,7 +3,7 @@ import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Chip,
   IconButton, Tooltip, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, Button, Snackbar, Alert,
+  DialogActions, TextField, Button,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -17,6 +17,9 @@ import {
   type RemotePlatformFetchRequest,
 } from 'shared';
 import TopProgressBar from '../components/TopProgressBar';
+import PageHeader from '../components/PageHeader';
+import EmptyState from '../components/EmptyState';
+import NotificationSnackbar, { useFeedback } from '../components/NotificationSnackbar';
 
 export default function PlatformsPage() {
   const [platforms, setPlatforms] = useState<RemotePlatformInfo[]>([]);
@@ -28,9 +31,7 @@ export default function PlatformsPage() {
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<RemotePlatformInfo | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [snackbar, setSnackbar] = useState<{open: boolean; message: string; severity: 'success' | 'error'}>({
-    open: false, message: '', severity: 'success',
-  });
+  const { feedback, notify, close } = useFeedback();
 
   const fetchPlatforms = async () => {
     setLoading(true);
@@ -39,7 +40,7 @@ export default function PlatformsPage() {
       setPlatforms(data.platforms || []);
     } catch (e) {
       console.error('Failed to fetch platforms', e);
-      setSnackbar({ open: true, message: 'Failed to fetch platforms', severity: 'error' });
+      notify('Failed to fetch platforms', 'error');
     } finally {
       setLoading(false);
     }
@@ -56,12 +57,12 @@ export default function PlatformsPage() {
         ? addForm.addresses.split(',').map(s => s.trim()).filter(Boolean)
         : [];
       await api.platforms.add({ ams: addForm.ams, addresses });
-      setSnackbar({ open: true, message: `Platform added via AMS '${addForm.ams}'`, severity: 'success' });
+      notify(`Platform added via AMS '${addForm.ams}'`, 'success');
       setAddOpen(false);
       setAddForm({ ams: '', addresses: '' });
       fetchPlatforms();
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Add platform failed - ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Add platform failed - ${e.message || 'unknown error'}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -71,12 +72,12 @@ export default function PlatformsPage() {
     setActionLoading('add-url');
     try {
       await api.platforms.fetch({ url: urlForm.url });
-      setSnackbar({ open: true, message: `Platform fetched from URL`, severity: 'success' });
+      notify(`Platform fetched from URL`, 'success');
       setAddOpen(false);
       setUrlForm({ url: '' });
       fetchPlatforms();
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Fetch platform failed - ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Fetch platform failed - ${e.message || 'unknown error'}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -89,10 +90,10 @@ export default function PlatformsPage() {
     setActionLoading('remove:' + name);
     try {
       await api.platforms.remove(name);
-      setSnackbar({ open: true, message: `Platform '${name}' removed`, severity: 'success' });
+      notify(`Platform '${name}' removed`, 'success');
       fetchPlatforms();
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Remove failed - ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Remove failed - ${e.message || 'unknown error'}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -105,7 +106,7 @@ export default function PlatformsPage() {
       setSelectedPlatform(desc);
       setViewOpen(true);
     } catch (e: any) {
-      setSnackbar({ open: true, message: `View description failed - ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`View description failed - ${e.message || 'unknown error'}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -117,25 +118,27 @@ export default function PlatformsPage() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h4">Remote Platforms</Typography>
-        <Box display="flex" gap={1}>
-          <Tooltip title="Refresh">
-            <IconButton onClick={fetchPlatforms} disabled={loading}>
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-          <Button variant="contained" onClick={() => setAddOpen(true)} startIcon={<AddIcon />}>
-            Add Platform
-          </Button>
-        </Box>
-      </Box>
+      <PageHeader
+        title="Remote Platforms"
+        actions={
+          <>
+            <Tooltip title="Refresh">
+              <IconButton onClick={fetchPlatforms} disabled={loading}>
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+            <Button variant="contained" onClick={() => setAddOpen(true)} startIcon={<AddIcon />}>
+              Add Platform
+            </Button>
+          </>
+        }
+      />
 
       {platforms.length === 0 ? (
-        <Typography>No platforms found</Typography>
+        <EmptyState message="No platforms found" />
       ) : (
         <TableContainer component={Paper}>
-          <Table>
+          <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell>Name</TableCell>
@@ -256,15 +259,7 @@ export default function PlatformsPage() {
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={5000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      <NotificationSnackbar feedback={feedback} onClose={close} />
     </Box>
   );
 }

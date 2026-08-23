@@ -3,7 +3,7 @@ import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton,
   Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Button, Snackbar, Alert,
+  TextField, Button,
 } from '@mui/material';
 import DeleteForeverIcon from '@mui/icons-material/Delete';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -17,8 +17,12 @@ import LockIcon from '@mui/icons-material/Lock';
 import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
 import PublicIcon from '@mui/icons-material/Public';
+import AddIcon from '@mui/icons-material/Add';
 import { api, type AgentInfo, type AgentListResponse } from 'shared';
 import TopProgressBar from '../components/TopProgressBar';
+import PageHeader from '../components/PageHeader';
+import EmptyState from '../components/EmptyState';
+import NotificationSnackbar, { useFeedback } from '../components/NotificationSnackbar';
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<AgentInfo[]>([]);
@@ -42,9 +46,7 @@ export default function AgentsPage() {
   const [loadForm, setLoadForm] = useState({ name: '', container: '', repository: 'default' });
   const [registerRemoteOpen, setRegisterRemoteOpen] = useState(false);
   const [registerRemoteForm, setRegisterRemoteForm] = useState({ aid: '', addresses: '' });
-  const [snackbar, setSnackbar] = useState<{open: boolean; message: string; severity: 'success' | 'error'}>({
-    open: false, message: '', severity: 'success',
-  });
+  const { feedback, notify, close } = useFeedback();
 
   const fetchAgents = async () => {
     setLoading(true);
@@ -53,7 +55,7 @@ export default function AgentsPage() {
       setAgents(data.agents);
     } catch (e) {
       console.error('Failed to fetch agents', e);
-      setSnackbar({ open: true, message: 'Failed to fetch agents', severity: 'error' });
+      notify('Failed to fetch agents', 'error');
     } finally {
       setLoading(false);
     }
@@ -67,13 +69,18 @@ export default function AgentsPage() {
     setActionLoading(actionName + ':' + agentName);
     try {
       await action();
-      setSnackbar({ open: true, message: `${agentName}: ${actionName} completed`, severity: 'success' });
+      notify(`${agentName}: ${actionName} completed`, 'success');
       fetchAgents();
     } catch (e: any) {
-      setSnackbar({ open: true, message: `${agentName}: ${actionName} failed - ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`${agentName}: ${actionName} failed - ${e.message || 'unknown error'}`, 'error');
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const handleKill = (agentName: string) => {
+    if (!window.confirm(`Kill agent '${agentName}'? This cannot be undone.`)) return;
+    handleAction(() => api.agents.kill(agentName), 'kill', agentName);
   };
 
   const handleDeploy = async () => {
@@ -83,12 +90,12 @@ export default function AgentsPage() {
         class: deployForm.class,
         args: deployForm.args ? deployForm.args.split(',').map(s => s.trim()).filter(Boolean) : undefined,
       });
-      setSnackbar({ open: true, message: `Agent '${deployForm.name}' deployed`, severity: 'success' });
+      notify(`Agent '${deployForm.name}' deployed`, 'success');
       setDeployOpen(false);
       setDeployForm({ name: '', class: '', args: '' });
       fetchAgents();
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Deploy failed - ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Deploy failed - ${e.message || 'unknown error'}`, 'error');
     }
   };
 
@@ -145,12 +152,12 @@ export default function AgentsPage() {
   const handleLoad = async () => {
     try {
       await api.agents.load(loadForm.name, loadForm.container, loadForm.repository);
-      setSnackbar({ open: true, message: `Agent '${loadForm.name}' loaded`, severity: 'success' });
+      notify(`Agent '${loadForm.name}' loaded`, 'success');
       setLoadOpen(false);
       setLoadForm({ name: '', container: '', repository: '' });
       fetchAgents();
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Load failed - ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Load failed - ${e.message || 'unknown error'}`, 'error');
     }
   };
 
@@ -160,12 +167,12 @@ export default function AgentsPage() {
         ? registerRemoteForm.addresses.split(',').map(s => s.trim()).filter(Boolean)
         : undefined;
       await api.agents.registerRemote({ aid: registerRemoteForm.aid, addresses });
-      setSnackbar({ open: true, message: `Remote agent '${registerRemoteForm.aid}' registered`, severity: 'success' });
+      notify(`Remote agent '${registerRemoteForm.aid}' registered`, 'success');
       setRegisterRemoteOpen(false);
       setRegisterRemoteForm({ aid: '', addresses: '' });
       fetchAgents();
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Register remote failed - ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Register remote failed - ${e.message || 'unknown error'}`, 'error');
     }
   };
 
@@ -175,28 +182,30 @@ export default function AgentsPage() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h4">Agents</Typography>
-        <Box display="flex" gap={1}>
-          <Tooltip title="Refresh">
-            <IconButton onClick={fetchAgents} disabled={loading}>
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-          <Button variant="contained" onClick={() => setRegisterRemoteOpen(true)}>
-            Register Remote
-          </Button>
-          <Button variant="contained" onClick={() => setLoadOpen(true)}>
-            Load Agent
-          </Button>
-          <Button variant="contained" onClick={() => setDeployOpen(true)}>
-            Deploy Agent
-          </Button>
-        </Box>
-      </Box>
+      <PageHeader
+        title="Agents"
+        actions={
+          <>
+            <Tooltip title="Refresh">
+              <IconButton onClick={fetchAgents} disabled={loading}>
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setRegisterRemoteOpen(true)}>
+              Register Remote
+            </Button>
+            <Button variant="contained" startIcon={<UploadIcon />} onClick={() => setLoadOpen(true)}>
+              Load Agent
+            </Button>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setDeployOpen(true)}>
+              Deploy Agent
+            </Button>
+          </>
+        }
+      />
 
       {agents.length === 0 ? (
-        <Typography>No agents found</Typography>
+        <EmptyState message="No agents found" />
       ) : (
         <TableContainer component={Paper}>
           <Table size="small">
@@ -222,11 +231,7 @@ export default function AgentsPage() {
                         color="error"
                         size="small"
                         disabled={actionLoading === 'kill:' + agent.name}
-                        onClick={() => handleAction(
-                          () => api.agents.kill(agent.name),
-                          'kill',
-                          agent.name
-                        )}
+                         onClick={() => handleKill(agent.name)}
                       >
                         <DeleteForeverIcon fontSize="small" />
                       </IconButton>
@@ -523,15 +528,7 @@ export default function AgentsPage() {
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={5000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      <NotificationSnackbar feedback={feedback} onClose={close} />
     </Box>
   );
 }

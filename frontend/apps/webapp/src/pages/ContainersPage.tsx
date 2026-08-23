@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, CircularProgress, Chip,
-  IconButton, Tooltip, Snackbar, Alert,
+  IconButton, Tooltip,
   Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Button,
 } from '@mui/material';
@@ -11,6 +11,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
 import AddIcon from '@mui/icons-material/Add';
+import TuneIcon from '@mui/icons-material/Tune';
 import {
   api,
   type ContainerInfo,
@@ -19,6 +20,9 @@ import {
   type MTPListResponse,
 } from 'shared';
 import TopProgressBar from '../components/TopProgressBar';
+import PageHeader from '../components/PageHeader';
+import EmptyState from '../components/EmptyState';
+import NotificationSnackbar, { useFeedback } from '../components/NotificationSnackbar';
 
 export default function ContainersPage() {
   const [containers, setContainers] = useState<ContainerInfo[]>([]);
@@ -26,9 +30,7 @@ export default function ContainersPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [mtps, setMtps] = useState<Record<string, MTPInfo[]>>({});
   const [mtpsLoading, setMtpsLoading] = useState<Record<string, boolean>>({});
-  const [snackbar, setSnackbar] = useState<{open: boolean; message: string; severity: 'success' | 'error'}>({
-    open: false, message: '', severity: 'success',
-  });
+  const { feedback, notify, close } = useFeedback();
 
   const [saveOpen, setSaveOpen] = useState(false);
   const [saveTarget, setSaveTarget] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export default function ContainersPage() {
       setContainers(data.containers);
     } catch (e) {
       console.error('Failed to fetch containers', e);
-      setSnackbar({ open: true, message: 'Failed to fetch containers', severity: 'error' });
+      notify('Failed to fetch containers', 'error');
     } finally {
       setLoading(false);
     }
@@ -63,20 +65,21 @@ export default function ContainersPage() {
       const data: MTPListResponse = await api.containers.listMTPs(containerName);
       setMtps(prev => ({ ...prev, [containerName]: data.mtps || [] }));
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Failed to fetch MTPs: ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Failed to fetch MTPs: ${e.message || 'unknown error'}`, 'error');
     } finally {
       setMtpsLoading(prev => ({ ...prev, [containerName]: false }));
     }
   };
 
   const handleKill = async (containerName: string) => {
+    if (!window.confirm(`Kill container '${containerName}'? This cannot be undone.`)) return;
     setActionLoading('kill:' + containerName);
     try {
       await api.containers.kill(containerName);
-      setSnackbar({ open: true, message: `Container '${containerName}' killed`, severity: 'success' });
+      notify(`Container '${containerName}' killed`, 'success');
       fetchContainers();
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Kill failed - ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Kill failed - ${e.message || 'unknown error'}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -86,11 +89,11 @@ export default function ContainersPage() {
     if (!saveTarget) return;
     try {
       await api.containers.save(saveTarget, saveForm.repository);
-      setSnackbar({ open: true, message: `Container '${saveTarget}' saved to ${saveForm.repository}`, severity: 'success' });
+      notify(`Container '${saveTarget}' saved to ${saveForm.repository}`, 'success');
       setSaveOpen(false);
       setSaveForm({ repository: '' });
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Save failed - ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Save failed - ${e.message || 'unknown error'}`, 'error');
     }
   };
 
@@ -98,12 +101,12 @@ export default function ContainersPage() {
     if (!loadTarget) return;
     try {
       await api.containers.load(loadTarget, loadForm.repository);
-      setSnackbar({ open: true, message: `Container '${loadTarget}' loaded from ${loadForm.repository}`, severity: 'success' });
+      notify(`Container '${loadTarget}' loaded from ${loadForm.repository}`, 'success');
       setLoadOpen(false);
       setLoadForm({ repository: '' });
       fetchContainers();
     } catch (e: any) {
-      setSnackbar({ open: true, message: `Load failed - ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`Load failed - ${e.message || 'unknown error'}`, 'error');
     }
   };
 
@@ -114,12 +117,12 @@ export default function ContainersPage() {
         className: mtpForm.className,
         address: mtpForm.address,
       });
-      setSnackbar({ open: true, message: `MTP installed on '${mtpInstallTarget}'`, severity: 'success' });
+      notify(`MTP installed on '${mtpInstallTarget}'`, 'success');
       setMtpInstallOpen(false);
       setMtpForm({ className: '', address: '' });
       fetchMtps(mtpInstallTarget);
     } catch (e: any) {
-      setSnackbar({ open: true, message: `MTP install failed - ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`MTP install failed - ${e.message || 'unknown error'}`, 'error');
     }
   };
 
@@ -127,10 +130,10 @@ export default function ContainersPage() {
     setActionLoading('uninstall:' + containerName + ':' + address);
     try {
       await api.containers.uninstallMTP(containerName, address);
-      setSnackbar({ open: true, message: `MTP at '${address}' uninstalled from '${containerName}'`, severity: 'success' });
+      notify(`MTP at '${address}' uninstalled from '${containerName}'`, 'success');
       fetchMtps(containerName);
     } catch (e: any) {
-      setSnackbar({ open: true, message: `MTP uninstall failed - ${e.message || 'unknown error'}`, severity: 'error' });
+      notify(`MTP uninstall failed - ${e.message || 'unknown error'}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -142,17 +145,19 @@ export default function ContainersPage() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h4">Containers</Typography>
-        <Tooltip title="Refresh">
-          <IconButton onClick={fetchContainers} disabled={loading}>
-            <RefreshIcon />
-          </IconButton>
-        </Tooltip>
-      </Box>
+      <PageHeader
+        title="Containers"
+        actions={
+          <Tooltip title="Refresh">
+            <IconButton onClick={fetchContainers} disabled={loading}>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+        }
+      />
 
       {containers.length === 0 ? (
-        <Typography>No containers found</Typography>
+        <EmptyState message="No containers found" />
       ) : (
         <TableContainer component={Paper}>
           <Table size="small">
@@ -199,15 +204,15 @@ export default function ContainersPage() {
                             <UploadIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Manage MTPs">
-                          <IconButton
-                            color="secondary"
-                            size="small"
-                            onClick={() => fetchMtps(container.name)}
-                          >
-                            <AddIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                         <Tooltip title="Manage MTPs">
+                           <IconButton
+                             color="secondary"
+                             size="small"
+                             onClick={() => fetchMtps(container.name)}
+                           >
+                             <TuneIcon fontSize="small" />
+                           </IconButton>
+                         </Tooltip>
                         <Tooltip title="Kill Container">
                           <IconButton
                             color="error"
@@ -352,15 +357,7 @@ export default function ContainersPage() {
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={5000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      <NotificationSnackbar feedback={feedback} onClose={close} />
     </Box>
   );
 }
