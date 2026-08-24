@@ -6,7 +6,10 @@ MTPs-Main-Container.txt
 .idea
 
 ### build dir ###
-target
+target/
+
+### Maven flatten plugin (CI-friendly ${revision} artifacts) ###
+.flattened-pom.xml
 
 ### Docker ###
 *.pid

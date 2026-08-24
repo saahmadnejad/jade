@@ -5,7 +5,11 @@
 Jade is a fork of JADE (Java Agent DEvelopment Framework) — a multi-agent framework under the
 `io.donbee.jade` package, targeting Java 21 with virtual threads.
 
-- **Backend** (`backend/`) — Java/Maven, builds to `backend/target/backend.jar` (shade uber jar)
+- **Backend** (`backend/`) — Java/Maven multi-module build: parent POM `backend/pom.xml`
+  (`jade-parent`) with two modules: `backend/fipa/` (FIPA common library, `io.donbee:fipa`:
+  CORBA-generated `io.donbee.FIPA` classes + `FIPANames`) and `backend/jade/`
+  (platform code, depends on fipa). Shade uber jar builds to `backend/jade/target/backend.jar`.
+  Build from `backend/` so the reactor resolves the internal dependency.
 - **Frontend** (`frontend/`) — pnpm monorepo: React app at **`frontend/apps/webapp/`**
   (package name: `webapp`) + shared TS lib at `frontend/packages/shared/` (package name: `shared`)
 - **Migration state**: old Swing GUI tools are being replaced by a Vert.x REST API + React UI.
