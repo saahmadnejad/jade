@@ -10,10 +10,10 @@ Jade is a fork of JADE (Java Agent DEvelopment Framework) — a multi-agent fram
   CORBA-generated `io.donbee.FIPA` classes + `FIPANames`), `backend/jade/`
   (platform code, depends on fipa) and `backend/examples/` (example scenarios like the
   online shop, depends on jade; NOT part of the shaded uber jar). Shade uber jar builds to
-  `backend/jade/target/backend.jar`; examples jar to `backend/examples/target/`.
+  `backend/jade/target/jade-<version>.jar`; examples jar to `backend/examples/target/`.
   Build from `backend/` so the reactor resolves the internal dependencies.
 - **Example scenarios**: see `backend/examples/README.md`. Run e.g.:
-  `java -cp backend/jade/target/backend.jar:backend/examples/target/examples-*.jar \
+  `java -cp backend/jade/target/jade-*.jar:backend/examples/target/examples-*.jar \
   io.donbee.jade.Boot -conf backend/examples/conf/shop.properties`
 - **Frontend** (`frontend/`) — pnpm monorepo: React app at **`frontend/apps/webapp/`**
   (package name: `webapp`) + shared TS lib at `frontend/packages/shared/` (package name: `shared`)

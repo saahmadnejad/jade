@@ -9,7 +9,7 @@ jade/
 ├── backend/                    # JADE framework (Java 21, multi-module Maven build)
 │   ├── pom.xml                 # Parent POM (jade-parent) with CI-friendly ${revision} version
 │   ├── fipa/                   # FIPA common library (CORBA-generated classes, FIPANames)
-│   ├── jade/                   # Platform code (shade plugin -> uber jar backend.jar)
+│   ├── jade/                   # Platform code (shade plugin -> uber jar jade-<version>.jar)
 │   └── examples/               # Example scenarios (e.g. online shop) - see backend/examples/README.md
 ├── frontend/                   # React + Vite + TypeScript UI
 │   ├── pnpm-workspace.yaml     # pnpm monorepo config

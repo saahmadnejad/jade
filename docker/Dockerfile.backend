@@ -8,7 +8,10 @@ RUN mvn -B -DskipTests package
 
 FROM docker.io/library/eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=build /build/jade/target/backend.jar app.jar
+COPY --from=build /build/jade/target/jade-*.jar app.jar
 COPY --from=build /build/examples/target/examples-*.jar examples.jar
 EXPOSE 1099 8080
+# The image ships platform + bundled example scenarios. Scenario code is inert
+# until instantiated through /api/scenarios. Library users should depend on the
+# Maven artifacts (io.donbee:jade) instead of this image.
 ENTRYPOINT ["java", "-cp", "app.jar:examples.jar", "io.donbee.jade.Boot", "-host", "localhost", "-local-host", "localhost"]

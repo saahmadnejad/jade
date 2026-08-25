@@ -20,7 +20,7 @@ cd backend && mvn package -DskipTests
 
 Artifacts:
 
-- `backend/jade/target/backend.jar` — platform uber jar
+- `backend/jade/target/jade-<version>.jar` — platform uber jar
 - `backend/examples/target/examples-<version>.jar` — example agents
 
 ## Running the online-shop scenario
@@ -28,7 +28,7 @@ Artifacts:
 ### Option A: configuration file (all agents at startup)
 
 ```bash
-java -cp backend/jade/target/backend.jar:backend/examples/target/examples-*.jar \
+java -cp backend/jade/target/jade-*.jar:backend/examples/target/examples-*.jar \
   io.donbee.jade.Boot -conf backend/examples/conf/shop.properties
 ```
 
