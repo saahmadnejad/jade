@@ -60,12 +60,17 @@ podman compose down
 - Main class: `io.donbee.jade.Boot` (CLI args + REST startup). Local run:
   `cd backend && mvn compile exec:java -Dexec.mainClass="io.donbee.jade.Boot"`
 - REST API: Vert.x server on port 8080 (`Profile.REST_PORT`, CLI `-rest-port <n>`), started only
-  on the Main Container. ~40 endpoints under `/api/*` covering platform, containers, agents,
-  tools, remote platforms, DF, and live messages.
+  on the Main Container. ~44 endpoints under `/api/*` covering platform, containers, agents,
+  tools, remote platforms, DF, scenarios, and live messages.
 - Live message traffic: `MessageTrafficMonitor` (core/messaging) notifies listeners at the
   messaging dispatch point; `rest/service/MessageTrafficService` buffers recent ACL messages and
   feeds `GET /api/messages/recent` + `WS /api/messages/stream` (see `docs/api/messages-api.md`).
   Main-Container capture only.
+- Scenarios: `rest/service/ScenarioService` discovers `Scenario` SPI implementations via
+  ServiceLoader (`io.donbee.jade.rest.scenario`, registered in META-INF/services). Each instance
+  runs in its own in-process container (`scenario-<instance>`); endpoints under `/api/scenarios`
+  (see `docs/api/scenarios-api.md`). Third parties add scenarios by dropping a jar on the
+  classpath — no platform changes needed.
 - Wiring: `rest/RestAPIVerticle.java` only wires routes; route paths are constants in
   `rest/ApiRoutes.java`; logic lives in one class per endpoint in `rest/handler/`; delegation to
   service layer (`PlatformService`, DF services).
@@ -77,10 +82,10 @@ podman compose down
 - React 18 + TypeScript + Vite 5 + MUI (v9.x, dark theme), ESLint strict.
   Note: MUI deps are declared at the `frontend/` workspace root, not in `apps/webapp/package.json`.
 - Pages live in `frontend/apps/webapp/src/pages/` (AgentsPage, ContainersPage, PlatformsPage,
-  DFPage, DashboardPage, ToolsPage, MessagesPage); each page has a co-located `.test.tsx`.
+  DFPage, DashboardPage, ToolsPage, MessagesPage, ScenariosPage); each page has a co-located `.test.tsx`.
 - API access is via the `shared` package: `import { api } from 'shared'`. Domain clients
   (`api.agents`, `api.containers`, `api.platforms`, `api.df`, `api.tools`, `api.platform`,
-  `api.messages`) are
+  `api.messages`, `api.scenarios`) are
   built by `packages/shared/src/api/factory.ts` over an injectable `HttpClient`
   (`http-client.ts`, axios). Types live in `packages/shared/src/api/types.ts`. Live message
   streaming uses `subscribeMessagesStream()` (WebSocket, auto-reconnect).
