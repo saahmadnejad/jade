@@ -68,6 +68,19 @@ public interface PlatformService {
 
     AgentInfo deployAgent(String agentName, String className, Object[] args);
 
+    /**
+     * Deploy an agent into a specific container. Used by the scenarios API to
+     * place scenario agents into their dedicated instance container.
+     *
+     * @param targetContainer container name; when null the Main Container is used
+     */
+    default AgentInfo deployAgent(String agentName, String className, Object[] args, String targetContainer) {
+        if (targetContainer == null) {
+            return deployAgent(agentName, className, args);
+        }
+        throw new UnsupportedOperationException("Container-targeted deployment not supported");
+    }
+
     java.util.List<RemotePlatformInfo> getRemotePlatforms();
 
     RemotePlatformInfo addRemotePlatform(String amsName, String[] addresses);

@@ -41,12 +41,17 @@ import io.donbee.jade.rest.handler.JsonFailureHandler;
 import io.donbee.jade.rest.handler.MessagesRecentHandler;
 import io.donbee.jade.rest.handler.MessagesStreamHandler;
 import io.donbee.jade.rest.handler.PlatformInfoHandler;
+import io.donbee.jade.rest.handler.ScenarioInstancesHandler;
+import io.donbee.jade.rest.handler.ScenarioListHandler;
+import io.donbee.jade.rest.handler.ScenarioStartHandler;
+import io.donbee.jade.rest.handler.ScenarioStopHandler;
 import io.donbee.jade.rest.handler.ShutdownHandler;
 import io.donbee.jade.rest.handler.VersionHandler;
 import io.donbee.jade.rest.service.JadesPlatformService;
 import io.donbee.jade.rest.service.MessageTrafficService;
 import io.donbee.jade.rest.service.PlatformService;
 import io.donbee.jade.rest.service.DFService;
+import io.donbee.jade.rest.service.ScenarioService;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
@@ -128,6 +133,13 @@ public class RestAPIVerticle extends AbstractVerticle {
         // Messages (live ACL traffic)
         router.get(ApiRoutes.MESSAGES_RECENT).handler(new MessagesRecentHandler(trafficService));
         router.get(ApiRoutes.MESSAGES_STREAM).handler(new MessagesStreamHandler(trafficService));
+
+        // Scenarios
+        ScenarioService scenarioService = new ScenarioService(service);
+        router.get(ApiRoutes.SCENARIOS).handler(new ScenarioListHandler(scenarioService));
+        router.post(ApiRoutes.SCENARIO_INSTANCES).handler(new ScenarioStartHandler(scenarioService));
+        router.get(ApiRoutes.SCENARIOS_INSTANCE_LIST).handler(new ScenarioInstancesHandler(scenarioService));
+        router.delete(ApiRoutes.SCENARIO_INSTANCE_BY_NAME).handler(new ScenarioStopHandler(scenarioService));
 
         // Platform
         router.get(ApiRoutes.PLATFORM).handler(new PlatformInfoHandler(service));
