@@ -83,7 +83,49 @@ public class ScenarioService {
     }
 
     public List<InstanceInfo> listInstances() {
+        pruneDeadInstances();
         return List.copyOf(instances.values());
+    }
+
+    /**
+     * Drop tracked instances that disappeared outside the scenarios API —
+     * e.g. the user killed the instance container from the Containers page.
+     * A dedicated-container instance is dead when its container is gone; a
+     * Main-Container fallback instance when none of its agents exist anymore.
+     */
+    private void pruneDeadInstances() {
+        if (instances.isEmpty()) {
+            return;
+        }
+        try {
+            java.util.Set<String> liveContainers = new java.util.HashSet<>();
+            for (PlatformService.ContainerInfo c : platformService.getContainers()) {
+                liveContainers.add(c.name);
+            }
+            if (liveContainers.isEmpty()) {
+                // Platform info unavailable -> cannot verify, keep current view.
+                return;
+            }
+            java.util.Set<String> liveAgents = new java.util.HashSet<>();
+            for (PlatformService.AgentInfo a : platformService.getAgents(true)) {
+                liveAgents.add(a.name);
+            }
+            instances.entrySet().removeIf(entry -> {
+                InstanceInfo info = entry.getValue();
+                boolean dedicated = info.container() != null && info.container().startsWith(CONTAINER_PREFIX);
+                boolean dead = dedicated
+                    ? !liveContainers.contains(info.container())
+                    : info.agents().stream().noneMatch(liveAgents::contains);
+                if (dead) {
+                    System.err.println("[ScenarioService] Pruning instance '" + entry.getKey()
+                        + "': its " + (dedicated ? "container" : "agents") + " are gone");
+                }
+                return dead;
+            });
+        } catch (RuntimeException e) {
+            // Platform info unavailable right now -> keep current view.
+            System.err.println("[ScenarioService] Skipping instance pruning: " + e.getMessage());
+        }
     }
 
     /**
@@ -97,6 +139,7 @@ public class ScenarioService {
         if (scenario == null) {
             throw new IllegalArgumentException("Unknown scenario: " + scenarioId);
         }
+        pruneDeadInstances();
         String name = resolveInstanceName(scenarioId, instanceName);
         if (instances.containsKey(name)) {
             throw new IllegalStateException("Instance already exists: " + name);
