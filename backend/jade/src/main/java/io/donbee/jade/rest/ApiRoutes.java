@@ -48,6 +48,12 @@ public final class ApiRoutes {
     public static final String PLATFORM_REFRESH = "/api/platforms/:name/refresh";
     public static final String PLATFORM_AGENTS = "/api/platforms/:name/agents";
 
+    // Scenarios
+    public static final String SCENARIOS = "/api/scenarios";
+    public static final String SCENARIO_INSTANCES = "/api/scenarios/:id/instances";
+    public static final String SCENARIOS_INSTANCE_LIST = "/api/scenarios/instances";
+    public static final String SCENARIO_INSTANCE_BY_NAME = "/api/scenarios/instances/:name";
+
     // Messages (live ACL traffic)
     public static final String MESSAGES_RECENT = "/api/messages/recent";
     public static final String MESSAGES_STREAM = "/api/messages/stream";

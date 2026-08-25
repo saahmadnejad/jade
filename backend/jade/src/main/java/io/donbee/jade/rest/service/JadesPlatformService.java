@@ -366,10 +366,15 @@ public class JadesPlatformService implements PlatformService, DFService {
 
     @Override
     public AgentInfo deployAgent(String agentName, String className, Object[] args) {
+        return deployAgent(agentName, className, args, null);
+    }
+
+    @Override
+    public AgentInfo deployAgent(String agentName, String className, Object[] args, String targetContainer) {
         if (agentManager == null) {
             throw new IllegalStateException("Not a Main Container");
         }
-        ContainerID cid = impl.getID();
+        ContainerID cid = targetContainer != null ? findContainerByName(targetContainer) : impl.getID();
         try {
             agentManager.create(agentName, className, args, cid, null, null, null, null);
         } catch (NameClashException e) {
