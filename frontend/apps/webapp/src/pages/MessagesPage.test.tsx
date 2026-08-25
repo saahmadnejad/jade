@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import MessagesPage from './MessagesPage';
 
@@ -157,6 +157,31 @@ describe('MessagesPage', () => {
     // --- Assert ---
     expect(screen.queryByText('(reserve sku-1 2)')).not.toBeInTheDocument();
     expect(screen.getByText(/sku-7/)).toBeInTheDocument();
+  });
+
+  it('Given a message row, When the eye button is clicked, Then a modal shows all details including full content', async () => {
+    // --- Arrange ---
+    const longContent = '(action shop (buy sku-123 2)) /* ' + 'x'.repeat(120) + ' */';
+    mockRecent.mockResolvedValue({
+      messages: [{ ...sampleMessage, content: longContent }],
+      total: 1,
+      dropped: 0,
+    });
+    renderWithTheme(<MessagesPage />);
+    await waitFor(() => expect(screen.getByText(longContent)).toBeInTheDocument());
+
+    // --- Act ---
+    fireEvent.click(screen.getByRole('button', { name: /view message details/i }));
+
+    // --- Assert ---
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Message #1');          // id
+    expect(dialog).toHaveTextContent('shop');                // sender
+    expect(dialog).toHaveTextContent('inventory');           // receiver
+    expect(dialog).toHaveTextContent('fipa-request');        // protocol
+    expect(dialog).toHaveTextContent('shop-ontology');       // ontology
+    // Full untruncated content inside the modal (also present in the table cell)
+    expect(within(dialog).getByText(longContent)).toBeInTheDocument();
   });
 
   it('Given page unmounts, When leaving page, Then stream subscription is cancelled', async () => {
