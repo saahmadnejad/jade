@@ -12,6 +12,30 @@
 
     <name>JAVA Agent DEvelopment Framework (parent)</name>
     <description>An open source platform for peer-to-peer agent based applications </description>
+    <url>https://github.com/donbee/jade</url>
+    <inceptionYear>2000</inceptionYear>
+
+    <licenses>
+        <license>
+            <name>GNU Lesser General Public License, version 2.1</name>
+            <url>https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>https://github.com/donbee/jade</url>
+        <connection>scm:git:https://github.com/donbee/jade.git</connection>
+        <developerConnection>scm:git:git@github.com:donbee/jade.git</developerConnection>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>donbee</id>
+            <name>donbee</name>
+            <organization>io.donbee</organization>
+        </developer>
+    </developers>
 
     <modules>
         <module>fipa</module>
@@ -138,5 +162,46 @@
             </plugin>
         </plugins>
     </build>
+
+    <!-- Sources and javadoc jars required when publishing to Maven Central.
+         Activate with -Prelease. -->
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>3.11.2</version>
+                        <configuration>
+                            <doclint>none</doclint>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
