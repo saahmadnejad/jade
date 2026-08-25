@@ -2,6 +2,13 @@
 
 A fork of JADE (Java Agent DEvelopment Framework) running on Java 21 with virtual threads, bundled with a React + Vite frontend and Docker compose for local development.
 
+## Highlights
+
+- **REST API** (~44 endpoints) + **React UI**: agents, containers, DF, tools, remote platforms
+- **Live message traffic** in the browser (WebSocket): watch FIPA ACL conversations as they happen (MessagesPage)
+- **Scenarios page**: launch configurable multi-agent demo scenarios with one click; each instance runs in its own container and can be stopped independently — or add your own scenarios by dropping a jar implementing the `io.donbee.jade.rest.scenario.Scenario` SPI on the classpath
+- **Library-ready artifacts**: `io.donbee:jade` (+ `fipa`, `examples`) installable via Maven; the platform uber jar runs standalone without the UI
+
 ## Project Structure
 
 ```

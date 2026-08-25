@@ -151,6 +151,10 @@ The following endpoints are fully specified in [rma-api.md](rma-api.md):
 | POST | `/api/tools/:tool/start` | Specified & Implemented |
 | GET | `/api/messages/recent` | Specified & Implemented *(see [messages-api.md](messages-api.md))* |
 | WS | `/api/messages/stream` | Specified & Implemented *(see [messages-api.md](messages-api.md))* |
+| GET | `/api/scenarios` | Specified & Implemented *(see [scenarios-api.md](scenarios-api.md))* |
+| POST | `/api/scenarios/:id/instances` | Specified & Implemented *(see [scenarios-api.md](scenarios-api.md))* |
+| GET | `/api/scenarios/instances` | Specified & Implemented *(see [scenarios-api.md](scenarios-api.md))* |
+| DELETE | `/api/scenarios/instances/:name` | Specified & Implemented *(see [scenarios-api.md](scenarios-api.md))* |
 
 **Implementation note for POST /api/agents:** The implemented request body uses `class` (not `className`) and `args` (not `arguments`), both optional `container`/`owner` fields are omitted for simplicity.
 

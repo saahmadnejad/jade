@@ -126,6 +126,13 @@ public class ScenarioService {
             }
         } catch (RuntimeException e) {
             rollback(deployedAgents);
+            if (container != null) {
+                try {
+                    platformService.killContainer(container);
+                } catch (RuntimeException ignored) {
+                    // Best-effort cleanup
+                }
+            }
             throw e;
         }
 
@@ -252,7 +259,24 @@ public class ScenarioService {
         if (wrapper == null) {
             throw new RuntimeException("Container failed to join the platform");
         }
-        return wrapper.getName();
+        return extractContainerIdName(wrapper);
+    }
+
+    /**
+     * {@code wrapper.AgentContainer#getName()} returns the platform name, not
+     * the container name, so pull the ContainerID out of the internal impl
+     * (same access pattern as {@code RestAPIVerticle#extractImpl()}).
+     */
+    private String extractContainerIdName(io.donbee.jade.wrapper.AgentContainer wrapper) {
+        try {
+            java.lang.reflect.Field f = io.donbee.jade.wrapper.ContainerController.class.getDeclaredField("myImpl");
+            f.setAccessible(true);
+            io.donbee.jade.core.AgentContainer impl =
+                (io.donbee.jade.core.AgentContainer) f.get(wrapper);
+            return impl.getID().getName();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to resolve created container name: " + e.getMessage(), e);
+        }
     }
 
     private String findMainContainerName() {

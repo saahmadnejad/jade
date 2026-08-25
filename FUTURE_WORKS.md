@@ -32,3 +32,4 @@
 - Replace finalize() usage in JarClassLoader
 - Address value-based class synchronization warnings
 - Extend live message capture beyond the Main Container (currently only messages dispatched by agents hosted on the Main Container are reported; see `docs/api/messages-api.md`)
+- Scenario instances: persist configs across platform restarts (currently in-memory only, see `docs/api/scenarios-api.md`)
