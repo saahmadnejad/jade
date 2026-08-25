@@ -1,0 +1,39 @@
+server {
+    listen 80;
+    server_name localhost;
+
+    # DNS servers of the container network, auto-detected by the nginx
+    # image entrypoint (NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1). Using a
+    # variable upstream + resolver makes nginx re-resolve 'backend' on
+    # every request instead of caching the IP from startup, so the API
+    # keeps working after the backend container alone is recreated.
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
+
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/messages/stream {
+        set $backend_upstream http://backend:8080;
+        proxy_pass $backend_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    location /api/ {
+        set $backend_upstream http://backend:8080;
+        proxy_pass $backend_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    error_page 500 502 503 504 /index.html;
+}
