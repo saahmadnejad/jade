@@ -23,7 +23,9 @@ export class ContainerAPI {
   };
 
   kill = async (name: string): Promise<AgentActionResponse> => {
-    const res = await this.httpClient.delete<AgentActionResponse>(`/containers/${name}`);
+    const res = await this.httpClient.delete<AgentActionResponse>(`/containers/${name}`, {
+      params: { confirm: true },
+    });
     return res.data;
   };
 
