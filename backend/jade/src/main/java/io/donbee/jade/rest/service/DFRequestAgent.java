@@ -17,6 +17,7 @@ import io.donbee.jade.lang.acl.MessageTemplate;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Temporary one-shot agent that sends an ACL REQUEST to the DF agent
@@ -27,6 +28,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DFRequestAgent extends Agent {
 
     private static final Map<String, DFRequestAgent.ResultHolder> results = new ConcurrentHashMap<>();
+
+    /** Guarantees unique temp-agent names even for same-millisecond requests. */
+    private static final AtomicLong NAME_SEQUENCE = new AtomicLong();
 
     private static class ResultHolder {
         ACLMessage response;
@@ -86,7 +90,7 @@ public class DFRequestAgent extends Agent {
         ResultHolder holder = new ResultHolder();
         results.put(key, holder);
 
-        String agentName = "df_req_" + System.currentTimeMillis();
+        String agentName = nextAgentName();
         Object[] args = { key, receiverAID, action, ontologyName, timeoutMs };
 
         try {
@@ -111,6 +115,11 @@ public class DFRequestAgent extends Agent {
             throw holder.error;
         }
         return new DFResponse(holder.response, holder.decoded);
+    }
+
+    /** Package-private for tests: millisecond timestamp + monotonic sequence. */
+    static String nextAgentName() {
+        return "df_req_" + System.currentTimeMillis() + "_" + NAME_SEQUENCE.incrementAndGet();
     }
 
     @Override
