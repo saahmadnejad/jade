@@ -3,6 +3,7 @@ WORKDIR /build
 COPY backend/pom.xml ./
 COPY backend/fipa ./fipa
 COPY backend/jade ./jade
+COPY backend/examples ./examples
 RUN mvn -B -DskipTests package
 
 FROM docker.io/library/eclipse-temurin:21-jre-alpine
