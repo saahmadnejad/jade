@@ -2,6 +2,7 @@ FROM docker.io/library/maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
 COPY backend/pom.xml ./
 COPY backend/fipa ./fipa
+COPY backend/llm ./llm
 COPY backend/jade ./jade
 COPY backend/examples ./examples
 RUN mvn -B -DskipTests package
@@ -10,8 +11,9 @@ FROM docker.io/library/eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /build/jade/target/jade-*.jar app.jar
 COPY --from=build /build/examples/target/examples-*.jar examples.jar
+COPY --from=build /build/llm/target/llm-*.jar llm.jar
 EXPOSE 1099 8080
 # The image ships platform + bundled example scenarios. Scenario code is inert
 # until instantiated through /api/scenarios. Library users should depend on the
 # Maven artifacts (io.donbee:jade) instead of this image.
-ENTRYPOINT ["java", "-cp", "app.jar:examples.jar", "io.donbee.jade.Boot", "-host", "localhost", "-local-host", "localhost"]
+ENTRYPOINT ["java", "-cp", "app.jar:examples.jar:llm.jar", "io.donbee.jade.Boot", "-host", "localhost", "-local-host", "localhost"]
