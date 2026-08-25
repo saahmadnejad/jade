@@ -38,10 +38,13 @@ import io.donbee.jade.rest.handler.ShutdownHandler;
 import io.donbee.jade.rest.handler.ToolLaunchHandler;
 import io.donbee.jade.rest.handler.HealthHandler;
 import io.donbee.jade.rest.handler.JsonFailureHandler;
+import io.donbee.jade.rest.handler.MessagesRecentHandler;
+import io.donbee.jade.rest.handler.MessagesStreamHandler;
 import io.donbee.jade.rest.handler.PlatformInfoHandler;
 import io.donbee.jade.rest.handler.ShutdownHandler;
 import io.donbee.jade.rest.handler.VersionHandler;
 import io.donbee.jade.rest.service.JadesPlatformService;
+import io.donbee.jade.rest.service.MessageTrafficService;
 import io.donbee.jade.rest.service.PlatformService;
 import io.donbee.jade.rest.service.DFService;
 
@@ -74,10 +77,12 @@ public class RestAPIVerticle extends AbstractVerticle {
     @Override
     public void start(Promise<Void> startPromise) {
         PlatformService service = buildService();
+        MessageTrafficService trafficService = new MessageTrafficService();
+        trafficService.start();
 
         Router router = Router.router(vertx);
         configureMiddleware(router);
-        configureRoutes(router, service);
+        configureRoutes(router, service, trafficService);
 
         vertx.createHttpServer()
             .requestHandler(router)
@@ -113,12 +118,16 @@ public class RestAPIVerticle extends AbstractVerticle {
     /**
      * Configure all REST API routes, mapping paths to handlers.
      */
-    private void configureRoutes(Router router, PlatformService service) {
+    private void configureRoutes(Router router, PlatformService service, MessageTrafficService trafficService) {
         // Health
         router.get(ApiRoutes.HEALTH).handler(new HealthHandler());
 
         // Version
         router.get(ApiRoutes.VERSION).handler(new VersionHandler());
+
+        // Messages (live ACL traffic)
+        router.get(ApiRoutes.MESSAGES_RECENT).handler(new MessagesRecentHandler(trafficService));
+        router.get(ApiRoutes.MESSAGES_STREAM).handler(new MessagesStreamHandler(trafficService));
 
         // Platform
         router.get(ApiRoutes.PLATFORM).handler(new PlatformInfoHandler(service));

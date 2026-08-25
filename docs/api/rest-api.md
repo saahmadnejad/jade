@@ -56,6 +56,7 @@ allows developers to compare the old and new implementations side by side.
 | `DFStatusHandler` | `io.donbee.jade.tools.dfgui.DFGUI` | `DFGUI.showStatusMsg()` |
 | `DFederationHandler` (all modes) | `io.donbee.jade.tools.dfgui.DFGUIFederateAction`, `DFGUIDeregisterAction` | `DFGUIAdapter.FEDERATE` |
 | `JsonFailureHandler` | `rma.showErrorDialog()` | `AMSClientBehaviour` error handlers |
+| `MessagesRecentHandler` / `MessagesStreamHandler` | `io.donbee.jade.tools.sniffer.Sniffer` (message canvas), `tools.introspector.gui.MessagePanel` | see [messages-api.md](messages-api.md) |
 
 ## Endpoints Not Covered in Other Docs
 
@@ -148,6 +149,8 @@ The following endpoints are fully specified in [rma-api.md](rma-api.md):
 | POST | `/api/platforms/:name/refresh` | Specified & Implemented |
 | GET | `/api/platforms/:name/agents` | Specified & Implemented |
 | POST | `/api/tools/:tool/start` | Specified & Implemented |
+| GET | `/api/messages/recent` | Specified & Implemented *(see [messages-api.md](messages-api.md))* |
+| WS | `/api/messages/stream` | Specified & Implemented *(see [messages-api.md](messages-api.md))* |
 
 **Implementation note for POST /api/agents:** The implemented request body uses `class` (not `className`) and `args` (not `arguments`), both optional `container`/`owner` fields are omitted for simplicity.
 

@@ -5,6 +5,7 @@ import { AgentAPI } from './agent';
 import { ToolAPI } from './tool';
 import { RemotePlatformAPI } from './remote-platform';
 import { DFAPI } from './df';
+import { MessageAPI } from './messages';
 
 export interface ApiClient {
   platform: PlatformAPI;
@@ -13,6 +14,7 @@ export interface ApiClient {
   tools: ToolAPI;
   platforms: RemotePlatformAPI;
   df: DFAPI;
+  messages: MessageAPI;
 }
 
 export const createApiClient = (): ApiClient => {
@@ -24,6 +26,7 @@ export const createApiClient = (): ApiClient => {
     tools: new ToolAPI(httpClient),
     platforms: new RemotePlatformAPI(httpClient),
     df: new DFAPI(httpClient),
+    messages: new MessageAPI(httpClient),
   };
 };
 

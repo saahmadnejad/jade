@@ -6,18 +6,21 @@ import ContainersIcon from '@mui/icons-material/Storage';
 import BuildIcon from '@mui/icons-material/Build';
 import PublicIcon from '@mui/icons-material/Public';
 import DnsIcon from '@mui/icons-material/Dns';
+import MessagesIcon from '@mui/icons-material/Sms';
 import DashboardPage from './pages/DashboardPage';
 import AgentsPage from './pages/AgentsPage';
 import ContainersPage from './pages/ContainersPage';
 import ToolsPage from './pages/ToolsPage';
 import PlatformsPage from './pages/PlatformsPage';
 import DFPage from './pages/DFPage';
+import MessagesPage from './pages/MessagesPage';
 import Layout from './components/Layout';
 
 const navItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
   { text: 'Agents', icon: <AgentsIcon />, path: '/agents' },
   { text: 'Containers', icon: <ContainersIcon />, path: '/containers' },
+  { text: 'Messages', icon: <MessagesIcon />, path: '/messages' },
   { text: 'Tools', icon: <BuildIcon />, path: '/tools' },
   { text: 'DF', icon: <DnsIcon />, path: '/df' },
   { text: 'Platforms', icon: <PublicIcon />, path: '/platforms' },
@@ -40,6 +43,7 @@ function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/agents" element={<AgentsPage />} />
             <Route path="/containers" element={<ContainersPage />} />
+            <Route path="/messages" element={<MessagesPage />} />
             <Route path="/tools" element={<ToolsPage />} />
             <Route path="/df" element={<DFPage />} />
             <Route path="/platforms" element={<PlatformsPage />} />

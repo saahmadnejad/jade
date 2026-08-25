@@ -922,6 +922,8 @@ public class MessagingService extends BaseService implements MessageManager.Chan
 			msg.setSenderCredentials(cmd.getCredentials());
 			msg.setSender(sender);
 			checkTracing(msg);
+			// Notify live-traffic listeners (e.g. REST/WebSocket layer). Must never affect delivery.
+			MessageTrafficMonitor.notifyMessage(sender, dest, msg.getACLMessage());
 			if (msg.getTraceID() != null) {
 				myLogger.log(Logger.INFO, "MessagingService source sink handling message "+MessageManager.stringify(msg)+" for receiver "+dest.getName()+". TraceID = "+msg.getTraceID());
 			}

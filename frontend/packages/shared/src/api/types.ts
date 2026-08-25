@@ -154,3 +154,27 @@ export interface ErrorResponse {
   error: string;
   code: number;
 }
+
+export interface AclMessageEvent {
+  id: string;
+  timestamp: string;
+  sender: string;
+  receiver: string;
+  performative: string;
+  protocol: string;
+  ontology: string;
+  content: string;
+}
+
+export interface MessagesRecentResponse {
+  messages: AclMessageEvent[];
+  total: number;
+  dropped: number;
+}
+
+export type MessagesStreamStatus = 'connecting' | 'open' | 'closed' | 'error';
+
+export interface MessagesStreamOptions {
+  onMessage: (message: AclMessageEvent) => void;
+  onStatusChange?: (status: MessagesStreamStatus) => void;
+}

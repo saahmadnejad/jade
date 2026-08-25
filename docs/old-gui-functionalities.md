@@ -121,7 +121,7 @@ Purpose: Intercepts and displays all ACL messages exchanged between agents on th
 ### Agent Canvas (Graphical Message View)
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 2.9 | Visual message flow between agents (canvas with agent boxes + arrows) | [ ] | [ ] | |
+| 2.9 | Visual message flow between agents (canvas with agent boxes + arrows) | [x] | [x] | replaced by live **MessagesPage** (`WS /api/messages/stream`, see `docs/api/messages-api.md`); canvas rendering not replicated, table view instead |
 | 2.10 | Double-click messages to view full ACL content | [ ] | [ ] | |
 | 2.11 | Right-click on messages: view sender/receiver, save message | [ ] | [ ] | |
 | 2.12 | Right-click on agents: Do Sniff / Do Not Sniff this Agent | [ ] | [ ] | |
