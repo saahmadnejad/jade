@@ -39,6 +39,7 @@
 
     <modules>
         <module>fipa</module>
+        <module>llm</module>
         <module>jade</module>
         <module>examples</module>
     </modules>
