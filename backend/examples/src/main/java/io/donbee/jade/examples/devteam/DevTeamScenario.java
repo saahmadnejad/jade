@@ -65,7 +65,9 @@ public class DevTeamScenario implements Scenario {
             ScenarioParam.stringParam("architectModel", "thinkingmachines/inkling:free", "Architect model"),
             ScenarioParam.stringParam("implementerModel", "poolside/laguna-s-2.1:free", "Implementer model"),
             ScenarioParam.stringParam("testerModel", "minimax/minimax-m3:free", "Tester model"),
-            ScenarioParam.stringParam("reviewerModel", "z-ai/glm-5.2:free", "Reviewer model"));
+            ScenarioParam.stringParam("reviewerModel", "z-ai/glm-5.2:free", "Reviewer model"),
+            ScenarioParam.stringParam("workspaceDir", "",
+                "Optional directory mirroring the team's produced files (empty = memory only)"));
     }
 
     @Override
@@ -83,7 +85,8 @@ public class DevTeamScenario implements Scenario {
         List<AgentSpec> specs = new ArrayList<>();
         specs.add(new AgentSpec("manager", MANAGER_CLASS, List.of(
             brief, String.valueOf(maxRounds), String.valueOf(maxTotalCalls),
-            String.valueOf(Math.max(1, callTimeoutSec / 60)))));
+            String.valueOf(Math.max(1, callTimeoutSec / 60)),
+            str(config, "workspaceDir"))));
 
         specs.add(new AgentSpec("architect", ARCHITECT_CLASS,
             brainArgs(baseUrl, str(config, "architectModel"), proxyEnabled, proxyHost, proxyPort, callTimeoutSec, keyEnvVar)));

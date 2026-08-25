@@ -45,11 +45,14 @@ public class ManagerAgent extends Agent {
         // in "-manager", so stripping the suffix recovers the team id.
         String local = getLocalName();
         teamId = local.endsWith("-manager") ? local.substring(0, local.length() - "-manager".length()) : local;
-        workspace = WorkspaceStore.getOrCreate(teamId, null);
+        String mirrorDir = str(args, 4, null);
+        workspace = WorkspaceStore.getOrCreate(teamId,
+            mirrorDir != null && !mirrorDir.isBlank() ? java.nio.file.Path.of(mirrorDir.trim()) : null);
         deadlineAt = System.currentTimeMillis() + roundStartTimeoutMin * 60_000L;
 
         System.out.println("[devteam:" + teamId + "] goal: " + firstLine(brief)
-            + " (maxRounds=" + maxRounds + ", maxCalls=" + maxTotalCalls + ")");
+            + " (maxRounds=" + maxRounds + ", maxCalls=" + maxTotalCalls + ")"
+            + (mirrorDir != null && !mirrorDir.isBlank() ? " mirror=" + mirrorDir : ""));
         workspace.save("BRIEF.md", "# Brief\n\n" + brief + "\n");
 
         addBehaviour(new CyclicBehaviour(this) {

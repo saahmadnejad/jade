@@ -9,6 +9,27 @@ through the REST API, and observe live in the React frontend.
 | Scenario | Folder | Description |
 |----------|--------|-------------|
 | Online shop | [`shop/`](shop/) | Customers buy from a storefront; the storefront reserves stock in the warehouse; the warehouse auto-restocks from a supplier. |
+| Dev team | `dev-team` (in `src/main/java/.../devteam/`) | Five LLM-powered agents (Manager, Architect, Implementer, Tester, Reviewer) build a small project from a brief, in bounded review rounds. |
+
+## API keys (LLM scenarios)
+
+The dev-team scenario calls LLM providers and needs an API key at runtime.
+**Keys are never stored in this repository** (see `docs/adr/0002`):
+
+```bash
+# Option 1: environment variable
+export OPENROUTER_API_KEY=sk-or-v1-...
+
+# Option 2: gitignored local file
+echo "api.key=sk-or-v1-..." > backend/examples/conf/secrets.local.properties
+```
+
+Without a key the role agents fail fast with an actionable error.
+
+By default LLM traffic routes through a SOCKS5 proxy (`192.168.1.151:10808`,
+configurable per instance on the Scenarios page). Any OpenAI-compatible
+provider works by changing `baseUrl` + model: paid OpenRouter tiers, OpenAI,
+DeepSeek direct, or a local Ollama (`http://localhost:11434/v1`, no key).
 
 ## Building
 
@@ -27,10 +48,16 @@ Artifacts:
 
 ### Option A: Scenarios page in the UI (recommended)
 
-Open the frontend, go to **Scenarios**, click the *Online Shop* card, adjust
-the config form (defaults prefilled) and press Start. Each launch creates its
-own container (`scenario-<instance>`) so you can run several instances side by
-side and kill them independently from the same page.
+Open the frontend, click a scenario card (**Online Shop** or **Software
+Development Team**), adjust the config form (defaults prefilled) and press
+Start. Each launch creates its own container (`scenario-<instance>`) so you can
+run several instances side by side and kill them independently from the same
+page.
+
+For the dev team: watch the conversation on the **Messages** page; when the
+instance finishes you'll find the produced project (`BRIEF.md`, `DESIGN.md`,
+`src/…`, `tests/…`, review reports) mirrored to disk if you set a workspace
+directory — otherwise ask the team's artifacts from the instance logs.
 
 Programmatically the same thing:
 

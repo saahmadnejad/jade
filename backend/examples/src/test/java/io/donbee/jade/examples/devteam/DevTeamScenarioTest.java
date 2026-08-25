@@ -47,10 +47,12 @@ public class DevTeamScenarioTest {
     }
 
     @Test
-    public void Given_ManagerSpec_When_AgentsComputed_Then_CapsPassedThrough() {
-        var specs = scenario.agents(config("maxRounds", 5, "maxTotalCalls", 30, "brief", "Build X"));
+    public void Given_ManagerSpec_When_AgentsComputed_Then_CapsAndWorkspacePassedThrough() {
+        var specs = scenario.agents(config("maxRounds", 5, "maxTotalCalls", 30,
+            "brief", "Build X", "workspaceDir", "/tmp/team-ws"));
 
         AgentSpec manager = specs.get(0);
-        assertThat(manager.getArgs()).containsExactly("Build X", "5", "30", "2"); // 120s -> 2min
+        assertThat(manager.getArgs()).containsExactly(
+            "Build X", "5", "30", "2", "/tmp/team-ws"); // 120s -> 2min
     }
 }

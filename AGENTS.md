@@ -6,12 +6,13 @@ Jade is a fork of JADE (Java Agent DEvelopment Framework) — a multi-agent fram
 `io.donbee.jade` package, targeting Java 21 with virtual threads.
 
 - **Backend** (`backend/`) — Java/Maven multi-module build: parent POM `backend/pom.xml`
-  (`jade-parent`) with three modules: `backend/fipa/` (FIPA common library, `io.donbee:fipa`:
-  CORBA-generated `io.donbee.FIPA` classes + `FIPANames`), `backend/jade/`
+  (`jade-parent`) with four modules: `backend/fipa/` (FIPA common library, `io.donbee:fipa`:
+  CORBA-generated `io.donbee.FIPA` classes + `FIPANames`), `backend/llm/` (framework-agnostic
+  LLM brains, `io.donbee:llm` — no JADE deps by design, see `docs/adr/0001`), `backend/jade/`
   (platform code, depends on fipa) and `backend/examples/` (example scenarios like the
-  online shop, depends on jade; NOT part of the shaded uber jar). Shade uber jar builds to
-  `backend/jade/target/jade-<version>.jar`; examples jar to `backend/examples/target/`.
-  Build from `backend/` so the reactor resolves the internal dependencies.
+  online shop and the dev team, depends on jade + llm; NOT part of the shaded uber jar).
+  Shade uber jar builds to `backend/jade/target/jade-<version>.jar`; examples jar to
+  `backend/examples/target/`. Build from `backend/` so the reactor resolves internal dependencies.
 - **Example scenarios**: see `backend/examples/README.md`. Run e.g.:
   `java -cp backend/jade/target/jade-*.jar:backend/examples/target/examples-*.jar \
   io.donbee.jade.Boot -conf backend/examples/conf/shop.properties`

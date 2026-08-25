@@ -33,3 +33,4 @@
 - Address value-based class synchronization warnings
 - Extend live message capture beyond the Main Container (currently only messages dispatched by agents hosted on the Main Container are reported; see `docs/api/messages-api.md`)
 - Scenario instances: persist configs across platform restarts (currently in-memory only, see `docs/api/scenarios-api.md`)
+- Dev-team scenario: a `CliBrain` implementation of `io.donbee.llm.Brain` that shells out to agentic CLI tools (opencode, claude-code) as an alternative to HTTP LLM providers
