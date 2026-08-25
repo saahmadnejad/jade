@@ -26,6 +26,13 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- LLM brains for the development-team scenario -->
+        <dependency>
+            <groupId>io.donbee</groupId>
+            <artifactId>llm</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
