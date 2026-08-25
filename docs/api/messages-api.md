@@ -1,0 +1,98 @@
+# Messages API
+
+Live visibility into the ACL message traffic of the platform. Captures every
+ACL message **dispatched by agents hosted on the Main Container** at the
+messaging-service send point (the closest REST-era equivalent of the old
+Sniffer tool).
+
+> **Capture scope (v1):** only messages sent by agents running on the Main
+> Container are captured. Traffic between agents on remote containers does not
+> transit the Main Container and is therefore not reported. All agents deployed
+> via `POST /api/agents` run on the Main Container, so typical scenarios are
+> fully covered.
+
+All responses are JSON. Errors always follow the global format:
+`{"error": "message", "code": <status>}`.
+
+---
+
+## GET /api/messages/recent
+
+Returns the most recent captured messages, oldest first. Backed by an
+in-memory ring buffer (default capacity 500).
+
+### Query parameters
+
+| Name   | Type | Required | Description                                        |
+|--------|------|----------|----------------------------------------------------|
+| `limit`| int  | no       | Max number of messages returned (default 100, max = buffer capacity) |
+| `from` | text | no       | Filter: only messages whose sender local-name contains this substring |
+| `to`   | text | no       | Filter: only messages whose receiver local-name contains this substring |
+
+### Response — 200 OK
+
+```json
+{
+  "messages": [
+    {
+      "id": "42",
+      "timestamp": "2026-08-25T10:15:30.123Z",
+      "sender": "customer1",
+      "receiver": "shop",
+      "performative": "request",
+      "protocol": "fipa-request",
+      "ontology": "shop-ontology",
+      "content": "(action shop (buy sku-123 2))"
+    }
+  ],
+  "total": 1,
+  "dropped": 0
+}
+```
+
+Field notes:
+
+- `id`: monotonic sequence number of the capture (per platform run).
+- `sender` / `receiver`: agent local names.
+- `content`: truncated to 256 characters.
+- `dropped`: number of older messages evicted from the ring buffer since startup.
+
+---
+
+## WS /api/messages/stream
+
+WebSocket endpoint that pushes each newly captured message as a JSON frame with
+the same schema as one element of the `messages` array above:
+
+```json
+{
+  "id": "43",
+  "timestamp": "2026-08-25T10:15:31.456Z",
+  "sender": "shop",
+  "receiver": "inventory",
+  "performative": "request",
+  "protocol": "fipa-request",
+  "ontology": "shop-ontology",
+  "content": "(action inventory (reserve sku-123 2))"
+}
+```
+
+Behaviour:
+
+- One frame per captured message; frames arrive in capture order.
+- The server sends nothing else (no heartbeats); clients may close at any time.
+- When a client disconnects its subscription is removed automatically.
+
+### Client-side filtering
+
+The stream is unfiltered; clients filter locally (e.g. by sender/receiver) or
+re-fetch `/api/messages/recent?from=...&to=...`.
+
+---
+
+## Old GUI equivalent
+
+This API replaces the live message views of the old Swing tools — most closely
+the Sniffer's agent/message canvas (`io.donbee.jade.tools.sniffer`) and the
+Introspector's message list (`io.donbee.jade.tools.introspector.gui.MessagePanel`).
+The React frontend consumes these endpoints on its **MessagesPage**.
