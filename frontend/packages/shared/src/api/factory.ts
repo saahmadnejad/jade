@@ -6,6 +6,7 @@ import { ToolAPI } from './tool';
 import { RemotePlatformAPI } from './remote-platform';
 import { DFAPI } from './df';
 import { MessageAPI } from './messages';
+import { ScenarioAPI } from './scenario';
 
 export interface ApiClient {
   platform: PlatformAPI;
@@ -15,6 +16,7 @@ export interface ApiClient {
   platforms: RemotePlatformAPI;
   df: DFAPI;
   messages: MessageAPI;
+  scenarios: ScenarioAPI;
 }
 
 export const createApiClient = (): ApiClient => {
@@ -27,6 +29,7 @@ export const createApiClient = (): ApiClient => {
     platforms: new RemotePlatformAPI(httpClient),
     df: new DFAPI(httpClient),
     messages: new MessageAPI(httpClient),
+    scenarios: new ScenarioAPI(httpClient),
   };
 };
 

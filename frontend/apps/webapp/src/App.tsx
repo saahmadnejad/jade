@@ -7,6 +7,7 @@ import BuildIcon from '@mui/icons-material/Build';
 import PublicIcon from '@mui/icons-material/Public';
 import DnsIcon from '@mui/icons-material/Dns';
 import MessagesIcon from '@mui/icons-material/Sms';
+import ScenariosIcon from '@mui/icons-material/Science';
 import DashboardPage from './pages/DashboardPage';
 import AgentsPage from './pages/AgentsPage';
 import ContainersPage from './pages/ContainersPage';
@@ -14,10 +15,12 @@ import ToolsPage from './pages/ToolsPage';
 import PlatformsPage from './pages/PlatformsPage';
 import DFPage from './pages/DFPage';
 import MessagesPage from './pages/MessagesPage';
+import ScenariosPage from './pages/ScenariosPage';
 import Layout from './components/Layout';
 
 const navItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
+  { text: 'Scenarios', icon: <ScenariosIcon />, path: '/scenarios' },
   { text: 'Agents', icon: <AgentsIcon />, path: '/agents' },
   { text: 'Containers', icon: <ContainersIcon />, path: '/containers' },
   { text: 'Messages', icon: <MessagesIcon />, path: '/messages' },
@@ -41,6 +44,7 @@ function App() {
         <Layout navItems={navItems}>
           <Routes>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/scenarios" element={<ScenariosPage />} />
             <Route path="/agents" element={<AgentsPage />} />
             <Route path="/containers" element={<ContainersPage />} />
             <Route path="/messages" element={<MessagesPage />} />
