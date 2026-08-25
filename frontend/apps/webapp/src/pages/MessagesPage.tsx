@@ -45,7 +45,8 @@ export default function MessagesPage() {
       try {
         const data = await api.messages.recent({ limit: MAX_DISPLAYED_MESSAGES });
         if (!cancelled) {
-          setMessages(data.messages);
+          // API returns oldest-first; show newest at the top.
+          setMessages([...data.messages].reverse());
         }
       } catch (e) {
         console.error('Failed to fetch recent messages', e);
@@ -58,9 +59,9 @@ export default function MessagesPage() {
       onMessage: (msg) => {
         if (pausedRef.current) return;
         setMessages((prev) => {
-          const next = [...prev, msg];
+          const next = [msg, ...prev];
           return next.length > MAX_DISPLAYED_MESSAGES
-            ? next.slice(next.length - MAX_DISPLAYED_MESSAGES)
+            ? next.slice(0, MAX_DISPLAYED_MESSAGES)
             : next;
         });
       },

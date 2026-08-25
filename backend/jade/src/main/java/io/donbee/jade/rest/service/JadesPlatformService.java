@@ -916,9 +916,17 @@ public class JadesPlatformService implements PlatformService, DFService {
             DFAgentDescription template = new DFAgentDescription();
             template.setName(dfAID);
 
+            // The Search action requires a description slot (and constraints),
+            // otherwise the DF rejects it with an OntologyException.
+            SearchConstraints constraints = new SearchConstraints();
+            constraints.setMaxResults(new Long(1));
+            Search search = new Search();
+            search.setDescription(template);
+            search.setConstraints(constraints);
+
             ACLMessage reply = DFRequestAgent.execute(
                 agentManager, impl.getID(), dfAID,
-                new Search(),
+                search,
                 FIPAManagementOntology.getInstance().getName(),
                 FIPAManagementVocabulary.SEARCH,
                 DF_TIMEOUT_MS
