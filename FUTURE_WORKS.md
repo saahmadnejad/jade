@@ -25,9 +25,10 @@
 ### Frontend Modernization
 - Build full Jade UI pages (agent management, container view, DF browser, sniffer)
 - Connect React frontend to the new Vert.x REST API
-- Add real-time event streaming via WebSocket
+- Add real-time event streaming via WebSocket *(done for ACL message traffic: MessagesPage via `WS /api/messages/stream`)*
 
 ### Backend Modernization
 - Migrate deprecated Java APIs (Integer constructor, Boolean constructor, etc.)
 - Replace finalize() usage in JarClassLoader
 - Address value-based class synchronization warnings
+- Extend live message capture beyond the Main Container (currently only messages dispatched by agents hosted on the Main Container are reported; see `docs/api/messages-api.md`)

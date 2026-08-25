@@ -6,9 +6,11 @@ A fork of JADE (Java Agent DEvelopment Framework) running on Java 21 with virtua
 
 ```
 jade/
-├── backend/                    # JADE framework (Java 21, 1007 source files)
-│   ├── pom.xml                 # Maven build (shade plugin -> uber jar)
-│   └── src/main/java/io/donbee/jade/
+├── backend/                    # JADE framework (Java 21, multi-module Maven build)
+│   ├── pom.xml                 # Parent POM (jade-parent) with CI-friendly ${revision} version
+│   ├── fipa/                   # FIPA common library (CORBA-generated classes, FIPANames)
+│   ├── jade/                   # Platform code (shade plugin -> uber jar backend.jar)
+│   └── examples/               # Example scenarios (e.g. online shop) - see backend/examples/README.md
 ├── frontend/                   # React + Vite + TypeScript UI
 │   ├── pnpm-workspace.yaml     # pnpm monorepo config
 │   ├── package.json            # Root workspace package
@@ -17,7 +19,7 @@ jade/
 ├── docker/                     # Docker build files
 │   ├── Dockerfile.backend      # Multi-stage: Maven -> JRE 21 Alpine
 │   ├── Dockerfile.frontend     # Multi-stage: Node -> pnpm -> Vite build -> nginx
-│   └── nginx.conf              # nginx config (SPA fallback + /api proxy)
+│   └── nginx.conf              # nginx config (SPA fallback + /api proxy incl. WebSocket)
 ├── docker-compose.yml          # Root compose file
 └── .dockerignore / .gitignore
 ```
