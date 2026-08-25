@@ -179,3 +179,17 @@ name the closest old code as context. Example:
 
 Old Swing sources for reference: `backend/src/main/java/io/donbee/jade/tools/` (rma, dfgui,
 sniffer, introspector, logging, DummyAgent) and `backend/src/main/java/io/donbee/jade/gui/`.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues (saahmadnejad/jade), managed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
