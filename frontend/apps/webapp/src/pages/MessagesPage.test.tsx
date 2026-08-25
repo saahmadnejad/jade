@@ -95,9 +95,9 @@ describe('MessagesPage', () => {
     expect(screen.getByText('(reserve sku-1 2)')).toBeInTheDocument();
   });
 
-  it('Given live stream frame arrives, When page is open, Then the new message is appended', async () => {
+  it('Given live stream frame arrives, When page is open, Then the new message appears at the top', async () => {
     // --- Arrange ---
-    mockRecent.mockResolvedValue({ messages: [], total: 0, dropped: 0 });
+    mockRecent.mockResolvedValue({ messages: [sampleMessage], total: 1, dropped: 0 });
     renderWithTheme(<MessagesPage />);
     await waitFor(() => expect(streamListener).not.toBeNull());
 
@@ -115,7 +115,9 @@ describe('MessagesPage', () => {
 
     // --- Assert ---
     await waitFor(() => expect(screen.getByText('customer1')).toBeInTheDocument());
-    expect(screen.getByText('(buy sku-9)')).toBeInTheDocument();
+    const rows = screen.getAllByRole('row');
+    expect(rows[1]).toHaveTextContent('customer1'); // first data row = newest message
+    expect(rows[2]).toHaveTextContent('shop');      // older history below
   });
 
   it('Given stream is paused, When a live frame arrives, Then it is not displayed', async () => {
