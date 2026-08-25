@@ -178,3 +178,50 @@ export interface MessagesStreamOptions {
   onMessage: (message: AclMessageEvent) => void;
   onStatusChange?: (status: MessagesStreamStatus) => void;
 }
+
+export interface ScenarioParamInfo {
+  type: 'int' | 'string' | 'boolean';
+  defaultValue: unknown;
+  minValue?: number;
+  maxValue?: number;
+  description?: string;
+}
+
+export interface ScenarioSummary {
+  id: string;
+  title: string;
+  description: string;
+  params: Record<string, ScenarioParamInfo>;
+}
+
+export interface ScenarioListResponse {
+  scenarios: ScenarioSummary[];
+}
+
+export interface ScenarioAgentRef {
+  name: string;
+}
+
+export interface ScenarioInstance {
+  instance: string;
+  scenarioId: string;
+  container: string;
+  agents: ScenarioAgentRef[];
+}
+
+export interface ScenarioInstancesResponse {
+  instances: ScenarioInstance[];
+}
+
+export interface ScenarioStartRequest {
+  instanceName?: string;
+  config?: Record<string, unknown>;
+}
+
+export interface ScenarioStartResponse {
+  message: string;
+  instance: string;
+  scenarioId: string;
+  container: string;
+  agents: string[];
+}

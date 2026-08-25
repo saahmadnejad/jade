@@ -7,4 +7,5 @@ export * from './tool';
 export * from './remote-platform';
 export * from './df';
 export * from './messages';
+export * from './scenario';
 export * from './factory';
