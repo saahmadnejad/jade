@@ -35,7 +35,11 @@ class FullResourceManager implements ResourceManager {
     private static final boolean DEFAULT_DISABLE_THREAD_GROUP_INTERRUPT = false;
     public static final String THREAD_GROUP_INTERRUPT_TIMEOUT = "jade_core_FullResourceManager_threadgroupinterrupttimeout";
     private static final String DEFAULT_THREAD_GROUP_INTERRUPT_TIMEOUT = "5000";
-    private static final Map<String, Set<Thread>> THREAD_GROUPS = new ConcurrentHashMap<>();
+
+    // Per-instance (NOT static): each container owns its FullResourceManager;
+    // a static map would let one container's releaseResources() wipe the
+    // thread groups of every other container in the same JVM.
+    private final Map<String, Set<Thread>> threadGroups = new ConcurrentHashMap<>();
 
     private boolean terminating = false;
 
@@ -44,9 +48,9 @@ class FullResourceManager implements ResourceManager {
     private int threadGroupInterruptTimeout;
 
     public FullResourceManager() {
-        THREAD_GROUPS.put("USER_AGENTS", ConcurrentHashMap.newKeySet());
-        THREAD_GROUPS.put("SYSTEM_AGENTS", ConcurrentHashMap.newKeySet());
-        THREAD_GROUPS.put("TIME_CRITICAL", ConcurrentHashMap.newKeySet());
+        threadGroups.put("USER_AGENTS", ConcurrentHashMap.newKeySet());
+        threadGroups.put("SYSTEM_AGENTS", ConcurrentHashMap.newKeySet());
+        threadGroups.put("TIME_CRITICAL", ConcurrentHashMap.newKeySet());
     }
 
     public Thread getThread(int type, String name, Runnable r) {
@@ -55,9 +59,9 @@ class FullResourceManager implements ResourceManager {
                     if (!terminating) ex.printStackTrace();
                 }).unstarted(r);
         switch (type) {
-            case USER_AGENTS -> THREAD_GROUPS.get("USER_AGENTS").add(t);
-            case SYSTEM_AGENTS -> THREAD_GROUPS.get("SYSTEM_AGENTS").add(t);
-            case TIME_CRITICAL -> THREAD_GROUPS.get("TIME_CRITICAL").add(t);
+            case USER_AGENTS -> threadGroups.get("USER_AGENTS").add(t);
+            case SYSTEM_AGENTS -> threadGroups.get("SYSTEM_AGENTS").add(t);
+            case TIME_CRITICAL -> threadGroups.get("TIME_CRITICAL").add(t);
             default -> throw new IllegalStateException("Unexpected value: " + type);
         }
         return t;
@@ -73,8 +77,8 @@ class FullResourceManager implements ResourceManager {
                 } catch (InterruptedException ignored) {
                 }
 
-                THREAD_GROUPS.values().forEach(group -> group.forEach(Thread::interrupt));
-                THREAD_GROUPS.clear();
+                threadGroups.values().forEach(group -> group.forEach(Thread::interrupt));
+                threadGroups.clear();
             });
         }
     }
