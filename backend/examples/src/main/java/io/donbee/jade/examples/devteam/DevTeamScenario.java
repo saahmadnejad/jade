@@ -54,20 +54,24 @@ public class DevTeamScenario implements Scenario {
             ScenarioParam.intParam("maxTotalCalls", 12, 4, 500,
                 "Hard cap on LLM calls per instance (free tiers allow ~50/day)"),
             ScenarioParam.intParam("callTimeoutSec", 120, 10, 900, "Timeout per LLM call"),
+            ScenarioParam.stringParam("brainType", "cli",
+                "Agent reasoning backend: 'cli' (opencode CLI) or 'http' (OpenAI-compatible endpoint)"),
+            ScenarioParam.stringParam("cliCommand", "opencode run",
+                "CLI + subcommand used when brainType=cli"),
+            ScenarioParam.stringParam("workspaceDir", "",
+                "Optional directory mirroring the team's produced files; also the CLI working directory"),
             ScenarioParam.stringParam("baseUrl", "https://openrouter.ai/api/v1",
-                "OpenAI-compatible endpoint of the provider"),
+                "OpenAI-compatible endpoint of the provider (brainType=http only)"),
             ScenarioParam.stringParam("keyEnvVar", "OPENROUTER_API_KEY",
-                "Environment variable holding the API key (never put keys here)"),
-            ScenarioParam.boolParam("proxyEnabled", true, "Route LLM traffic through SOCKS5 proxy"),
+                "Environment variable holding the API key (never put keys here; brainType=http only)"),
+            ScenarioParam.boolParam("proxyEnabled", true, "Route LLM traffic through SOCKS5 proxy (brainType=http only)"),
             ScenarioParam.stringParam("proxyHost", "192.168.1.151", "SOCKS5 proxy host"),
             ScenarioParam.intParam("proxyPort", 10808, 1, 65535, "SOCKS5 proxy port"),
             ScenarioParam.stringParam("managerModel", "thinkingmachines/inkling-small:free", "Manager model (reserved)"),
             ScenarioParam.stringParam("architectModel", "thinkingmachines/inkling:free", "Architect model"),
             ScenarioParam.stringParam("implementerModel", "poolside/laguna-s-2.1:free", "Implementer model"),
             ScenarioParam.stringParam("testerModel", "minimax/minimax-m3:free", "Tester model"),
-            ScenarioParam.stringParam("reviewerModel", "z-ai/glm-5.2:free", "Reviewer model"),
-            ScenarioParam.stringParam("workspaceDir", "",
-                "Optional directory mirroring the team's produced files (empty = memory only)"));
+            ScenarioParam.stringParam("reviewerModel", "z-ai/glm-5.2:free", "Reviewer model"));
     }
 
     @Override
@@ -81,34 +85,39 @@ public class DevTeamScenario implements Scenario {
         int proxyPort = (Integer) config.get("proxyPort");
         String baseUrl = str(config, "baseUrl");
         String keyEnvVar = str(config, "keyEnvVar");
+        String brainType = str(config, "brainType");
+        String cliCommand = str(config, "cliCommand");
+        String workspaceDir = str(config, "workspaceDir");
 
         List<AgentSpec> specs = new ArrayList<>();
         specs.add(new AgentSpec("manager", MANAGER_CLASS, List.of(
             brief, String.valueOf(maxRounds), String.valueOf(maxTotalCalls),
             String.valueOf(Math.max(1, callTimeoutSec / 60)),
-            str(config, "workspaceDir"))));
+            workspaceDir)));
 
-        specs.add(new AgentSpec("architect", ARCHITECT_CLASS,
-            brainArgs(baseUrl, str(config, "architectModel"), proxyEnabled, proxyHost, proxyPort, callTimeoutSec, keyEnvVar)));
-        specs.add(new AgentSpec("implementer", IMPLEMENTER_CLASS,
-            brainArgs(baseUrl, str(config, "implementerModel"), proxyEnabled, proxyHost, proxyPort, callTimeoutSec, keyEnvVar)));
-        specs.add(new AgentSpec("tester", TESTER_CLASS,
-            brainArgs(baseUrl, str(config, "testerModel"), proxyEnabled, proxyHost, proxyPort, callTimeoutSec, keyEnvVar)));
-        specs.add(new AgentSpec("reviewer", REVIEWER_CLASS,
-            brainArgs(baseUrl, str(config, "reviewerModel"), proxyEnabled, proxyHost, proxyPort, callTimeoutSec, keyEnvVar)));
+        specs.add(roleSpec("architect", ARCHITECT_CLASS, config));
+        specs.add(roleSpec("implementer", IMPLEMENTER_CLASS, config));
+        specs.add(roleSpec("tester", TESTER_CLASS, config));
+        specs.add(roleSpec("reviewer", REVIEWER_CLASS, config));
         return specs;
     }
 
-    private static List<Object> brainArgs(String baseUrl, String model, boolean proxyEnabled,
-                                          String proxyHost, int proxyPort, int timeoutSec, String keyEnvVar) {
-        return List.of(
-            baseUrl,
-            model,
-            String.valueOf(proxyEnabled),
-            proxyHost,
-            String.valueOf(proxyPort),
-            String.valueOf(timeoutSec),
-            keyEnvVar);
+    private static AgentSpec roleSpec(String suffix, String className, Map<String, Object> config) {
+        return new AgentSpec(suffix, className, List.of(
+            str(config, "brainType"),
+            str(config, "baseUrl"),
+            str(config, modelKey(suffix)),
+            String.valueOf(config.get("proxyEnabled")),
+            str(config, "proxyHost"),
+            String.valueOf(config.get("proxyPort")),
+            String.valueOf(config.get("callTimeoutSec")),
+            str(config, "keyEnvVar"),
+            str(config, "cliCommand"),
+            str(config, "workspaceDir")));
+    }
+
+    private static String modelKey(String roleSuffix) {
+        return roleSuffix + "Model";
     }
 
     private static String str(Map<String, Object> config, String key) {

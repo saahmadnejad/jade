@@ -1,6 +1,7 @@
 package io.donbee.jade.examples.devteam;
 
 import java.nio.file.Path;
+import java.util.List;
 
 import io.donbee.jade.core.Agent;
 import io.donbee.jade.domain.DFService;
@@ -10,6 +11,7 @@ import io.donbee.jade.domain.FIPAAgentManagement.ServiceDescription;
 import io.donbee.jade.lang.acl.ACLMessage;
 import io.donbee.jade.lang.acl.MessageTemplate;
 import io.donbee.llm.Brain;
+import io.donbee.llm.CliBrain;
 import io.donbee.llm.HttpBrain;
 import io.donbee.llm.LlmConfig;
 
@@ -19,8 +21,8 @@ import io.donbee.llm.LlmConfig;
  * generated text (or FAILURE on brain/provider errors).
  *
  * <p>Brain args (passed by {@link DevTeamScenario}, identical order for all
- * roles): baseUrl, model, proxyEnabled, proxyHost, proxyPort, callTimeoutSec,
- * keyEnvVar.</p>
+ * roles): brainType, baseUrl, model, proxyEnabled, proxyHost, proxyPort,
+ * callTimeoutSec, keyEnvVar, cliCommand, workingDir.</p>
  */
 public abstract class RoleAgent extends Agent {
 
@@ -35,23 +37,20 @@ public abstract class RoleAgent extends Agent {
     @Override
     protected void setup() {
         Object[] args = getArguments();
-        String baseUrl = str(args, 0, "https://openrouter.ai/api/v1");
-        String model = str(args, 1, "thinkingmachines/inkling-small:free");
-        boolean proxyEnabled = Boolean.parseBoolean(str(args, 2, "false"));
-        String proxyHost = str(args, 3, null);
-        int proxyPort = intArg(args, 4, 1080);
-        int timeoutSec = intArg(args, 5, 120);
-        String keyEnvVar = str(args, 6, "OPENROUTER_API_KEY");
+        String brainType = str(args, 0, "http");
+        String baseUrl = str(args, 1, "https://openrouter.ai/api/v1");
+        String model = str(args, 2, "thinkingmachines/inkling-small:free");
+        boolean proxyEnabled = Boolean.parseBoolean(str(args, 3, "false"));
+        String proxyHost = str(args, 4, null);
+        int proxyPort = intArg(args, 5, 1080);
+        int timeoutSec = intArg(args, 6, 120);
+        String keyEnvVar = str(args, 7, "OPENROUTER_API_KEY");
+        String cliCommand = str(args, 8, "opencode run");
+        String workingDir = str(args, 9, null);
 
         try {
-            String apiKey = SecretsResolver.resolveApiKey(System::getenv, keyEnvVar, Path.of(""));
-            LlmConfig.Builder builder = LlmConfig.builder(baseUrl, model)
-                .apiKey(() -> apiKey)
-                .timeoutMs(timeoutSec * 1000);
-            if (proxyEnabled && proxyHost != null && !proxyHost.isBlank()) {
-                builder.socksProxy(proxyHost, proxyPort);
-            }
-            brain = new HttpBrain(builder.build());
+            brain = buildBrain(brainType, baseUrl, model, proxyEnabled, proxyHost,
+                proxyPort, timeoutSec, keyEnvVar, cliCommand, workingDir);
         } catch (IllegalStateException e) {
             System.err.println("[" + roleName() + "] " + e.getMessage());
             doDelete();
@@ -108,6 +107,27 @@ public abstract class RoleAgent extends Agent {
         } catch (FIPAException ignored) {
             // Already gone
         }
+    }
+
+    private Brain buildBrain(String brainType, String baseUrl, String model,
+                             boolean proxyEnabled, String proxyHost, int proxyPort,
+                             int timeoutSec, String keyEnvVar, String cliCommand,
+                             String workingDir) {
+        if ("cli".equalsIgnoreCase(brainType)) {
+            Path dir = workingDir != null && !workingDir.isBlank()
+                ? Path.of(workingDir.trim()) : null;
+            return new CliBrain(List.of(cliCommand.trim().split("\\s+")),
+                model, dir, timeoutSec * 1000);
+        }
+        // Default: HTTP brain (OpenAI-compatible endpoint).
+        String apiKey = SecretsResolver.resolveApiKey(System::getenv, keyEnvVar, Path.of(""));
+        LlmConfig.Builder builder = LlmConfig.builder(baseUrl, model)
+            .apiKey(() -> apiKey)
+            .timeoutMs(timeoutSec * 1000);
+        if (proxyEnabled && proxyHost != null && !proxyHost.isBlank()) {
+            builder.socksProxy(proxyHost, proxyPort);
+        }
+        return new HttpBrain(builder.build());
     }
 
     String roleName() {

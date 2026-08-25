@@ -12,6 +12,14 @@ WORKDIR /app
 COPY --from=build /build/jade/target/jade-*.jar app.jar
 COPY --from=build /build/examples/target/examples-*.jar examples.jar
 COPY --from=build /build/llm/target/llm-*.jar llm.jar
+# Best-effort install of the opencode CLI (default brain of the dev-team
+# scenario). Failure keeps the image buildable offline; the CLI brain then
+# errors at runtime with an actionable message.
+RUN apk add --no-cache curl libstdc++ libgcc >/dev/null 2>&1; \
+    export SHELL=/bin/sh; \
+    curl -fsSL https://opencode.ai/install | sh >/dev/null 2>&1 || \
+    echo "WARNING: opencode install skipped"
+ENV PATH="/root/.opencode/bin:${PATH}"
 EXPOSE 1099 8080
 # The image ships platform + bundled example scenarios. Scenario code is inert
 # until instantiated through /api/scenarios. Library users should depend on the

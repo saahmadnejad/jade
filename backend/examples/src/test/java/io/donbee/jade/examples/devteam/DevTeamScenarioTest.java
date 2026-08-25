@@ -33,17 +33,30 @@ public class DevTeamScenarioTest {
     }
 
     @Test
-    public void Given_RoleOverrides_When_AgentsComputed_Then_BrainArgsCarryModelAndProxy() {
+    public void Given_Defaults_When_AgentsComputed_Then_CliBrainIsDefault() {
+        var specs = scenario.agents(config("workspaceDir", "/tmp/team-ws"));
+
+        AgentSpec architect = specs.get(1);
+        assertThat(architect.getArgs().get(0)).isEqualTo("cli");                 // brainType
+        assertThat(architect.getArgs()).contains("opencode run", "/tmp/team-ws"); // cli + working dir
+        assertThat(architect.getArgs().get(2)).isEqualTo("thinkingmachines/inkling:free");
+    }
+
+    @Test
+    public void Given_RoleOverrides_When_AgentsComputed_Then_BrainArgsCarryModelAndProvider() {
         var specs = scenario.agents(config(
+            "brainType", "http",
             "implementerModel", "some/paid-model",
             "proxyEnabled", false,
-            "proxyPort", 9999));
+            "proxyPort", 9999,
+            "workspaceDir", "/tmp/team-ws"));
 
         AgentSpec implementer = specs.get(2);
         assertThat(implementer.getClassName()).isEqualTo(DevTeamScenario.IMPLEMENTER_CLASS);
         assertThat(implementer.getArgs()).containsExactly(
-            "https://openrouter.ai/api/v1", "some/paid-model", "false",
-            "192.168.1.151", "9999", "120", "OPENROUTER_API_KEY");
+            "http", "https://openrouter.ai/api/v1", "some/paid-model", "false",
+            "192.168.1.151", "9999", "120", "OPENROUTER_API_KEY",
+            "opencode run", "/tmp/team-ws");
     }
 
     @Test
