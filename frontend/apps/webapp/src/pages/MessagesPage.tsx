@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Chip, IconButton, Tooltip, TextField,
-  Button, InputAdornment,
+  Button, InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
 import CircleIcon from '@mui/icons-material/Circle';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import { api, subscribeMessagesStream, type AclMessageEvent, type MessagesStreamStatus } from 'shared';
 import PageHeader from '../components/PageHeader';
 import EmptyState from '../components/EmptyState';
@@ -35,6 +36,7 @@ export default function MessagesPage() {
   const [paused, setPaused] = useState(false);
   const [filter, setFilter] = useState('');
   const [status, setStatus] = useState<MessagesStreamStatus>('connecting');
+  const [detailsMessage, setDetailsMessage] = useState<AclMessageEvent | null>(null);
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
 
@@ -156,6 +158,7 @@ export default function MessagesPage() {
                 <TableCell>Protocol</TableCell>
                 <TableCell>Ontology</TableCell>
                 <TableCell>Content</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -172,12 +175,61 @@ export default function MessagesPage() {
                   <TableCell sx={{ maxWidth: 420, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {m.content}
                   </TableCell>
+                  <TableCell align="right">
+                    <Tooltip title="View message details">
+                      <IconButton size="small" onClick={() => setDetailsMessage(m)}>
+                        <VisibilityIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
       )}
+
+      <Dialog
+        open={detailsMessage !== null}
+        onClose={() => setDetailsMessage(null)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Message #{detailsMessage?.id} — {detailsMessage?.performative}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 1, mb: 2 }}>
+            <Typography variant="body2" color="text.secondary">Time</Typography>
+            <Typography variant="body2">{detailsMessage ? new Date(detailsMessage.timestamp).toLocaleString() : ''}</Typography>
+            <Typography variant="body2" color="text.secondary">From</Typography>
+            <Typography variant="body2">{detailsMessage?.sender}</Typography>
+            <Typography variant="body2" color="text.secondary">To</Typography>
+            <Typography variant="body2">{detailsMessage?.receiver}</Typography>
+            <Typography variant="body2" color="text.secondary">Performative</Typography>
+            <Typography variant="body2">{detailsMessage?.performative}</Typography>
+            <Typography variant="body2" color="text.secondary">Protocol</Typography>
+            <Typography variant="body2">{detailsMessage?.protocol}</Typography>
+            <Typography variant="body2" color="text.secondary">Ontology</Typography>
+            <Typography variant="body2">{detailsMessage?.ontology}</Typography>
+          </Box>
+          <Typography variant="subtitle2" gutterBottom>Content</Typography>
+          <Paper
+            variant="outlined"
+            sx={{ p: 1.5, maxHeight: 320, overflowY: 'auto' }}
+          >
+            <Box
+              component="pre"
+              sx={{ m: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'monospace', fontSize: 13 }}
+            >
+              {detailsMessage?.content}
+            </Box>
+          </Paper>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsMessage(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       <Box sx={{ mt: 1 }}>
         <Button size="small" disabled>
