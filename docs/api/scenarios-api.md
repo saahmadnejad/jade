@@ -101,6 +101,8 @@ Start a new instance of a scenario.
 
 List currently tracked running instances. Tracking is in-memory only:
 instances started before a platform restart are not listed after it.
+Instances whose container disappears outside this API (e.g. killed from
+`DELETE /api/containers/:name`) are pruned automatically on the next list.
 
 ### Response — 200 OK
 

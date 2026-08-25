@@ -183,6 +183,69 @@ public class ScenarioServiceTest {
     }
 
     @Test
+    public void Given_ContainerKilledExternally_When_InstancesListed_Then_StaleInstancePruned() {
+        // --- Arrange ---
+        when(mockPlatform.getPlatformInfo()).thenReturn(new PlatformService.PlatformInfo("id", "Main-Container", true, "ams", "df"));
+        service.start("online-shop", "ghost", null);
+        assertThat(service.listInstances()).extracting(ScenarioService.InstanceInfo::instance)
+            .containsExactly("ghost");
+
+        // Container killed outside the scenarios API (e.g. Containers page):
+        when(mockPlatform.getContainers()).thenReturn(List.of(
+            new PlatformService.ContainerInfo("Main-Container", "h", "1", true)));
+        when(mockPlatform.getAgents(true)).thenReturn(List.of());
+
+        // --- Act ---
+        List<ScenarioService.InstanceInfo> remaining = service.listInstances();
+
+        // --- Assert ---
+        assertThat(remaining).isEmpty();
+    }
+
+    @Test
+    public void Given_FallbackInstanceWithAllAgentsDead_When_InstancesListed_Then_Pruned() {
+        // --- Arrange ---
+        ScenarioService fallbackService = new ScenarioService(mockPlatform, Map.of("online-shop", shopScenario)) {
+            @Override
+            protected String createScenarioContainer(String instanceName) {
+                throw new RuntimeException("no platform connection");
+            }
+        };
+        when(mockPlatform.getPlatformInfo()).thenReturn(new PlatformService.PlatformInfo("id", "Main-Container", true, "ams", "df"));
+        fallbackService.start("online-shop", "fb", null);
+
+        // All agents gone, but the Main Container is still alive:
+        when(mockPlatform.getContainers()).thenReturn(List.of(
+            new PlatformService.ContainerInfo("Main-Container", "h", "1", true)));
+        when(mockPlatform.getAgents(true)).thenReturn(List.of(
+            new PlatformService.AgentInfo("someone-else", "ACTIVE", "", "Main-Container", new String[]{})));
+
+        // --- Act ---
+        List<ScenarioService.InstanceInfo> remaining = fallbackService.listInstances();
+
+        // --- Assert ---
+        assertThat(remaining).isEmpty();
+    }
+
+    @Test
+    public void Given_LiveInstanceAndExternalKillOfOther_When_InstancesListed_Then_LiveSurvives() {
+        // --- Arrange ---
+        when(mockPlatform.getPlatformInfo()).thenReturn(new PlatformService.PlatformInfo("id", "Main-Container", true, "ams", "df"));
+        service.start("online-shop", "alive", null);
+        when(mockPlatform.getContainers()).thenReturn(List.of(
+            new PlatformService.ContainerInfo("Main-Container", "h", "1", true),
+            new PlatformService.ContainerInfo("scenario-alive", "h", "2", false)));
+        when(mockPlatform.getAgents(true)).thenReturn(List.of());
+
+        // --- Act ---
+        List<ScenarioService.InstanceInfo> remaining = service.listInstances();
+
+        // --- Assert ---
+        assertThat(remaining).extracting(ScenarioService.InstanceInfo::instance)
+            .containsExactly("alive");
+    }
+
+    @Test
     public void Given_DeploymentFailsMidway_When_Start_Then_AlreadyDeployedAgentsRolledBack() {
         // --- Arrange ---
         doThrow(new RuntimeException("boom"))
