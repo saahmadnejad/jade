@@ -6,10 +6,15 @@ Jade is a fork of JADE (Java Agent DEvelopment Framework) — a multi-agent fram
 `io.donbee.jade` package, targeting Java 21 with virtual threads.
 
 - **Backend** (`backend/`) — Java/Maven multi-module build: parent POM `backend/pom.xml`
-  (`jade-parent`) with two modules: `backend/fipa/` (FIPA common library, `io.donbee:fipa`:
-  CORBA-generated `io.donbee.FIPA` classes + `FIPANames`) and `backend/jade/`
-  (platform code, depends on fipa). Shade uber jar builds to `backend/jade/target/backend.jar`.
-  Build from `backend/` so the reactor resolves the internal dependency.
+  (`jade-parent`) with three modules: `backend/fipa/` (FIPA common library, `io.donbee:fipa`:
+  CORBA-generated `io.donbee.FIPA` classes + `FIPANames`), `backend/jade/`
+  (platform code, depends on fipa) and `backend/examples/` (example scenarios like the
+  online shop, depends on jade; NOT part of the shaded uber jar). Shade uber jar builds to
+  `backend/jade/target/backend.jar`; examples jar to `backend/examples/target/`.
+  Build from `backend/` so the reactor resolves the internal dependencies.
+- **Example scenarios**: see `backend/examples/README.md`. Run e.g.:
+  `java -cp backend/jade/target/backend.jar:backend/examples/target/examples-*.jar \
+  io.donbee.jade.Boot -conf backend/examples/conf/shop.properties`
 - **Frontend** (`frontend/`) — pnpm monorepo: React app at **`frontend/apps/webapp/`**
   (package name: `webapp`) + shared TS lib at `frontend/packages/shared/` (package name: `shared`)
 - **Migration state**: old Swing GUI tools are being replaced by a Vert.x REST API + React UI.

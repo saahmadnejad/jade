@@ -16,6 +16,7 @@
     <modules>
         <module>fipa</module>
         <module>jade</module>
+        <module>examples</module>
     </modules>
 
     <properties>

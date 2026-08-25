@@ -1,0 +1,5 @@
+{
+  "name": "customer1",
+  "class": "io.donbee.jade.examples.shop.CustomerAgent",
+  "args": ["8", "1", "sku-laptop", "sku-phone", "sku-cable"]
+}
