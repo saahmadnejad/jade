@@ -23,9 +23,7 @@ public class DevTeamScenario implements Scenario {
     static final String TESTER_CLASS = TesterAgent.class.getName();
     static final String REVIEWER_CLASS = ReviewerAgent.class.getName();
 
-    private static final String DEFAULT_BRIEF =
-        "Build a command-line To-Do list application in Python: add/list/done/remove "
-            + "tasks, persisted to a JSON file, with unit tests.";
+    private static final String DEFAULT_BRIEF = ""; // the user must say what to build
 
     @Override
     public String id() {
@@ -40,24 +38,26 @@ public class DevTeamScenario implements Scenario {
     @Override
     public String description() {
         return "Five LLM-powered agents (Manager, Architect, Implementer, Tester, Reviewer) "
-            + "collaborate to build a small project from a brief. The Manager routes work in "
-            + "bounded rounds; the Reviewer decides when it is done. Watch the whole "
-            + "conversation on the Messages page and the produced files via the workspace "
-            + "mirror directory.";
+            + "collaborate to build whatever YOU ask for: describe your project in the 'brief' "
+            + "field - it is required. The team works in bounded review rounds inside skilled "
+            + "opencode sessions and publishes the result to GitHub.";
     }
 
     @Override
     public List<ScenarioParam> params() {
         return List.of(
-            ScenarioParam.stringParam("brief", DEFAULT_BRIEF, "What the team must build"),
+            ScenarioParam.stringParam("brief", DEFAULT_BRIEF,
+                "REQUIRED: what the team must build - describe it like a README"),
             ScenarioParam.intParam("maxRounds", 3, 1, 10, "Max implement/review rounds"),
             ScenarioParam.intParam("maxTotalCalls", 12, 4, 500,
                 "Hard cap on LLM calls per instance (free tiers allow ~50/day)"),
-            ScenarioParam.intParam("callTimeoutSec", 120, 10, 900, "Timeout per LLM call"),
+            ScenarioParam.intParam("callTimeoutSec", 300, 10, 1800, "Timeout per LLM call"),
+            ScenarioParam.stringParam("fallbackModel", "ox-alpha",
+                "Fallback brain model when the role model fails or times out"),
             ScenarioParam.stringParam("brainType", "cli",
                 "Agent reasoning backend: 'cli' (opencode CLI) or 'http' (OpenAI-compatible endpoint)"),
-            ScenarioParam.stringParam("cliCommand", "opencode run",
-                "CLI + subcommand used when brainType=cli"),
+            ScenarioParam.stringParam("cliCommand", "opencode run --auto",
+                "CLI + subcommand + flags used when brainType=cli"),
             ScenarioParam.stringParam("workspaceDir", "",
                 "Optional directory mirroring the team's produced files; also the CLI working directory"),
             ScenarioParam.stringParam("baseUrl", "https://openrouter.ai/api/v1",
@@ -113,6 +113,7 @@ public class DevTeamScenario implements Scenario {
             str(config, "brainType"),
             str(config, "baseUrl"),
             str(config, modelKey(suffix)),
+            str(config, "fallbackModel"),
             String.valueOf(config.get("proxyEnabled")),
             str(config, "proxyHost"),
             String.valueOf(config.get("proxyPort")),

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -22,6 +23,7 @@ public class CliBrain implements Brain {
     private final String agent;
     private final Path workingDir;
     private final int timeoutMs;
+    private final java.util.Map<String, String> extraEnv;
 
     /**
      * @param command    base command and arguments, e.g. {@code [opencode, run]}
@@ -34,6 +36,15 @@ public class CliBrain implements Brain {
      */
     public CliBrain(List<String> command, String model, String agent,
                     Path workingDir, int timeoutMs) {
+        this(command, model, agent, workingDir, timeoutMs, null);
+    }
+
+    /**
+     * @param extraEnv additional environment variables for the CLI process
+     *                 (e.g. {@code GH_TOKEN} so the tool can call {@code gh})
+     */
+    public CliBrain(List<String> command, String model, String agent,
+                    Path workingDir, int timeoutMs, java.util.Map<String, String> extraEnv) {
         this.command = List.copyOf(Objects.requireNonNull(command, "command"));
         if (this.command.isEmpty()) {
             throw new IllegalArgumentException("command must not be empty");
@@ -42,6 +53,7 @@ public class CliBrain implements Brain {
         this.agent = agent;
         this.workingDir = workingDir;
         this.timeoutMs = timeoutMs <= 0 ? 120_000 : timeoutMs;
+        this.extraEnv = extraEnv == null ? Map.of() : Map.copyOf(extraEnv);
     }
 
     @Override
@@ -58,6 +70,9 @@ public class CliBrain implements Brain {
         cmd.add(combine(systemPrompt, userPrompt));
 
         ProcessBuilder pb = new ProcessBuilder(cmd);
+        if (!extraEnv.isEmpty()) {
+            pb.environment().putAll(extraEnv);
+        }
         if (workingDir != null) {
             pb.directory(workingDir.toFile());
         }

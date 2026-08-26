@@ -1,6 +1,7 @@
 package io.donbee.jade.examples.devteam;
 
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.List;
 
 import io.donbee.jade.core.Agent;
@@ -12,6 +13,7 @@ import io.donbee.jade.lang.acl.ACLMessage;
 import io.donbee.jade.lang.acl.MessageTemplate;
 import io.donbee.llm.Brain;
 import io.donbee.llm.CliBrain;
+import io.donbee.llm.FallbackBrain;
 import io.donbee.llm.HttpBrain;
 import io.donbee.llm.LlmConfig;
 
@@ -21,12 +23,13 @@ import io.donbee.llm.LlmConfig;
  * generated text (or FAILURE on brain/provider errors).
  *
  * <p>Brain args (passed by {@link DevTeamScenario}, identical order for all
- * roles): brainType, baseUrl, model, proxyEnabled, proxyHost, proxyPort,
- * callTimeoutSec, keyEnvVar, cliCommand, workingDir.</p>
+ * roles): brainType, baseUrl, model, fallbackModel, proxyEnabled, proxyHost,
+ * proxyPort, callTimeoutSec, keyEnvVar, cliCommand, workingDir.</p>
  */
 public abstract class RoleAgent extends Agent {
 
     protected Brain brain;
+    private String githubToken;
 
     /** Role suffix used in agent local names, e.g. {@code architect}. */
     protected abstract String role();
@@ -40,17 +43,29 @@ public abstract class RoleAgent extends Agent {
         String brainType = str(args, 0, "http");
         String baseUrl = str(args, 1, "https://openrouter.ai/api/v1");
         String model = str(args, 2, "thinkingmachines/inkling-small:free");
-        boolean proxyEnabled = Boolean.parseBoolean(str(args, 3, "false"));
-        String proxyHost = str(args, 4, null);
-        int proxyPort = intArg(args, 5, 1080);
-        int timeoutSec = intArg(args, 6, 120);
-        String keyEnvVar = str(args, 7, "OPENROUTER_API_KEY");
-        String cliCommand = str(args, 8, "opencode run");
-        String workingDir = str(args, 9, null);
+        String fallbackModel = str(args, 3, null);
+        boolean proxyEnabled = Boolean.parseBoolean(str(args, 4, "false"));
+        String proxyHost = str(args, 5, null);
+        int proxyPort = intArg(args, 6, 1080);
+        int timeoutSec = intArg(args, 7, 300);
+        String keyEnvVar = str(args, 8, "OPENROUTER_API_KEY");
+        String cliCommand = str(args, 9, "opencode run");
+        String workingDir = str(args, 10, null);
 
         try {
-            brain = buildBrain(brainType, baseUrl, model, proxyEnabled, proxyHost,
+            Brain primary = buildBrain(brainType, baseUrl, model, proxyEnabled, proxyHost,
                 proxyPort, timeoutSec, keyEnvVar, cliCommand, workingDir);
+            if (fallbackModel != null && !fallbackModel.isBlank()
+                && !fallbackModel.equalsIgnoreCase(model)) {
+                Brain fallback = buildBrain(brainType, baseUrl, fallbackModel, false,
+                    null, 0, timeoutSec, keyEnvVar, cliCommand, workingDir);
+                brain = new FallbackBrain(List.of(primary, fallback));
+                System.out.println("[" + roleName() + "] brain: " + model
+                    + " (fallback: " + fallbackModel + ")");
+            } else {
+                brain = primary;
+                System.out.println("[" + roleName() + "] brain: " + model);
+            }
         } catch (IllegalStateException e) {
             System.err.println("[" + roleName() + "] " + e.getMessage());
             doDelete();
@@ -60,6 +75,7 @@ public abstract class RoleAgent extends Agent {
             doDelete();
             return;
         }
+        githubToken = resolveGithubTokenQuietly();
 
         try {
             DFAgentDescription dfd = new DFAgentDescription();
@@ -117,7 +133,8 @@ public abstract class RoleAgent extends Agent {
             Path dir = workingDir != null && !workingDir.isBlank()
                 ? Path.of(workingDir.trim()) : null;
             return new CliBrain(List.of(cliCommand.trim().split("\\s+")),
-                model, role(), dir, timeoutSec * 1000);
+                model, role(), dir, timeoutSec * 1000,
+                githubToken != null ? Map.of("GH_TOKEN", githubToken) : null);
         }
         // Default: HTTP brain (OpenAI-compatible endpoint).
         String apiKey = SecretsResolver.resolveApiKey(System::getenv, keyEnvVar, Path.of(""));
@@ -128,6 +145,15 @@ public abstract class RoleAgent extends Agent {
             builder.socksProxy(proxyHost, proxyPort);
         }
         return new HttpBrain(builder.build());
+    }
+
+    /** GH_TOKEN env var, else the gitignored secrets file (best effort). */
+    private String resolveGithubTokenQuietly() {
+        try {
+            return SecretsResolver.resolveGithubToken(System::getenv, Path.of(""));
+        } catch (IllegalStateException e) {
+            return null;
+        }
     }
 
     String roleName() {

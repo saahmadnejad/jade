@@ -77,13 +77,28 @@ public class DevTeamInfraTest {
     }
 
     @Test
+    public void Given_GithubTokenInFile_When_EnvEmpty_Then_TokenFromFileUsed() throws Exception {
+        // --- Arrange ---
+        Path dir = Files.createTempDirectory("devteam-gh");
+        Path conf = dir.resolve("conf");
+        Files.createDirectories(conf);
+        Files.writeString(conf.resolve("secrets.local.properties"), "github.token=gh-file-token\n");
+
+        // --- Act ---
+        String token = SecretsResolver.resolveGithubToken(name -> "", dir);
+
+        // --- Assert ---
+        assertThat(token).isEqualTo("gh-file-token");
+    }
+
+    @Test
     public void Given_NeitherSource_When_KeyResolved_Then_ActionableFailure() throws Exception {
         Path dir = Files.createTempDirectory("devteam-empty").toAbsolutePath();
         assertThatThrownBy(() ->
             SecretsResolver.resolveApiKey(name -> null, "MY_KEY", dir))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("MY_KEY")
-            .hasMessageContaining("Never commit keys");
+            .hasMessageContaining("Never commit secrets");
     }
 
     // ===== Workspace disk mirror =====

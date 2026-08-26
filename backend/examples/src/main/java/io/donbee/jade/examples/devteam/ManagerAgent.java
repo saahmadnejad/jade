@@ -40,7 +40,7 @@ public class ManagerAgent extends Agent {
     @Override
     protected void setup() {
         Object[] args = getArguments();
-        brief = str(args, 0, "Build a small CLI to-do app in Python.");
+        brief = str(args, 0, "");
         maxRounds = intArg(args, 1, 3);
         maxTotalCalls = intArg(args, 2, 12);
         roundStartTimeoutMin = intArg(args, 3, 30);
@@ -58,6 +58,12 @@ public class ManagerAgent extends Agent {
                 ? java.nio.file.Path.of(workspaceDirParam.trim()) : null);
         deadlineAt = System.currentTimeMillis() + roundStartTimeoutMin * 60_000L;
 
+        if (brief == null || brief.isBlank()) {
+            finish("FAILED", "No brief provided. Tell the team what to develop: fill the "
+                + "'brief' field in the scenario config (like a README) and start again.");
+            return;
+        }
+
         try {
             TeamScaffolder.scaffold(workDir, githubOrg, teamId + "-project", githubVisibility);
         } catch (IOException e) {
@@ -65,7 +71,7 @@ public class ManagerAgent extends Agent {
         }
 
         boolean githubWanted = githubOrg != null && !githubOrg.isBlank();
-        boolean ghTokenMissing = githubWanted && isBlank(System.getenv("GH_TOKEN"));
+        boolean ghTokenMissing = githubWanted && !githubTokenAvailable();
         if (ghTokenMissing) {
             finish("FAILED", "githubOrg='" + githubOrg + "' requires the GH_TOKEN environment "
                 + "variable (a PAT with Administration+Contents+Issues access to the org). "
@@ -190,6 +196,14 @@ public class ManagerAgent extends Agent {
 
     private boolean githubWanted() {
         return githubOrg != null && !githubOrg.isBlank();
+    }
+
+    private static boolean githubTokenAvailable() {
+        try {
+            return !SecretsResolver.resolveGithubToken(System::getenv, java.nio.file.Path.of("")).isBlank();
+        } catch (IllegalStateException e) {
+            return false;
+        }
     }
 
     private static boolean isBlank(String s) {

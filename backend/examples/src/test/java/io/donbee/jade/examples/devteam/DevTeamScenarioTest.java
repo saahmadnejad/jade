@@ -38,8 +38,9 @@ public class DevTeamScenarioTest {
 
         AgentSpec architect = specs.get(1);
         assertThat(architect.getArgs().get(0)).isEqualTo("cli");                 // brainType
-        assertThat(architect.getArgs()).contains("opencode run", "/tmp/team-ws"); // cli + working dir
+        assertThat(architect.getArgs()).contains("opencode run --auto", "/tmp/team-ws");
         assertThat(architect.getArgs().get(2)).isEqualTo("thinkingmachines/inkling:free");
+        assertThat(architect.getArgs().get(3)).isEqualTo("ox-alpha"); // fallback model
     }
 
     @Test
@@ -47,6 +48,7 @@ public class DevTeamScenarioTest {
         var specs = scenario.agents(config(
             "brainType", "http",
             "implementerModel", "some/paid-model",
+            "fallbackModel", "backup/model",
             "proxyEnabled", false,
             "proxyPort", 9999,
             "workspaceDir", "/tmp/team-ws"));
@@ -54,9 +56,9 @@ public class DevTeamScenarioTest {
         AgentSpec implementer = specs.get(2);
         assertThat(implementer.getClassName()).isEqualTo(DevTeamScenario.IMPLEMENTER_CLASS);
         assertThat(implementer.getArgs()).containsExactly(
-            "http", "https://openrouter.ai/api/v1", "some/paid-model", "false",
-            "192.168.1.151", "9999", "120", "OPENROUTER_API_KEY",
-            "opencode run", "/tmp/team-ws");
+            "http", "https://openrouter.ai/api/v1", "some/paid-model", "backup/model",
+            "false", "192.168.1.151", "9999", "300", "OPENROUTER_API_KEY",
+            "opencode run --auto", "/tmp/team-ws");
     }
 
     @Test
@@ -66,6 +68,6 @@ public class DevTeamScenarioTest {
 
         AgentSpec manager = specs.get(0);
         assertThat(manager.getArgs()).containsExactly(
-            "Build X", "5", "30", "2", "/tmp/team-ws", "moreshco-agents", "private"); // 120s -> 2min
+            "Build X", "5", "30", "5", "/tmp/team-ws", "moreshco-agents", "private"); // 300s -> 5min
     }
 }
