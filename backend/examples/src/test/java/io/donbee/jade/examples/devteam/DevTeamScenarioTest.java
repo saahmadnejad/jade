@@ -39,8 +39,8 @@ public class DevTeamScenarioTest {
         AgentSpec architect = specs.get(1);
         assertThat(architect.getArgs().get(0)).isEqualTo("http");                // brainType
         assertThat(architect.getArgs()).contains("/tmp/team-ws");
-        assertThat(architect.getArgs().get(2)).isEqualTo("nvidia/nemotron-3.5-lightning:free");
-        assertThat(architect.getArgs().get(3)).isEqualTo("nvidia/nemotron-3.5-lightning:free"); // fallback model
+        assertThat(architect.getArgs().get(2)).isEqualTo("kr/claude-sonnet-4.5");
+        assertThat(architect.getArgs().get(3)).isEqualTo("opencode/nemotron-3-ultra-free"); // fallback model
     }
 
     @Test
@@ -56,8 +56,8 @@ public class DevTeamScenarioTest {
         AgentSpec implementer = specs.get(2);
         assertThat(implementer.getClassName()).isEqualTo(DevTeamScenario.IMPLEMENTER_CLASS);
         assertThat(implementer.getArgs()).containsExactly(
-            "http", "https://openrouter.ai/api/v1", "some/paid-model", "backup/model",
-            "false", "192.168.1.151", "9999", "300", "OPENROUTER_API_KEY",
+            "http", "http://localhost:20128/v1", "some/paid-model", "backup/model",
+            "false", "192.168.1.151", "9999", "300", "NINEROUTER_API_KEY",
             "opencode run --auto", "/tmp/team-ws");
     }
 
