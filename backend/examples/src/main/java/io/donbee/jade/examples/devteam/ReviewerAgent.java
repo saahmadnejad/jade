@@ -1,6 +1,12 @@
 package io.donbee.jade.examples.devteam;
 
-/** Judges each round and issues the Verdict that drives the workflow. */
+import io.donbee.jade.lang.acl.ACLMessage;
+
+/**
+ * Judges each round and issues the Verdict that drives the workflow.
+ * Supports P2P: after review, sends verdict to Manager (for phase tracking)
+ * and Implementer (for next round feedback).
+ */
 public class ReviewerAgent extends RoleAgent {
 
     /** Machine-readable verdict lines the Manager looks for. */
@@ -28,5 +34,25 @@ public class ReviewerAgent extends RoleAgent {
 
             Before that line, if changes are requested, list at most three concrete,
             actionable corrections.""";
+    }
+
+    @Override
+    protected void handleTask(ACLMessage request) {
+        System.out.println("[" + roleName() + "] thinking about: "
+            + firstLine(request.getContent()));
+        ACLMessage reply = request.createReply();
+        try {
+            String result = brain.respond(systemPrompt(), request.getContent());
+            reply.setPerformative(ACLMessage.INFORM);
+            reply.setContent(result);
+            // P2P: notify Manager and Implementer with the verdict
+            notifyPeer("manager", "Verdict: " + result);
+            notifyPeer("implementer", result);
+        } catch (Exception e) {
+            reply.setPerformative(ACLMessage.FAILURE);
+            reply.setContent("(" + roleName() + "-failed " + sanitize(e.getMessage()) + ")");
+            System.err.println("[" + roleName() + "] brain call failed: " + e.getMessage());
+        }
+        send(reply);
     }
 }

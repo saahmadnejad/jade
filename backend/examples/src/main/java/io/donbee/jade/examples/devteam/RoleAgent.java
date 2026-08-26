@@ -1,14 +1,13 @@
 package io.donbee.jade.examples.devteam;
 
-import java.nio.file.Path;
-import java.util.Map;
-import java.util.List;
-
 import io.donbee.jade.core.Agent;
+import io.donbee.jade.core.AID;
 import io.donbee.jade.domain.DFService;
 import io.donbee.jade.domain.FIPAException;
 import io.donbee.jade.domain.FIPAAgentManagement.DFAgentDescription;
+import io.donbee.jade.domain.FIPAAgentManagement.Property;
 import io.donbee.jade.domain.FIPAAgentManagement.ServiceDescription;
+import io.donbee.jade.domain.FIPANames;
 import io.donbee.jade.lang.acl.ACLMessage;
 import io.donbee.jade.lang.acl.MessageTemplate;
 import io.donbee.llm.Brain;
@@ -17,10 +16,17 @@ import io.donbee.llm.FallbackBrain;
 import io.donbee.llm.HttpBrain;
 import io.donbee.llm.LlmConfig;
 
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.List;
+import java.util.Set;
+
 /**
- * Base class for LLM-powered team members. Receives a task as an ACL
- * REQUEST, delegates it to its {@link Brain} and answers with INFORM +
- * generated text (or FAILURE on brain/provider errors).
+ * Base class for LLM-powered team members. Receives tasks as ACL REQUEST,
+ * delegates to {@link Brain}, and replies with INFORM or FAILURE.
+ *
+ * <p>Supports decentralized peer-to-peer communication: agents can discover
+ * each other via DF and send direct messages, bypassing the Manager hub.</p>
  *
  * <p>Brain args (passed by {@link DevTeamScenario}, identical order for all
  * roles): brainType, baseUrl, model, fallbackModel, proxyEnabled, proxyHost,
@@ -30,6 +36,7 @@ public abstract class RoleAgent extends Agent {
 
     protected Brain brain;
     private String githubToken;
+    private String teamId;
 
     /** Role suffix used in agent local names, e.g. {@code architect}. */
     protected abstract String role();
@@ -37,9 +44,14 @@ public abstract class RoleAgent extends Agent {
     /** Persona instructions sent as the system prompt. */
     protected abstract String systemPrompt();
 
+    /** DF service types for peer discovery. */
+    protected static final String DF_ROLE_SERVICE_TYPE = "devteam-role";
+
     @Override
     protected void setup() {
         Object[] args = getArguments();
+        teamId = extractTeamId(getLocalName());
+
         String brainType = str(args, 0, "http");
         String baseUrl = str(args, 1, "https://openrouter.ai/api/v1");
         String model = str(args, 2, "thinkingmachines/inkling-small:free");
@@ -77,52 +89,123 @@ public abstract class RoleAgent extends Agent {
         }
         githubToken = resolveGithubTokenQuietly();
 
-        try {
-            DFAgentDescription dfd = new DFAgentDescription();
-            dfd.setName(getAID());
-            ServiceDescription sd = new ServiceDescription();
-            sd.setType("devteam-role");
-            sd.setName(role());
-            dfd.addServices(sd);
-            DFService.register(this, dfd);
-        } catch (FIPAException e) {
-            System.err.println("[" + roleName() + "] DF registration failed: " + e.getMessage());
-        }
+        registerInDF();
 
         System.out.println("[" + roleName() + "] ready (model: " + brain.model() + ")");
 
         addBehaviour(new io.donbee.jade.core.behaviours.CyclicBehaviour(this) {
             @Override
             public void action() {
-                ACLMessage task = myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.REQUEST));
-                if (task == null) {
+                ACLMessage msg = myAgent.receive(
+                    MessageTemplate.or(
+                        MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
+                        MessageTemplate.MatchPerformative(ACLMessage.INFORM)));
+                if (msg == null) {
                     block();
                     return;
                 }
-                System.out.println("[" + roleName() + "] thinking about: "
-                    + firstLine(task.getContent()));
-                ACLMessage reply = task.createReply();
-                try {
-                    String result = brain.respond(systemPrompt(), task.getContent());
-                    reply.setPerformative(ACLMessage.INFORM);
-                    reply.setContent(result);
-                } catch (Exception e) {
-                    reply.setPerformative(ACLMessage.FAILURE);
-                    reply.setContent("(" + roleName() + "-failed " + sanitize(e.getMessage()) + ")");
-                    System.err.println("[" + roleName() + "] brain call failed: " + e.getMessage());
-                }
-                myAgent.send(reply);
+                handleIncomingMessage(msg);
             }
         });
+    }
+
+    /**
+     * Handle incoming REQUEST or INFORM messages. Subclasses can override to
+     * customize behavior for direct peer communication.
+     */
+    protected void handleIncomingMessage(ACLMessage msg) {
+        if (msg.getPerformative() == ACLMessage.REQUEST) {
+            handleTask(msg);
+        } else {
+            // INFORM - peer-to-peer communication
+            onPeerMessage(msg);
+        }
+    }
+
+    /** Subclasses implement task handling (LLM delegation + response). */
+    protected void handleTask(ACLMessage request) {
+        System.out.println("[" + roleName() + "] thinking about: "
+            + firstLine(request.getContent()));
+        ACLMessage reply = request.createReply();
+        try {
+            String result = brain.respond(systemPrompt(), request.getContent());
+            reply.setPerformative(ACLMessage.INFORM);
+            reply.setContent(result);
+        } catch (Exception e) {
+            reply.setPerformative(ACLMessage.FAILURE);
+            reply.setContent("(" + roleName() + "-failed " + sanitize(e.getMessage()) + ")");
+            System.err.println("[" + roleName() + "] brain call failed: " + e.getMessage());
+        }
+        send(reply);
+    }
+
+    /** Called when a peer sends us an INFORM message (direct P2P comms). */
+    protected void onPeerMessage(ACLMessage msg) {
+        // Default: ignore peer messages. Override in subclasses if needed.
+    }
+
+    private void registerInDF() {
+        try {
+            DFAgentDescription dfd = new DFAgentDescription();
+            dfd.setName(getAID());
+            ServiceDescription sd = new ServiceDescription();
+            sd.setType(DF_ROLE_SERVICE_TYPE);
+            sd.setName(role());
+            sd.addProperties(new Property("team", teamId));
+            dfd.addServices(sd);
+            DFService.register(this, dfd);
+        } catch (FIPAException e) {
+            System.err.println("[" + roleName() + "] DF registration failed: " + e.getMessage());
+        }
+    }
+
+    protected AID findPeer(String roleSuffix) {
+        try {
+            DFAgentDescription template = new DFAgentDescription();
+            ServiceDescription sd = new ServiceDescription();
+            sd.setType(DF_ROLE_SERVICE_TYPE);
+            sd.setName(roleSuffix);
+            sd.addProperties(new Property("team", teamId));
+            template.addServices(sd);
+            DFAgentDescription[] results = DFService.search(this, null, template, null);
+            if (results.length > 0) {
+                return results[0].getName();
+            }
+        } catch (FIPAException e) {
+            System.err.println("[" + roleName() + "] DF lookup failed for " + roleSuffix + ": " + e.getMessage());
+        }
+        return null;
+    }
+
+    /** Find all roles on this team (including self). */
+    protected Set<String> findTeamRoles(String peerRole) {
+        Set<String> roles = new java.util.HashSet<>();
+        roles.add("architect");
+        roles.add("implementer");
+        roles.add("tester");
+        roles.add("reviewer");
+        roles.remove(peerRole);
+        return roles;
+    }
+
+    /** Notify a peer agent directly with an INFORM message. */
+    protected void notifyPeer(String roleSuffix, String content) {
+        AID peer = findPeer(roleSuffix);
+        if (peer != null) {
+            ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+            msg.addReceiver(peer);
+            msg.setProtocol("FIPA_REQUEST");
+            msg.setConversationId("dt-peer-" + getLocalName());
+            msg.setContent(content);
+            send(msg);
+        }
     }
 
     @Override
     protected void takeDown() {
         try {
             DFService.deregister(this);
-        } catch (FIPAException ignored) {
-            // Already gone
-        }
+        } catch (FIPAException ignored) {}
     }
 
     private Brain buildBrain(String brainType, String baseUrl, String model,
@@ -136,7 +219,6 @@ public abstract class RoleAgent extends Agent {
                 model, role(), dir, timeoutSec * 1000,
                 githubToken != null ? Map.of("GH_TOKEN", githubToken) : null);
         }
-        // Default: HTTP brain (OpenAI-compatible endpoint).
         String apiKey = SecretsResolver.resolveApiKey(System::getenv, keyEnvVar, Path.of(""));
         LlmConfig.Builder builder = LlmConfig.builder(baseUrl, model)
             .apiKey(() -> apiKey)
@@ -147,7 +229,6 @@ public abstract class RoleAgent extends Agent {
         return new HttpBrain(builder.build());
     }
 
-    /** GH_TOKEN env var, else the gitignored secrets file (best effort). */
     private String resolveGithubTokenQuietly() {
         try {
             return SecretsResolver.resolveGithubToken(System::getenv, Path.of(""));
@@ -158,6 +239,12 @@ public abstract class RoleAgent extends Agent {
 
     String roleName() {
         return getLocalName();
+    }
+
+    private String extractTeamId(String localName) {
+        String r = role();
+        String suffix = "-" + r;
+        return localName.endsWith(suffix) ? localName.substring(0, localName.length() - suffix.length()) : localName;
     }
 
     static String firstLine(String s) {

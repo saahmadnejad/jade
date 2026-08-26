@@ -68,6 +68,13 @@ public class ManagerAgent extends Agent {
             sd.setType("devteam-manager");
             sd.setName("coordinator:" + teamId);
             dfd.addServices(sd);
+            // Also register as peer-discoverable "manager" role
+            io.donbee.jade.domain.FIPAAgentManagement.ServiceDescription sdPeer =
+                new io.donbee.jade.domain.FIPAAgentManagement.ServiceDescription();
+            sdPeer.setType("devteam-role");
+            sdPeer.setName("manager");
+            sdPeer.addProperties(new io.donbee.jade.domain.FIPAAgentManagement.Property("team", teamId));
+            dfd.addServices(sdPeer);
             io.donbee.jade.domain.DFService.register(this, dfd);
         } catch (io.donbee.jade.domain.FIPAException e) {
             System.err.println("[devteam:" + teamId + "] DF registration failed: " + e.getMessage());
@@ -112,7 +119,9 @@ public class ManagerAgent extends Agent {
                     block();
                     return;
                 }
-                if (!reply.getConversationId().startsWith("dt-")) {
+                String convId = reply.getConversationId();
+                // Only handle Manager's own phase messages, ignore peer (dt-peer-*) messages
+                if (convId == null || !convId.startsWith("dt-") || convId.startsWith("dt-peer-")) {
                     return; // not ours
                 }
                 callsUsed++;
@@ -251,12 +260,40 @@ public class ManagerAgent extends Agent {
     // ---- task builders -------------------------------------------------
 
     private void sendTo(String roleSuffix, String content, String conversationId) {
+        AID peer = findPeer(roleSuffix);
+        if (peer == null) {
+            System.err.println("[devteam:" + teamId + "] sendTo: peer not found for " + roleSuffix
+                + ", falling back to hardcoded AID");
+            peer = new AID(teamId + "-" + roleSuffix, AID.ISLOCALNAME);
+        }
         ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
-        msg.addReceiver(new AID(teamId + "-" + roleSuffix, AID.ISLOCALNAME));
+        msg.addReceiver(peer);
         msg.setProtocol(FIPANames.InteractionProtocol.FIPA_REQUEST);
         msg.setConversationId(conversationId);
         msg.setContent(content);
         send(msg);
+    }
+
+    /** Find a peer agent by role suffix on the same team using DF. */
+    private AID findPeer(String roleSuffix) {
+        try {
+            io.donbee.jade.domain.FIPAAgentManagement.DFAgentDescription template =
+                new io.donbee.jade.domain.FIPAAgentManagement.DFAgentDescription();
+            io.donbee.jade.domain.FIPAAgentManagement.ServiceDescription sd =
+                new io.donbee.jade.domain.FIPAAgentManagement.ServiceDescription();
+            sd.setType("devteam-role");
+            sd.setName(roleSuffix);
+            sd.addProperties(new io.donbee.jade.domain.FIPAAgentManagement.Property("team", teamId));
+            template.addServices(sd);
+            io.donbee.jade.domain.FIPAAgentManagement.DFAgentDescription[] results =
+                io.donbee.jade.domain.DFService.search(this, null, template, null);
+            if (results.length > 0) {
+                return results[0].getName();
+            }
+        } catch (io.donbee.jade.domain.FIPAException e) {
+            System.err.println("[devteam:" + teamId + "] DF lookup failed for " + roleSuffix + ": " + e.getMessage());
+        }
+        return null;
     }
 
     private String clarifyTask() {

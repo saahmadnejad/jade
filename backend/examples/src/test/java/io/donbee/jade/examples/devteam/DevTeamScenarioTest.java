@@ -33,14 +33,14 @@ public class DevTeamScenarioTest {
     }
 
     @Test
-    public void Given_Defaults_When_AgentsComputed_Then_CliBrainIsDefault() {
+    public void Given_Defaults_When_AgentsComputed_Then_HttpBrainIsDefault() {
         var specs = scenario.agents(config("workspaceDir", "/tmp/team-ws"));
 
         AgentSpec architect = specs.get(1);
-        assertThat(architect.getArgs().get(0)).isEqualTo("cli");                 // brainType
-        assertThat(architect.getArgs()).contains("opencode run --auto", "/tmp/team-ws");
-        assertThat(architect.getArgs().get(2)).isEqualTo("thinkingmachines/inkling:free");
-        assertThat(architect.getArgs().get(3)).isEqualTo("ox-alpha"); // fallback model
+        assertThat(architect.getArgs().get(0)).isEqualTo("http");                // brainType
+        assertThat(architect.getArgs()).contains("/tmp/team-ws");
+        assertThat(architect.getArgs().get(2)).isEqualTo("nvidia/nemotron-3.5-lightning:free");
+        assertThat(architect.getArgs().get(3)).isEqualTo("nvidia/nemotron-3.5-lightning:free"); // fallback model
     }
 
     @Test

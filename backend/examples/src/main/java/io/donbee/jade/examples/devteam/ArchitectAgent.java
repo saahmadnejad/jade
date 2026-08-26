@@ -1,6 +1,12 @@
 package io.donbee.jade.examples.devteam;
 
-/** Produces the technical design for the Brief as a design-document Artifact. */
+import io.donbee.jade.lang.acl.ACLMessage;
+
+/**
+ * Produces the technical design for the Brief as a design-document Artifact.
+ * Supports P2P communication: after producing a design, notifies Implementer
+ * directly so the Manager only tracks phase transitions.
+ */
 public class ArchitectAgent extends RoleAgent {
 
     @Override
@@ -21,5 +27,24 @@ public class ArchitectAgent extends RoleAgent {
             - End with a section '## Files' listing every planned file path on its
               own line in the form `- path`.
             Keep it under 400 words. No code yet.""";
+    }
+
+    @Override
+    protected void handleTask(ACLMessage request) {
+        System.out.println("[" + roleName() + "] thinking about: "
+            + firstLine(request.getContent()));
+        ACLMessage reply = request.createReply();
+        try {
+            String result = brain.respond(systemPrompt(), request.getContent());
+            reply.setPerformative(ACLMessage.INFORM);
+            reply.setContent(result);
+            // P2P: notify Implementer directly with the design
+            notifyPeer("implementer", result);
+        } catch (Exception e) {
+            reply.setPerformative(ACLMessage.FAILURE);
+            reply.setContent("(" + roleName() + "-failed " + sanitize(e.getMessage()) + ")");
+            System.err.println("[" + roleName() + "] brain call failed: " + e.getMessage());
+        }
+        send(reply);
     }
 }
