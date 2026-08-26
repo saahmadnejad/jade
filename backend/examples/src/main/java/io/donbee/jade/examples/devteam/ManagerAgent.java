@@ -58,6 +58,21 @@ public class ManagerAgent extends Agent {
                 ? java.nio.file.Path.of(workspaceDirParam.trim()) : null);
         deadlineAt = System.currentTimeMillis() + roundStartTimeoutMin * 60_000L;
 
+        // Visible on the DF page as the team's coordinator.
+        try {
+            io.donbee.jade.domain.FIPAAgentManagement.DFAgentDescription dfd =
+                new io.donbee.jade.domain.FIPAAgentManagement.DFAgentDescription();
+            dfd.setName(getAID());
+            io.donbee.jade.domain.FIPAAgentManagement.ServiceDescription sd =
+                new io.donbee.jade.domain.FIPAAgentManagement.ServiceDescription();
+            sd.setType("devteam-manager");
+            sd.setName("coordinator:" + teamId);
+            dfd.addServices(sd);
+            io.donbee.jade.domain.DFService.register(this, dfd);
+        } catch (io.donbee.jade.domain.FIPAException e) {
+            System.err.println("[devteam:" + teamId + "] DF registration failed: " + e.getMessage());
+        }
+
         if (brief == null || brief.isBlank()) {
             finish("FAILED", "No brief provided. Tell the team what to develop: fill the "
                 + "'brief' field in the scenario config (like a README) and start again.");
@@ -201,6 +216,15 @@ public class ManagerAgent extends Agent {
 
     private boolean githubWanted() {
         return githubOrg != null && !githubOrg.isBlank();
+    }
+
+    @Override
+    protected void takeDown() {
+        try {
+            io.donbee.jade.domain.DFService.deregister(this);
+        } catch (Exception ignored) {
+            // Already gone
+        }
     }
 
     private static boolean githubTokenAvailable() {
