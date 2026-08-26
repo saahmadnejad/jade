@@ -93,6 +93,15 @@ export default function MessagesPage() {
     setMessages([]);
   }, []);
 
+  /** Open the modal with the row data, then upgrade to the full message. */
+  const openDetails = useCallback((row: AclMessageEvent) => {
+    setDetailsMessage(row);
+    api.messages.getById(row.id)
+      .then((full) => setDetailsMessage((current) =>
+        current && current.id === full.id ? full : current))
+      .catch((e) => console.error('Failed to fetch full message', e));
+  }, []);
+
   return (
     <Box>
       <PageHeader
@@ -177,7 +186,7 @@ export default function MessagesPage() {
                   </TableCell>
                   <TableCell align="right">
                     <Tooltip title="View message details">
-                      <IconButton size="small" onClick={() => setDetailsMessage(m)}>
+                      <IconButton size="small" onClick={() => openDetails(m)}>
                         <VisibilityIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -195,29 +204,27 @@ export default function MessagesPage() {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
-          Message #{detailsMessage?.id} — {detailsMessage?.performative}
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip label={`#${detailsMessage?.id}`} size="small" />
+          <Chip label={detailsMessage?.performative ?? ''} size="small" color="primary" variant="outlined" />
+          {detailsMessage?.sender} → {detailsMessage?.receiver}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 1, mb: 2 }}>
             <Typography variant="body2" color="text.secondary">Time</Typography>
             <Typography variant="body2">{detailsMessage ? new Date(detailsMessage.timestamp).toLocaleString() : ''}</Typography>
-            <Typography variant="body2" color="text.secondary">From</Typography>
-            <Typography variant="body2">{detailsMessage?.sender}</Typography>
-            <Typography variant="body2" color="text.secondary">To</Typography>
-            <Typography variant="body2">{detailsMessage?.receiver}</Typography>
-            <Typography variant="body2" color="text.secondary">Performative</Typography>
-            <Typography variant="body2">{detailsMessage?.performative}</Typography>
             <Typography variant="body2" color="text.secondary">Protocol</Typography>
-            <Typography variant="body2">{detailsMessage?.protocol}</Typography>
+            <Typography variant="body2">{detailsMessage?.protocol || '—'}</Typography>
             <Typography variant="body2" color="text.secondary">Ontology</Typography>
-            <Typography variant="body2">{detailsMessage?.ontology}</Typography>
+            <Typography variant="body2">{detailsMessage?.ontology || '—'}</Typography>
           </Box>
-          <Typography variant="subtitle2" gutterBottom>Content</Typography>
-          <Paper
-            variant="outlined"
-            sx={{ p: 1.5, maxHeight: 320, overflowY: 'auto' }}
-          >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+            <Typography variant="subtitle2">Content</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {detailsMessage?.content.length.toLocaleString()} chars · full message
+            </Typography>
+          </Box>
+          <Paper variant="outlined" sx={{ p: 1.5, maxHeight: 380, overflowY: 'auto' }}>
             <Box
               component="pre"
               sx={{ m: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'monospace', fontSize: 13 }}

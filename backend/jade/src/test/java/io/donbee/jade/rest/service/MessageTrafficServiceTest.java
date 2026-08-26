@@ -101,6 +101,32 @@ public class MessageTrafficServiceTest {
     }
 
     @Test
+    public void Given_LongContent_When_Captured_Then_BufferKeepsFullAndRecentTruncates() {
+        // --- Arrange ---
+        MessageTrafficService service = new MessageTrafficService();
+        String longContent = "x".repeat(1000);
+
+        // --- Act ---
+        service.onMessage(sender, receiver, message(ACLMessage.INFORM, longContent));
+        List<JsonObject> recent = service.recent(10, null, null);
+        JsonObject full = service.getById(recent.get(0).getString("id"));
+
+        // --- Assert ---
+        assertThat(recent.get(0).getString("content")).hasSize(256 + 3).endsWith("...");
+        assertThat(full).isNotNull();
+        assertThat(full.getString("content")).isEqualTo(longContent); // detail view: untruncated
+    }
+
+    @Test
+    public void Given_UnknownId_When_GetById_Then_Null() {
+        // --- Arrange ---
+        MessageTrafficService service = new MessageTrafficService();
+
+        // --- Act / Assert ---
+        assertThat(service.getById("999")).isNull();
+    }
+
+    @Test
     public void Given_Subscriber_When_MessageCaptured_Then_ReceivesLiveFrameAndUnsubscribeStopsDelivery() {
         // --- Arrange ---
         MessageTrafficService service = new MessageTrafficService();

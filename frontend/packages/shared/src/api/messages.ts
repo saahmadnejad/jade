@@ -16,6 +16,12 @@ export class MessageAPI {
     const res = await this.httpClient.get<MessagesRecentResponse>('/messages/recent', { params });
     return res.data;
   };
+
+  /** Full single message (untruncated content) by capture id. */
+  getById = async (id: string): Promise<AclMessageEvent> => {
+    const res = await this.httpClient.get<AclMessageEvent>(`/messages/${id}`);
+    return res.data;
+  };
 }
 
 /**

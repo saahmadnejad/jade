@@ -38,6 +38,7 @@ import io.donbee.jade.rest.handler.ShutdownHandler;
 import io.donbee.jade.rest.handler.ToolLaunchHandler;
 import io.donbee.jade.rest.handler.HealthHandler;
 import io.donbee.jade.rest.handler.JsonFailureHandler;
+import io.donbee.jade.rest.handler.MessagesByIdHandler;
 import io.donbee.jade.rest.handler.MessagesRecentHandler;
 import io.donbee.jade.rest.handler.MessagesStreamHandler;
 import io.donbee.jade.rest.handler.PlatformInfoHandler;
@@ -133,6 +134,8 @@ public class RestAPIVerticle extends AbstractVerticle {
         // Messages (live ACL traffic)
         router.get(ApiRoutes.MESSAGES_RECENT).handler(new MessagesRecentHandler(trafficService));
         router.get(ApiRoutes.MESSAGES_STREAM).handler(new MessagesStreamHandler(trafficService));
+        // Declare before any parameterized /api/messages/:id route would match "recent".
+        router.get(ApiRoutes.MESSAGES_BY_ID).handler(new MessagesByIdHandler(trafficService));
 
         // Scenarios
         ScenarioService scenarioService = new ScenarioService(service);

@@ -57,6 +57,7 @@ public final class ApiRoutes {
     // Messages (live ACL traffic)
     public static final String MESSAGES_RECENT = "/api/messages/recent";
     public static final String MESSAGES_STREAM = "/api/messages/stream";
+    public static final String MESSAGES_BY_ID = "/api/messages/:id";
 
     // Tools
     public static final String TOOLS_START = "/api/tools/:tool/start";

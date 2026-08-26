@@ -76,15 +76,28 @@ public class MessageTrafficService implements MessageTrafficListener {
             }
             buffer.addLast(json.copy());
         }
-        notifySubscribers(json);
+        notifySubscribers(truncated(json));
     }
 
     /**
-     * Snapshot of the buffered messages, oldest first, with optional filters.
+     * Full single message by its capture id, with untruncated content.
      *
-     * @param limit maximum number of messages returned (0 = default 100)
-     * @param from  substring filter on sender local name (nullable)
-     * @param to    substring filter on receiver local name (nullable)
+     * @return the message, or null when no capture with this id exists
+     */
+    public JsonObject getById(String id) {
+        synchronized (buffer) {
+            for (JsonObject msg : buffer) {
+                if (msg.getString("id", "").equals(id)) {
+                    return msg;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Snapshot of the buffered messages, oldest first, with optional filters
+     * and truncated content (for table rendering).
      */
     public List<JsonObject> recent(int limit, String from, String to) {
         int max = limit > 0 ? limit : 100;
@@ -92,7 +105,7 @@ public class MessageTrafficService implements MessageTrafficListener {
         synchronized (buffer) {
             for (JsonObject msg : buffer) {
                 if (matches(msg, from, to)) {
-                    result.add(msg);
+                    result.add(truncated(msg));
                 }
             }
         }
@@ -134,6 +147,17 @@ public class MessageTrafficService implements MessageTrafficListener {
         }
     }
 
+    /** Copy with truncated content, for table/list rendering. */
+    static JsonObject truncated(JsonObject full) {
+        String content = full.getString("content", "");
+        if (content.length() <= CONTENT_TRUNCATE_LENGTH) {
+            return full;
+        }
+        JsonObject copy = full.copy();
+        copy.put("content", content.substring(0, CONTENT_TRUNCATE_LENGTH) + "...");
+        return copy;
+    }
+
     private static boolean matches(JsonObject msg, String from, String to) {
         if (from != null && !msg.getString("sender", "").contains(from)) {
             return false;
@@ -146,9 +170,6 @@ public class MessageTrafficService implements MessageTrafficListener {
 
     private static JsonObject toJson(long id, AID sender, AID receiver, ACLMessage message) {
         String content = message.getContent();
-        if (content != null && content.length() > CONTENT_TRUNCATE_LENGTH) {
-            content = content.substring(0, CONTENT_TRUNCATE_LENGTH) + "...";
-        }
         return new JsonObject()
             .put("id", Long.toString(id))
             .put("timestamp", Instant.now().toString())

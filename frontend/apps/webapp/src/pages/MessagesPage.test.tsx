@@ -3,8 +3,9 @@ import { render, screen, waitFor, fireEvent, within } from '@testing-library/rea
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import MessagesPage from './MessagesPage';
 
-const { mockRecent } = vi.hoisted(() => ({
+const { mockRecent, mockGetById } = vi.hoisted(() => ({
   mockRecent: vi.fn(),
+  mockGetById: vi.fn(),
 }));
 
 const mockUnsubscribe = vi.fn();
@@ -29,7 +30,7 @@ vi.mock('shared/api/factory', () => ({
       getParents: vi.fn(), getChildren: vi.fn(), federate: vi.fn(),
       deregisterParent: vi.fn(), deregisterChild: vi.fn(),
     },
-    messages: { recent: mockRecent },
+    messages: { recent: mockRecent, getById: mockGetById },
   },
 }));
 
@@ -167,6 +168,9 @@ describe('MessagesPage', () => {
       total: 1,
       dropped: 0,
     });
+    // The list carries truncated content; getById returns the FULL message.
+    const fullContent = longContent + ' TAIL-BEYOND-TRUNCATION';
+    mockGetById.mockResolvedValue({ ...sampleMessage, content: fullContent });
     renderWithTheme(<MessagesPage />);
     await waitFor(() => expect(screen.getByText(longContent)).toBeInTheDocument());
 
@@ -174,14 +178,14 @@ describe('MessagesPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /view message details/i }));
 
     // --- Assert ---
+    await waitFor(() => expect(mockGetById).toHaveBeenCalledWith('1'));
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('Message #1');          // id
-    expect(dialog).toHaveTextContent('shop');                // sender
-    expect(dialog).toHaveTextContent('inventory');           // receiver
+    expect(dialog).toHaveTextContent('#1');                  // id chip
+    expect(dialog).toHaveTextContent('shop → inventory');     // route
     expect(dialog).toHaveTextContent('fipa-request');        // protocol
     expect(dialog).toHaveTextContent('shop-ontology');       // ontology
-    // Full untruncated content inside the modal (also present in the table cell)
-    expect(within(dialog).getByText(longContent)).toBeInTheDocument();
+    // Full untruncated content fetched by id and rendered in the modal
+    expect(within(dialog).getByText(fullContent)).toBeInTheDocument();
   });
 
   it('Given page unmounts, When leaving page, Then stream subscription is cancelled', async () => {

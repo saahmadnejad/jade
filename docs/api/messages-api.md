@@ -54,8 +54,30 @@ Field notes:
 
 - `id`: monotonic sequence number of the capture (per platform run).
 - `sender` / `receiver`: agent local names.
-- `content`: truncated to 256 characters.
+- `content`: **truncated to 256 characters** in list/stream views — fetch the
+  full message via `GET /api/messages/{id}`.
 - `dropped`: number of older messages evicted from the ring buffer since startup.
+
+---
+
+## GET /api/messages/{id}
+
+Returns one captured message with its **full, untruncated content**. Same
+schema as a list element. `404` when the id is unknown or was evicted from
+the buffer.
+
+```json
+{
+  "id": "42",
+  "timestamp": "2026-08-25T10:15:30.123Z",
+  "sender": "customer1",
+  "receiver": "shop",
+  "performative": "request",
+  "protocol": "fipa-request",
+  "ontology": "shop-ontology",
+  "content": "... complete, untruncated content ..."
+}
+```
 
 ---
 
