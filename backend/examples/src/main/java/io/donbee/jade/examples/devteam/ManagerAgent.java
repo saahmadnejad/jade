@@ -1,5 +1,6 @@
 package io.donbee.jade.examples.devteam;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.Map;
 
@@ -17,18 +18,21 @@ import io.donbee.jade.lang.acl.MessageTemplate;
  */
 public class ManagerAgent extends Agent {
 
-    private enum Phase { DESIGN, IMPLEMENT, TEST, REVIEW, DONE }
+    private enum Phase { CLARIFY, DESIGN, IMPLEMENT, TEST, REVIEW, PUBLISH, DONE }
 
     private String teamId;
     private Workspace workspace;
-    private Phase phase = Phase.DESIGN;
+    private Phase phase = Phase.CLARIFY;
     private int round = 1;
     private int callsUsed = 0;
     private long deadlineAt;
     private String brief;
     private String designDoc = "";
+    private String clarifications = "";
     private String reviewFeedback = "";
-    private String lastVerdictRaw = "";
+    private String githubOrg;
+    private String githubVisibility;
+    private java.nio.file.Path workDir;
     private int maxRounds;
     private int maxTotalCalls;
     private long roundStartTimeoutMin;
@@ -40,19 +44,39 @@ public class ManagerAgent extends Agent {
         maxRounds = intArg(args, 1, 3);
         maxTotalCalls = intArg(args, 2, 12);
         roundStartTimeoutMin = intArg(args, 3, 30);
+        String workspaceDirParam = str(args, 4, null);
+        githubOrg = str(args, 5, null);
+        githubVisibility = str(args, 6, "private");
 
         // Agent local name is "<instance>-manager"; instance names never end
         // in "-manager", so stripping the suffix recovers the team id.
         String local = getLocalName();
         teamId = local.endsWith("-manager") ? local.substring(0, local.length() - "-manager".length()) : local;
-        String mirrorDir = str(args, 4, null);
+        workDir = TeamDirs.resolve(teamId, workspaceDirParam);
         workspace = WorkspaceStore.getOrCreate(teamId,
-            mirrorDir != null && !mirrorDir.isBlank() ? java.nio.file.Path.of(mirrorDir.trim()) : null);
+            workspaceDirParam != null && !workspaceDirParam.isBlank()
+                ? java.nio.file.Path.of(workspaceDirParam.trim()) : null);
         deadlineAt = System.currentTimeMillis() + roundStartTimeoutMin * 60_000L;
 
+        try {
+            TeamScaffolder.scaffold(workDir, githubOrg, teamId + "-project", githubVisibility);
+        } catch (IOException e) {
+            System.err.println("[devteam:" + teamId + "] scaffolding failed: " + e.getMessage());
+        }
+
+        boolean githubWanted = githubOrg != null && !githubOrg.isBlank();
+        boolean ghTokenMissing = githubWanted && isBlank(System.getenv("GH_TOKEN"));
+        if (ghTokenMissing) {
+            finish("FAILED", "githubOrg='" + githubOrg + "' requires the GH_TOKEN environment "
+                + "variable (a PAT with Administration+Contents+Issues access to the org). "
+                + "Set it and restart the instance.");
+            return;
+        }
+
         System.out.println("[devteam:" + teamId + "] goal: " + firstLine(brief)
-            + " (maxRounds=" + maxRounds + ", maxCalls=" + maxTotalCalls + ")"
-            + (mirrorDir != null && !mirrorDir.isBlank() ? " mirror=" + mirrorDir : ""));
+            + " (maxRounds=" + maxRounds + ", maxCalls=" + maxTotalCalls
+            + ", brain=opencode, dir=" + workDir + ")"
+            + (githubWanted ? " github=" + githubOrg : ""));
         workspace.save("BRIEF.md", "# Brief\n\n" + brief + "\n");
 
         addBehaviour(new CyclicBehaviour(this) {
@@ -75,9 +99,9 @@ public class ManagerAgent extends Agent {
             }
         });
 
-        // Kick off phase 1
-        sendTo("architect", designTask(), "dt-design-" + round);
-        phase = Phase.DESIGN;
+        // Kick off phase 1: the architect clarifies the brief before designing.
+        sendTo("architect", clarifyTask(), "dt-clarify-" + round);
+        phase = Phase.CLARIFY;
     }
 
     private void handleReply(ACLMessage reply) {
@@ -91,6 +115,12 @@ public class ManagerAgent extends Agent {
         }
 
         switch (phase) {
+            case CLARIFY -> {
+                clarifications = reply.getContent();
+                workspace.save("CLARIFICATIONS.md", clarifications);
+                sendTo("architect", designTask(), "dt-design-" + round);
+                phase = Phase.DESIGN;
+            }
             case DESIGN -> {
                 designDoc = reply.getContent();
                 saveArtifacts(designDoc, "design");
@@ -111,21 +141,36 @@ public class ManagerAgent extends Agent {
                 phase = Phase.REVIEW;
             }
             case REVIEW -> {
-                lastVerdictRaw = reply.getContent();
-                workspace.save("REVIEW-round" + round + ".md", lastVerdictRaw);
-                boolean approved = lastVerdictRaw.toUpperCase().contains(ReviewerAgent.VERDICT_APPROVED.toUpperCase());
+                String reviewText = reply.getContent();
+                workspace.save("REVIEW-round" + round + ".md", reviewText);
+                boolean approved = reviewText.toUpperCase()
+                    .contains(ReviewerAgent.VERDICT_APPROVED.toUpperCase());
                 if (!approved) {
-                    reviewFeedback = extractChanges(lastVerdictRaw);
+                    reviewFeedback = extractChanges(reviewText);
                 }
-                evaluateNextRound(approved);
+                evaluateNextRound(approved, reviewText);
+            }
+            case PUBLISH -> {
+                String url = firstLine(reply.getContent());
+                workspace.save("GITHUB.md",
+                    "# Published\n\n" + url + "\n\n" + reply.getContent());
+                finish("PUBLISHED", "Team result published to " + url);
             }
             default -> { /* DONE */ }
         }
     }
 
-    private void evaluateNextRound(boolean approved) {
+    private void evaluateNextRound(boolean approved, String reviewText) {
+        if (approved && githubWanted() && callsUsed < maxTotalCalls) {
+            // One extra call: the implementer publishes the project to GitHub itself.
+            System.out.println("[devteam:" + teamId + "] approved - asking implementer to publish to GitHub");
+            sendTo("implementer", publishTask(), "dt-publish-" + round);
+            phase = Phase.PUBLISH;
+            return;
+        }
         if (approved) {
-            finish("APPROVED", "The reviewer approved the result in round " + round + ".");
+            finish("APPROVED", "The reviewer approved the result in round " + round
+                + "; call budget too low for the GitHub publish step.");
             return;
         }
         if (round >= maxRounds) {
@@ -141,6 +186,14 @@ public class ManagerAgent extends Agent {
         System.out.println("[devteam:" + teamId + "] starting round " + round + " with reviewer feedback");
         sendTo("implementer", implementTask(), "dt-implement-" + round);
         phase = Phase.IMPLEMENT;
+    }
+
+    private boolean githubWanted() {
+        return githubOrg != null && !githubOrg.isBlank();
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
     }
 
     private void finish(String status, String reason) {
@@ -163,9 +216,33 @@ public class ManagerAgent extends Agent {
         send(msg);
     }
 
-    private String designTask() {
+    private String clarifyTask() {
         return "Project brief from the product side:\n\n" + brief
-            + "\n\nProduce the technical design following your output contract.";
+            + "\n\nBefore designing, run a short self-interview (grilling skill): list up to 5 "
+            + "clarifying questions the brief leaves open. For each question, also state the "
+            + "answer you will assume, so the team can proceed without waiting.\n"
+            + "Output format:\n\n## Clarifying questions\n\n"
+            + "1. Q: <question>\n   Assumed answer: <your assumption>\n\n"
+            + "Then stop - the design comes in your next task.";
+    }
+
+    private String publishTask() {
+        return "The team approved your implementation. Publish it to GitHub now:\n\n"
+            + "- Repository: `" + githubOrg + "/" + teamId + "-project` (" + githubVisibility + ")\n"
+            + "- `git init`, commit ALL workspace files (src, tests, docs), create the repo "
+            + "under the org with `gh repo create`, push the main branch.\n"
+            + "- `gh` and `git` are authenticated via GH_TOKEN already.\n"
+            + "- Reply with the repository URL as the first line of your answer.";
+    }
+
+    private String designTask() {
+        StringBuilder sb = new StringBuilder("Project brief:\n\n").append(brief).append("\n\n");
+        if (!clarifications.isBlank()) {
+            sb.append("Clarified questions and assumed answers (from your previous task):\n\n")
+              .append(clarifications).append("\n\n");
+        }
+        sb.append("Produce the technical design following your output contract.");
+        return sb.toString();
     }
 
     private String implementTask() {

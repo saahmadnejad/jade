@@ -19,6 +19,7 @@ public class CliBrain implements Brain {
 
     private final List<String> command;
     private final String model;
+    private final String agent;
     private final Path workingDir;
     private final int timeoutMs;
 
@@ -26,15 +27,19 @@ public class CliBrain implements Brain {
      * @param command    base command and arguments, e.g. {@code [opencode, run]}
      * @param model      optional model identifier forwarded as {@code --model <model>}
      *                   when non-null/non-blank
+     * @param agent      optional opencode persona forwarded as {@code --agent <agent>}
+     *                   when non-null/non-blank
      * @param workingDir working directory for the process (nullable)
      * @param timeoutMs  hard kill timeout for one invocation
      */
-    public CliBrain(List<String> command, String model, Path workingDir, int timeoutMs) {
+    public CliBrain(List<String> command, String model, String agent,
+                    Path workingDir, int timeoutMs) {
         this.command = List.copyOf(Objects.requireNonNull(command, "command"));
         if (this.command.isEmpty()) {
             throw new IllegalArgumentException("command must not be empty");
         }
         this.model = model;
+        this.agent = agent;
         this.workingDir = workingDir;
         this.timeoutMs = timeoutMs <= 0 ? 120_000 : timeoutMs;
     }
@@ -42,6 +47,10 @@ public class CliBrain implements Brain {
     @Override
     public String respond(String systemPrompt, String userPrompt) {
         List<String> cmd = new ArrayList<>(command);
+        if (agent != null && !agent.isBlank()) {
+            cmd.add("--agent");
+            cmd.add(agent);
+        }
         if (model != null && !model.isBlank()) {
             cmd.add("--model");
             cmd.add(model);

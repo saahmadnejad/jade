@@ -117,7 +117,7 @@ public abstract class RoleAgent extends Agent {
             Path dir = workingDir != null && !workingDir.isBlank()
                 ? Path.of(workingDir.trim()) : null;
             return new CliBrain(List.of(cliCommand.trim().split("\\s+")),
-                model, dir, timeoutSec * 1000);
+                model, role(), dir, timeoutSec * 1000);
         }
         // Default: HTTP brain (OpenAI-compatible endpoint).
         String apiKey = SecretsResolver.resolveApiKey(System::getenv, keyEnvVar, Path.of(""));

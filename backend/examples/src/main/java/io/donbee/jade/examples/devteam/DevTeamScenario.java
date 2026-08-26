@@ -71,7 +71,11 @@ public class DevTeamScenario implements Scenario {
             ScenarioParam.stringParam("architectModel", "thinkingmachines/inkling:free", "Architect model"),
             ScenarioParam.stringParam("implementerModel", "poolside/laguna-s-2.1:free", "Implementer model"),
             ScenarioParam.stringParam("testerModel", "minimax/minimax-m3:free", "Tester model"),
-            ScenarioParam.stringParam("reviewerModel", "z-ai/glm-5.2:free", "Reviewer model"));
+            ScenarioParam.stringParam("reviewerModel", "z-ai/glm-5.2:free", "Reviewer model"),
+            ScenarioParam.stringParam("githubOrg", "moreshco-agents",
+                "GitHub org the team publishes to (empty = skip GitHub)"),
+            ScenarioParam.stringParam("githubVisibility", "private",
+                "Created repository visibility: private or public"));
     }
 
     @Override
@@ -93,7 +97,9 @@ public class DevTeamScenario implements Scenario {
         specs.add(new AgentSpec("manager", MANAGER_CLASS, List.of(
             brief, String.valueOf(maxRounds), String.valueOf(maxTotalCalls),
             String.valueOf(Math.max(1, callTimeoutSec / 60)),
-            workspaceDir)));
+            workspaceDir,
+            str(config, "githubOrg"),
+            str(config, "githubVisibility"))));
 
         specs.add(roleSpec("architect", ARCHITECT_CLASS, config));
         specs.add(roleSpec("implementer", IMPLEMENTER_CLASS, config));

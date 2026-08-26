@@ -24,7 +24,7 @@ public class CliBrainTest {
         // --- Arrange ---
         Path echoArgs = fakeCli("printf 'ARGS:%s' \"$*\"");
         CliBrain brain = new CliBrain(List.of("sh", echoArgs.toString()),
-            "test/model", null, 10_000);
+            "test/model", "architect", null, 10_000);
 
         // --- Act ---
         String out = brain.respond("Be brief.", "Say hi");
@@ -32,6 +32,8 @@ public class CliBrainTest {
         // --- Assert ---
         assertThat(out).startsWith("ARGS:");
         assertThat(out)
+            .contains("--agent")
+            .contains("architect")
             .contains("--model")
             .contains("test/model")
             .contains("Be brief.")
@@ -43,7 +45,7 @@ public class CliBrainTest {
     public void Given_NonZeroExit_When_Respond_Then_BrainExceptionWithStderr() throws Exception {
         // --- Arrange ---
         Path failer = fakeCli("echo 'boom detail' >&2; exit 3");
-        CliBrain brain = new CliBrain(List.of("sh", failer.toString()), null, null, 10_000);
+        CliBrain brain = new CliBrain(List.of("sh", failer.toString()), null, null, null, 10_000);
 
         // --- Act / Assert ---
         assertThatThrownBy(() -> brain.respond(null, "u"))
@@ -56,7 +58,7 @@ public class CliBrainTest {
     public void Given_Timeout_When_Respond_Then_BrainExceptionAndProcessKilled() throws Exception {
         // --- Arrange ---
         Path sleeper = fakeCli("sleep 30");
-        CliBrain brain = new CliBrain(List.of("sh", sleeper.toString()), null, null, 300);
+        CliBrain brain = new CliBrain(List.of("sh", sleeper.toString()), null, null, null, 300);
 
         // --- Act / Assert ---
         long start = System.currentTimeMillis();
@@ -70,7 +72,7 @@ public class CliBrainTest {
     public void Given_EmptyOutput_When_Respond_Then_BrainException() throws Exception {
         // --- Arrange ---
         Path silent = fakeCli("exit 0");
-        CliBrain brain = new CliBrain(List.of("sh", silent.toString()), null, null, 10_000);
+        CliBrain brain = new CliBrain(List.of("sh", silent.toString()), null, null, null, 10_000);
 
         // --- Act / Assert ---
         assertThatThrownBy(() -> brain.respond(null, "u"))
