@@ -68,6 +68,7 @@ public class DevTeamScenarioTest {
 
         AgentSpec manager = specs.get(0);
         assertThat(manager.getArgs()).containsExactly(
-            "Build X", "5", "30", "5", "/tmp/team-ws", "moreshco-agents", "private"); // 300s -> 5min
+            "Build X", "5", "30", "5", "/tmp/team-ws", "moreshco-agents", "private",
+            "true"); // 300s -> 5min, clarify on
     }
 }

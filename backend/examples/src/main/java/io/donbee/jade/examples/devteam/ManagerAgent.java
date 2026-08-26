@@ -105,9 +105,14 @@ public class ManagerAgent extends Agent {
             }
         });
 
-        // Kick off phase 1: the architect clarifies the brief before designing.
-        sendTo("architect", clarifyTask(), "dt-clarify-" + round);
-        phase = Phase.CLARIFY;
+        // Kick off phase 1: optionally clarify, then design.
+        if (Boolean.parseBoolean(str(args, 7, "true"))) {
+            sendTo("architect", clarifyTask(), "dt-clarify-" + round);
+            phase = Phase.CLARIFY;
+        } else {
+            sendTo("architect", designTask(), "dt-design-" + round);
+            phase = Phase.DESIGN;
+        }
     }
 
     private void handleReply(ACLMessage reply) {

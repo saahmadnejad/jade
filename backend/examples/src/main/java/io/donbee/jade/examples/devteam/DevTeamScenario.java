@@ -54,6 +54,8 @@ public class DevTeamScenario implements Scenario {
             ScenarioParam.intParam("callTimeoutSec", 300, 10, 1800, "Timeout per LLM call"),
             ScenarioParam.stringParam("fallbackModel", "ox-alpha",
                 "Fallback brain model when the role model fails or times out"),
+            ScenarioParam.boolParam("clarify", true,
+                "Run a clarification pass before design (set false to skip it and start faster)"),
             ScenarioParam.stringParam("brainType", "cli",
                 "Agent reasoning backend: 'cli' (opencode CLI) or 'http' (OpenAI-compatible endpoint)"),
             ScenarioParam.stringParam("cliCommand", "opencode run --auto",
@@ -99,7 +101,8 @@ public class DevTeamScenario implements Scenario {
             String.valueOf(Math.max(1, callTimeoutSec / 60)),
             workspaceDir,
             str(config, "githubOrg"),
-            str(config, "githubVisibility"))));
+            str(config, "githubVisibility"),
+            String.valueOf(config.get("clarify")))));
 
         specs.add(roleSpec("architect", ARCHITECT_CLASS, config));
         specs.add(roleSpec("implementer", IMPLEMENTER_CLASS, config));
