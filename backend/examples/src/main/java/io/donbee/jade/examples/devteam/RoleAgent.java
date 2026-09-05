@@ -48,10 +48,11 @@ public abstract class RoleAgent extends Agent {
     protected static final String DF_ROLE_SERVICE_TYPE = "devteam-role";
 
     /**
-     * Protocol for peer-to-peer INFORM messages. The value must be the
-     * FIPA-standard constant ({@code fipa-request}), not a hand-written
-     * literal: FIPA protocol names are case-sensitive and an uppercase
-     * {@code "FIPA_REQUEST"} string is non-conformant on the wire.
+     * Protocol for peer-to-peer INFORM messages. The value must be the exact
+     * reserved token defined by the FIPA Interaction Protocol Library
+     * ({@code fipa-request}); hand-written variants such as
+     * {@code "FIPA_REQUEST"} do not match the reserved value and are
+     * non-conformant on the wire.
      */
     static final String PEER_PROTOCOL =
         FIPANames.InteractionProtocol.FIPA_REQUEST;
