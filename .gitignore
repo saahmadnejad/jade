@@ -24,3 +24,8 @@ dist/
 ### LLM API keys (ADR-0002) - never commit ###
 backend/examples/conf/secrets.local.properties
 secrets.local.properties
+
+# Eclipse IDE files
+backend/**/.project
+backend/**/.classpath
+backend/**/.settings/

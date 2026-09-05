@@ -20,6 +20,16 @@ public class ManagerAgent extends Agent {
 
     private enum Phase { CLARIFY, DESIGN, IMPLEMENT, TEST, REVIEW, PUBLISH, DONE }
 
+    /**
+     * Protocol for task assignment messages sent to Role Agents. Same
+     * FIPA-standard value ({@code fipa-request}) as the peer leg
+     * ({@link RoleAgent#PEER_PROTOCOL}); both must reference the spec
+     * constant, never hand-written literals (protocol names are
+     * case-sensitive).
+     */
+    static final String TASK_PROTOCOL =
+        FIPANames.InteractionProtocol.FIPA_REQUEST;
+
     private String teamId;
     private Workspace workspace;
     private Phase phase = Phase.CLARIFY;
@@ -268,7 +278,7 @@ public class ManagerAgent extends Agent {
         }
         ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
         msg.addReceiver(peer);
-        msg.setProtocol(FIPANames.InteractionProtocol.FIPA_REQUEST);
+        msg.setProtocol(TASK_PROTOCOL);
         msg.setConversationId(conversationId);
         msg.setContent(content);
         send(msg);
