@@ -61,7 +61,7 @@ public class DevTeamInfraTest {
     @Test
     public void Given_EnvVarPresent_When_KeyResolved_Then_EnvWins() {
         String key = SecretsResolver.resolveApiKey(
-            name -> "env-key", "MY_KEY", Path.of("nonexistent-dir"));
+            name -> "env-key", Path.of("nonexistent-dir"));
         assertThat(key).isEqualTo("env-key");
     }
 
@@ -70,9 +70,9 @@ public class DevTeamInfraTest {
         Path dir = Files.createTempDirectory("devteam-test");
         Path conf = dir.resolve("conf");
         Files.createDirectories(conf);
-        Files.writeString(conf.resolve("secrets.local.properties"), "api.key=file-key\n");
+        Files.writeString(conf.resolve("secrets-local.properties"), "llm.api.key=file-key\n");
 
-        String key = SecretsResolver.resolveApiKey(name -> null, "MY_KEY", dir);
+        String key = SecretsResolver.resolveApiKey(name -> null, dir);
         assertThat(key).isEqualTo("file-key");
     }
 
@@ -82,7 +82,7 @@ public class DevTeamInfraTest {
         Path dir = Files.createTempDirectory("devteam-gh");
         Path conf = dir.resolve("conf");
         Files.createDirectories(conf);
-        Files.writeString(conf.resolve("secrets.local.properties"), "github.token=gh-file-token\n");
+        Files.writeString(conf.resolve("secrets-local.properties"), "github.token=gh-file-token\n");
 
         // --- Act ---
         String token = SecretsResolver.resolveGithubToken(name -> "", dir);
@@ -95,10 +95,37 @@ public class DevTeamInfraTest {
     public void Given_NeitherSource_When_KeyResolved_Then_ActionableFailure() throws Exception {
         Path dir = Files.createTempDirectory("devteam-empty").toAbsolutePath();
         assertThatThrownBy(() ->
-            SecretsResolver.resolveApiKey(name -> null, "MY_KEY", dir))
+            SecretsResolver.resolveApiKey(name -> null, dir))
             .isInstanceOf(IllegalStateException.class)
-            .hasMessageContaining("MY_KEY")
+            .hasMessageContaining("NINEROUTER_API_KEY")
             .hasMessageContaining("Never commit secrets");
+    }
+
+    @Test
+    public void Given_EnvVarPresent_When_OptionalResolved_Then_EnvWins() {
+        String val = SecretsResolver.resolveOptional(name -> "env-val", "MY_URL", Path.of("nonexistent"),
+            "llm.base.url", "default");
+        assertThat(val).isEqualTo("env-val");
+    }
+
+    @Test
+    public void Given_NoEnvButLocalFile_When_OptionalResolved_Then_FileUsed() throws Exception {
+        Path dir = Files.createTempDirectory("devteam-opt");
+        Path conf = dir.resolve("conf");
+        Files.createDirectories(conf);
+        Files.writeString(conf.resolve("secrets-local.properties"),
+            "llm.base.url=file-url\n");
+
+        String val = SecretsResolver.resolveOptional(name -> null, "MY_URL", dir,
+            "llm.base.url", "default");
+        assertThat(val).isEqualTo("file-url");
+    }
+
+    @Test
+    public void Given_NeitherSource_When_OptionalResolved_Then_DefaultReturned() {
+        String val = SecretsResolver.resolveOptional(name -> null, "MY_URL", Path.of("nonexistent"),
+            "llm.base.url", "http://default:20128/v1");
+        assertThat(val).isEqualTo("http://default:20128/v1");
     }
 
     // ===== Workspace disk mirror =====

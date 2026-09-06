@@ -10,8 +10,8 @@ import java.util.List;
 
 
 /**
- * Prepares the instance working directory so every Role Agent's opencode
- * session is "skilled": vendors the bundled mattpocock/skills collection into
+ * Prepares the instance working directory so every Role Agent's workspace
+ * is "skilled": vendors the bundled skills collection into
  * {@code .opencode/skills/}, writes one persona per role into
  * {@code .opencode/agent/} and an {@code AGENTS.md} with team conventions.
  */
@@ -31,6 +31,7 @@ public final class TeamScaffolder {
      */
     public static void scaffold(Path workDir, String githubOrg, String repoName,
                                 String visibility) throws IOException {
+        System.out.println("[devteam] scaffolding workspace " + workDir);
         Files.createDirectories(workDir);
         copySkills(workDir.resolve(".opencode").resolve("skills"));
         for (String role : List.of("manager", "architect", "implementer", "tester", "reviewer")) {

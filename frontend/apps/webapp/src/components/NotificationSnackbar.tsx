@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Snackbar, Alert } from '@mui/material';
 
 export interface Feedback {
@@ -12,10 +12,14 @@ const closed: Feedback = { open: false, message: '', severity: 'success' };
 export function useFeedback() {
   const [feedback, setFeedback] = useState<Feedback>(closed);
 
-  const notify = (message: string, severity: 'success' | 'error' = 'success') =>
-    setFeedback({ open: true, message, severity });
-
-  const close = () => setFeedback(closed);
+  // Stable identities: pages use `notify` in useCallback/useEffect deps, and
+  // an unstable function there causes fetch loops (API-call spam).
+  const notify = useCallback(
+    (message: string, severity: 'success' | 'error' = 'success') =>
+      setFeedback({ open: true, message, severity }),
+    [],
+  );
+  const close = useCallback(() => setFeedback(closed), []);
 
   return { feedback, notify, close };
 }

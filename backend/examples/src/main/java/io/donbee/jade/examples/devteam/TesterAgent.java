@@ -33,7 +33,7 @@ public class TesterAgent extends RoleAgent {
             + firstLine(request.getContent()));
         ACLMessage reply = request.createReply();
         try {
-            String result = brain.respond(systemPrompt(), request.getContent());
+            String result = callBrain(systemPrompt(), request.getContent(), request.getConversationId());
             reply.setPerformative(ACLMessage.INFORM);
             reply.setContent(result);
             // P2P: notify Reviewer directly with the test report

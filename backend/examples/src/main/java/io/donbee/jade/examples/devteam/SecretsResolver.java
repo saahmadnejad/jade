@@ -14,25 +14,30 @@ import java.util.function.UnaryOperator;
  */
 public final class SecretsResolver {
 
-    /** Gitignored file that may hold `api.key=<secret>`. */
-    static final Path LOCAL_SECRETS_FILE =
-        Path.of("conf", "secrets.local.properties");
+    /*     * Gitignored file that may hold {@code llm.api.key=<secret>} (default profile). */
+    public static final String DEFAULT_PROFILE = "local";
 
     private SecretsResolver() {
     }
 
+    /** Name of the profile file: {@code secrets-<profile>.properties}. */
+    static Path secretsFile(String profile) {
+        return Path.of("conf", "secrets-" + profile + ".properties");
+    }
+
     /**
+     * Resolve the LLM API key from {@code NINEROUTER_API_KEY} env var first,
+     * then the gitignored local file's {@code llm.api.key} property.
+     *
      * @param envLookup    environment lookup (injectable for tests)
-     * @param keyEnvVar    environment variable name holding the API key
-     * @param workingDir   directory containing {@code conf/secrets.local.properties}
+     * @param workingDir   directory containing {@code conf/secrets-local.properties}
      * @return the resolved API key
      * @throws IllegalStateException when no source provides a key
      */
     public static String resolveApiKey(UnaryOperator<String> envLookup,
-                                       String keyEnvVar,
                                        Path workingDir) {
-        return resolve(envLookup, keyEnvVar, workingDir, "api.key",
-            "No LLM API key found. Set the '" + keyEnvVar + "' environment variable ");
+        return resolve(envLookup, "NINEROUTER_API_KEY", workingDir, DEFAULT_PROFILE, "llm.api.key",
+            "No LLM API key found. Set the 'NINEROUTER_API_KEY' environment variable ");
     }
 
     /**
@@ -40,28 +45,56 @@ public final class SecretsResolver {
      * gitignored local file's {@code github.token} property.
      */
     public static String resolveGithubToken(UnaryOperator<String> envLookup, Path workingDir) {
-        return resolve(envLookup, "GH_TOKEN", workingDir, "github.token",
+        return resolve(envLookup, "GH_TOKEN", workingDir, DEFAULT_PROFILE, "github.token",
             "No GitHub token found. Set the 'GH_TOKEN' environment variable ");
     }
 
-    private static String resolve(UnaryOperator<String> envLookup, String envVar,
-                                  Path workingDir, String fileProperty, String errorPrefix) {
+    /**
+     * Read an optional configuration property, checking environment variable
+     * first then the local secrets file, falling back to {@code defaultValue}.
+     * Unlike {@link #resolveApiKey}, this never throws — missing values use the
+     * default (useful for non-secret settings like base URL or model name).
+     */
+    public static String resolveOptional(UnaryOperator<String> envLookup, String envVar,
+                                         Path workingDir, String fileProperty, String defaultValue) {
+        return resolveOptional(envLookup, envVar, workingDir, DEFAULT_PROFILE,
+            fileProperty, defaultValue);
+    }
+
+    /**
+     * Like {@link #resolveOptional}, but with an explicit secrets profile so
+     * callers can read from {@code secrets-<profile>.properties} (e.g. a future
+     * "shop" profile). Env var is still checked first.
+     */
+    public static String resolveOptional(UnaryOperator<String> envLookup, String envVar,
+                                         Path workingDir, String profile,
+                                         String fileProperty, String defaultValue) {
         String fromEnv = envLookup.apply(envVar);
         if (fromEnv != null && !fromEnv.isBlank()) {
             return fromEnv.trim();
         }
-        String fromFile = readFromLocalFile(workingDir, fileProperty);
+        String fromFile = readFromFile(workingDir, profile, fileProperty);
+        return fromFile != null && !fromFile.isBlank() ? fromFile.trim() : defaultValue;
+    }
+
+    private static String resolve(UnaryOperator<String> envLookup, String envVar,
+                                  Path workingDir, String profile, String fileProperty, String errorPrefix) {
+        String fromEnv = envLookup.apply(envVar);
+        if (fromEnv != null && !fromEnv.isBlank()) {
+            return fromEnv.trim();
+        }
+        String fromFile = readFromFile(workingDir, profile, fileProperty);
         if (fromFile != null && !fromFile.isBlank()) {
             return fromFile.trim();
         }
         throw new IllegalStateException(
             errorPrefix
-                + "or create " + workingDir.resolve(LOCAL_SECRETS_FILE)
+                + "or create " + workingDir.resolve(secretsFile(profile))
                 + " (gitignored) with '" + fileProperty + "=<secret>'. Never commit secrets (ADR-0002).");
     }
 
-    private static String readFromLocalFile(Path workingDir, String property) {
-        Path file = workingDir.resolve(LOCAL_SECRETS_FILE);
+    private static String readFromFile(Path workingDir, String profile, String property) {
+        Path file = workingDir.resolve(secretsFile(profile));
         if (!Files.exists(file)) {
             return null;
         }

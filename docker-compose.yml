@@ -3,9 +3,12 @@ services:
     image: docker.io/decolua/9router:latest
     container_name: jade-9router
     ports:
-      - "20128:20128"
+      - "20129:20128"
     volumes:
-      - 9router-data:/app/data
+      # Reuse the local 9router's providers/keys so the container serves the
+      # same models as `npx 9router` on the host. Override with
+      # NINEROUTER_DB_DIR=... if your 9router data lives elsewhere.
+      - ${NINEROUTER_DB_DIR:-~/.9router/db}:/app/data/db
     environment:
       - DATA_DIR=/app/data
     healthcheck:
@@ -24,10 +27,8 @@ services:
       - "8080:8080"
     environment:
       - JAVA_OPTS=-Xmx512m
-      # CI-friendly passthroughs; values come from the host environment only.
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
-      - GH_TOKEN=${GH_TOKEN:-}
       - NINEROUTER_API_KEY=${NINEROUTER_API_KEY:-}
+      - GH_TOKEN=${GH_TOKEN:-}
     depends_on:
       9router:
         condition: service_healthy
@@ -36,6 +37,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    volumes:
+      - ./backend/examples/conf:/app/conf:ro
+      - devteam-workspaces:/workspace
 
   frontend:
     build:
@@ -49,4 +53,4 @@ services:
         condition: service_started
 
 volumes:
-  9router-data:
+  devteam-workspaces:

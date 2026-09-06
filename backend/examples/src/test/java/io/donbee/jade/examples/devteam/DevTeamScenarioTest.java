@@ -33,20 +33,19 @@ public class DevTeamScenarioTest {
     }
 
     @Test
-    public void Given_Defaults_When_AgentsComputed_Then_HttpBrainIsDefault() {
+    public void Given_Defaults_When_AgentsComputed_Then_LangChain4jBrainIsDefault() {
         var specs = scenario.agents(config("workspaceDir", "/tmp/team-ws"));
 
         AgentSpec architect = specs.get(1);
-        assertThat(architect.getArgs().get(0)).isEqualTo("http");                // brainType
+        assertThat(architect.getArgs().get(0)).isEqualTo("http://9router:20128/v1");  // baseUrl
         assertThat(architect.getArgs()).contains("/tmp/team-ws");
-        assertThat(architect.getArgs().get(2)).isEqualTo("kr/claude-sonnet-4.5");
-        assertThat(architect.getArgs().get(3)).isEqualTo("opencode/nemotron-3-ultra-free"); // fallback model
+        assertThat(architect.getArgs().get(1)).isEqualTo("glm");      // model
+        assertThat(architect.getArgs().get(2)).isEqualTo("glm");              // fallback model
     }
 
     @Test
     public void Given_RoleOverrides_When_AgentsComputed_Then_BrainArgsCarryModelAndProvider() {
         var specs = scenario.agents(config(
-            "brainType", "http",
             "implementerModel", "some/paid-model",
             "fallbackModel", "backup/model",
             "proxyEnabled", false,
@@ -56,9 +55,9 @@ public class DevTeamScenarioTest {
         AgentSpec implementer = specs.get(2);
         assertThat(implementer.getClassName()).isEqualTo(DevTeamScenario.IMPLEMENTER_CLASS);
         assertThat(implementer.getArgs()).containsExactly(
-            "http", "http://localhost:20128/v1", "some/paid-model", "backup/model",
-            "false", "192.168.1.151", "9999", "300", "NINEROUTER_API_KEY",
-            "opencode run --auto", "/tmp/team-ws");
+            "http://9router:20128/v1", "some/paid-model", "backup/model",
+            "false", "192.168.1.151", "9999", "600",
+            "/tmp/team-ws");
     }
 
     @Test
@@ -68,7 +67,7 @@ public class DevTeamScenarioTest {
 
         AgentSpec manager = specs.get(0);
         assertThat(manager.getArgs()).containsExactly(
-            "Build X", "5", "30", "5", "/tmp/team-ws", "moreshco-agents", "private",
-            "true"); // 300s -> 5min, clarify on
+            "Build X", "5", "30", "10", "/tmp/team-ws", "", "private",
+            "true"); // 300s call timeout -> >=10min phase budget, clarify on
     }
 }

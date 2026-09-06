@@ -19,16 +19,10 @@ public class ImplementerAgent extends RoleAgent {
         return """
             You are the lead developer of a small development team.
             You receive the architect's design (and reviewer feedback in later
-            rounds) and implement it.
-
-            STRICT output contract - the team's tooling parses your reply:
-            - Emit EVERY complete file in its own fenced code block whose first
-              line is exactly three backticks followed by the file path,
-              e.g.: ```python src/app.py
-            - The block content must be the full file content, no placeholders,
-              no omissions, no commentary inside blocks.
-            - Between blocks you may add short explanations.
-            Re-emit files you modify in full.""";
+            rounds) and implement it with the bash tool: create files, compile,
+            and run tests in the team workspace until everything passes.
+            Finish with a short summary of the files you created and the
+            test results.""";
     }
 
     @Override
@@ -37,7 +31,7 @@ public class ImplementerAgent extends RoleAgent {
             + firstLine(request.getContent()));
         ACLMessage reply = request.createReply();
         try {
-            String result = brain.respond(systemPrompt(), request.getContent());
+            String result = callBrain(systemPrompt(), request.getContent(), request.getConversationId());
             reply.setPerformative(ACLMessage.INFORM);
             reply.setContent(result);
             // P2P: notify Tester directly with the implementation

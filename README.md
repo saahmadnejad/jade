@@ -7,7 +7,7 @@ A fork of JADE (Java Agent DEvelopment Framework) running on Java 21 with virtua
 - **REST API** (~44 endpoints) + **React UI**: agents, containers, DF, tools, remote platforms
 - **Live message traffic** in the browser (WebSocket): watch FIPA ACL conversations as they happen (MessagesPage)
 - **Scenarios page**: launch configurable multi-agent demo scenarios with one click; each instance runs in its own container and can be stopped independently — or add your own scenarios by dropping a jar implementing the `io.donbee.jade.rest.scenario.Scenario` SPI on the classpath
-- **LLM-powered agents**: `io.donbee:llm` speaks any OpenAI-compatible endpoint (OpenRouter free models by default, paid providers or local Ollama via config) through an optional SOCKS5 proxy; the dev-team scenario has five AI agents build a small project from a brief
+- **LLM-powered agents**: `io.donbee:llm` speaks any OpenAI-compatible endpoint (9router with `combo-coding` by default, paid providers or local Ollama via config) via langchain4j; the dev-team scenario has five AI agents build a small project from a brief
 - **Library-ready artifacts**: `io.donbee:jade` (+ `fipa`, `llm`, `examples`) installable via Maven; the platform uber jar runs standalone without the UI
 
 ## Project Structure

@@ -1,132 +1,89 @@
 package io.donbee.llm;
 
-import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
- * {@link Brain} backed by an external CLI tool (e.g. {@code opencode run},
- * {@code claude -p}). The configured command receives the combined prompts on
- * its argument list; stdout is the generated text.
+ * A {@link Brain} that shells out to the opencode CLI agent. Instead of
+ * calling an HTTP LLM endpoint, this implementation invokes the {@code opencode}
+ * binary in a working directory, running its {@code run} subcommand with the
+ * prompt as the message.
  *
- * <p>Authentication is whatever the CLI tool itself is configured with — no
- * API keys flow through this library.</p>
+ * <p>Useful when you want the full opencode agent inside a JADE role agent
+ * (file system access, tool execution, multi-step reasoning). The opencode
+ * CLI must be on PATH and authenticated (via 9router in this project).
  */
 public class CliBrain implements Brain {
 
-    private final List<String> command;
     private final String model;
-    private final String agent;
-    private final Path workingDir;
-    private final int timeoutMs;
-    private final java.util.Map<String, String> extraEnv;
+    private final Path workDir;
+    private final Duration timeout;
 
-    /**
-     * @param command    base command and arguments, e.g. {@code [opencode, run]}
-     * @param model      optional model identifier forwarded as {@code --model <model>}
-     *                   when non-null/non-blank
-     * @param agent      optional opencode persona forwarded as {@code --agent <agent>}
-     *                   when non-null/non-blank
-     * @param workingDir working directory for the process (nullable)
-     * @param timeoutMs  hard kill timeout for one invocation
-     */
-    public CliBrain(List<String> command, String model, String agent,
-                    Path workingDir, int timeoutMs) {
-        this(command, model, agent, workingDir, timeoutMs, null);
-    }
-
-    /**
-     * @param extraEnv additional environment variables for the CLI process
-     *                 (e.g. {@code GH_TOKEN} so the tool can call {@code gh})
-     */
-    public CliBrain(List<String> command, String model, String agent,
-                    Path workingDir, int timeoutMs, java.util.Map<String, String> extraEnv) {
-        this.command = List.copyOf(Objects.requireNonNull(command, "command"));
-        if (this.command.isEmpty()) {
-            throw new IllegalArgumentException("command must not be empty");
-        }
-        this.model = model;
-        this.agent = agent;
-        this.workingDir = workingDir;
-        this.timeoutMs = timeoutMs <= 0 ? 120_000 : timeoutMs;
-        this.extraEnv = extraEnv == null ? Map.of() : Map.copyOf(extraEnv);
+    public CliBrain(String model, Path workDir, Duration timeout) {
+        this.model = model != null ? model : "combo-coding";
+        this.workDir = workDir != null ? workDir : Paths.get("").toAbsolutePath();
+        this.timeout = timeout != null ? timeout : Duration.ofSeconds(300);
     }
 
     @Override
     public String respond(String systemPrompt, String userPrompt) {
-        List<String> cmd = new ArrayList<>(command);
-        if (agent != null && !agent.isBlank()) {
-            cmd.add("--agent");
-            cmd.add(agent);
-        }
+        String fullPrompt = (systemPrompt != null && !systemPrompt.isBlank())
+            ? systemPrompt + "\n\n---\n\n" + userPrompt
+            : userPrompt;
+
+        List<String> cmd = new ArrayList<>();
+        cmd.add("opencode");
+        cmd.add("run");
         if (model != null && !model.isBlank()) {
-            cmd.add("--model");
+            cmd.add("-m");
             cmd.add(model);
         }
-        cmd.add(combine(systemPrompt, userPrompt));
+        cmd.add(fullPrompt);
 
-        ProcessBuilder pb = new ProcessBuilder(cmd);
-        if (!extraEnv.isEmpty()) {
-            pb.environment().putAll(extraEnv);
-        }
-        if (workingDir != null) {
-            pb.directory(workingDir.toFile());
-        }
-        pb.redirectErrorStream(false);
-
-        Process process = null;
         try {
-            process = pb.start();
-            boolean finished = process.waitFor(timeoutMs, TimeUnit.MILLISECONDS);
+            ProcessBuilder pb = new ProcessBuilder(cmd);
+            pb.directory(workDir.toFile());
+            pb.redirectErrorStream(true);
+            Process proc = pb.start();
+
+            StringBuilder output = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+            }
+
+            boolean finished = proc.waitFor(timeout.getSeconds(), TimeUnit.SECONDS);
             if (!finished) {
-                process.destroyForcibly();
-                throw new BrainException("CLI brain '" + command.get(0) + "' timed out after "
-                    + timeoutMs + " ms");
+                proc.destroyForcibly();
+                throw new BrainException("opencode CLI timed out after " + timeout.getSeconds() + "s");
             }
-            String stdout = new String(process.getInputStream().readAllBytes());
-            String stderr = new String(process.getErrorStream().readAllBytes());
-            if (process.exitValue() != 0) {
-                throw new BrainException("CLI brain '" + command.get(0) + "' exited with code "
-                    + process.exitValue() + ": " + tail(stderr));
-            }
-            String response = stdout.trim();
-            if (response.isEmpty()) {
-                throw new BrainException("CLI brain '" + command.get(0)
-                    + "' produced no output" + (stderr.isBlank() ? "" : "; stderr: " + tail(stderr)));
-            }
-            return response;
-        } catch (IOException e) {
-            throw new BrainException("Could not launch CLI brain '" + command.get(0)
-                + "': " + e.getMessage() + " — is the tool installed and on PATH?", e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new BrainException("CLI brain interrupted", e);
-        } finally {
-            if (process != null && process.isAlive()) {
-                process.destroyForcibly();
-            }
-        }
-    }
 
-    private static String combine(String systemPrompt, String userPrompt) {
-        if (systemPrompt == null || systemPrompt.isBlank()) {
-            return userPrompt;
+            int exitCode = proc.exitValue();
+            if (exitCode != 0 && output.length() == 0) {
+                throw new BrainException("opencode CLI exited with code " + exitCode);
+            }
+            return output.toString().trim();
+        } catch (Exception e) {
+            if (e instanceof BrainException) throw (BrainException) e;
+            throw new BrainException("opencode CLI failed: " + e.getMessage(), e);
         }
-        return systemPrompt + "\n\n---\n\n" + userPrompt;
-    }
-
-    private static String tail(String s) {
-        if (s == null) return "";
-        String trimmed = s.trim();
-        return trimmed.length() <= 500 ? trimmed : "..." + trimmed.substring(trimmed.length() - 500);
     }
 
     @Override
     public String model() {
-        return model != null ? model : command.get(0);
+        return model;
+    }
+
+    @Override
+    public String respond(String systemPrompt, String userPrompt, List<Tool> tools) {
+        return respond(systemPrompt, userPrompt);
     }
 }

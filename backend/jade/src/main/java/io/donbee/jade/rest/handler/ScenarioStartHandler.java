@@ -31,6 +31,15 @@ public class ScenarioStartHandler implements Handler<RoutingContext> {
 
     @Override
     public void handle(RoutingContext ctx) {
+        // Scenario start does blocking work (provider probe, container creation,
+        // agent deployment) — run off the event loop so REST stays responsive.
+        ctx.vertx().executeBlocking(() -> {
+            handleStart(ctx);
+            return null;
+        }, false).onComplete(res -> { /* response already written by handleStart */ });
+    }
+
+    private Object handleStart(RoutingContext ctx) {
         String scenarioId = ctx.pathParam("id");
         try {
             JsonObject body = ctx.body().asJsonObject();
@@ -58,6 +67,7 @@ public class ScenarioStartHandler implements Handler<RoutingContext> {
         } catch (Exception e) {
             ctx.fail(500, e);
         }
+        return null;
     }
 
     private Map<String, Object> readConfig(JsonObject body) {

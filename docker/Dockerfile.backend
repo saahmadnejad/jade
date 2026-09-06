@@ -12,22 +12,16 @@ WORKDIR /app
 COPY --from=build /build/jade/target/jade-*.jar app.jar
 COPY --from=build /build/examples/target/examples-*.jar examples.jar
 COPY --from=build /build/llm/target/llm-*.jar llm.jar
-# Best-effort install of the opencode CLI (default brain of the dev-team
-# scenario). Failure keeps the image buildable offline; the CLI brain then
-# errors at runtime with an actionable message.
-RUN apk add --no-cache curl libstdc++ libgcc git >/dev/null 2>&1; \
-    export SHELL=/bin/sh; \
-    GH_VERSION=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | \
-        grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4 | sed 's/^v//'); \
-    curl -fsSL "https://github.com/cli/cli/releases/latest/download/gh_${GH_VERSION}_linux_amd64.tar.gz" \
-      | tar xz -C /tmp && mv /tmp/gh_${GH_VERSION}_linux_amd64 /opt/gh && \
+RUN apk add --no-cache curl libstdc++ libgcc git npm nodejs bash python3 py3-pip tar gzip shadow procps \
+    && curl -fsSL https://github.com/anomalyco/opencode/releases/download/v1.18.25/opencode-linux-x64-musl.tar.gz \
+      -o /tmp/opencode.tar.gz && mkdir -p /opt/opencode && tar -xzf /tmp/opencode.tar.gz -C /opt/opencode \
+    && ln -s /opt/opencode/opencode /usr/local/bin/opencode \
+    || echo "WARNING: opencode install failed"
+RUN mkdir -p /workspace /app/conf && chmod 777 /workspace /app/conf
+RUN export SHELL=/bin/sh; \
+    curl -fsSL "https://github.com/cli/cli/releases/download/v2.98.0/gh_2.98.0_linux_amd64.tar.gz" \
+      -o /tmp/gh.tar.gz && tar -xzf /tmp/gh.tar.gz -C /tmp && mv /tmp/gh_2.98.0_linux_amd64 /opt/gh && \
     ln -s /opt/gh/bin/gh /usr/local/bin/gh || \
-    echo "WARNING: gh install skipped"; \
-    curl -fsSL https://opencode.ai/install | sh >/dev/null 2>&1 || \
-    echo "WARNING: opencode install skipped"
-ENV PATH="/root/.opencode/bin:${PATH}"
+    echo "WARNING: gh install skipped"
 EXPOSE 1099 8080
-# The image ships platform + bundled example scenarios. Scenario code is inert
-# until instantiated through /api/scenarios. Library users should depend on the
-# Maven artifacts (io.donbee:jade) instead of this image.
-ENTRYPOINT ["java", "-cp", "app.jar:examples.jar:llm.jar", "io.donbee.jade.Boot", "-host", "localhost", "-local-host", "localhost"]
+CMD ["java", "-cp", "app.jar:examples.jar:llm.jar", "io.donbee.jade.Boot", "-host", "localhost", "-local-host", "localhost"]

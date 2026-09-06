@@ -19,6 +19,23 @@ public class FallbackBrain implements Brain {
     }
 
     @Override
+    public String respond(String systemPrompt, String userPrompt, List<Tool> tools) {
+        BrainException last = null;
+        for (Brain brain : delegates) {
+            try {
+                return brain.respond(systemPrompt, userPrompt, tools);
+            } catch (BrainException e) {
+                last = e;
+                System.err.println("[FallbackBrain] " + brain.model()
+                    + " failed, trying next: " + e.getMessage());
+            }
+        }
+        throw new BrainException("All "
+            + delegates.size() + " brains failed; last error: "
+            + (last != null ? last.getMessage() : "unknown"), last);
+    }
+
+    @Override
     public String respond(String systemPrompt, String userPrompt) {
         BrainException last = null;
         for (Brain brain : delegates) {

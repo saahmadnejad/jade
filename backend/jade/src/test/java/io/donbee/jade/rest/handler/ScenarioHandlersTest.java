@@ -55,11 +55,19 @@ public class ScenarioHandlersTest {
         }
     };
 
+    @Mock
+    private io.vertx.core.Vertx mockVertx;
+
     @Before
     public void setUp() {
         when(mockContext.response()).thenReturn(mockResponse);
         when(mockResponse.setStatusCode(org.mockito.ArgumentMatchers.anyInt())).thenReturn(mockResponse);
         when(mockResponse.putHeader(anyString(), anyString())).thenReturn(mockResponse);
+        when(mockContext.vertx()).thenReturn(mockVertx);
+        // Run the blocking task inline in tests
+        when(mockVertx.executeBlocking(org.mockito.ArgumentMatchers.<java.util.concurrent.Callable<Object>>any(), org.mockito.ArgumentMatchers.anyBoolean()))
+            .thenAnswer(inv -> io.vertx.core.Future.succeededFuture(
+                ((java.util.concurrent.Callable<?>) inv.getArgument(0)).call()));
     }
 
     @Test

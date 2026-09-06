@@ -17,19 +17,36 @@ The dev-team scenario calls LLM providers and needs an API key at runtime.
 **Keys are never stored in this repository** (see `docs/adr/0002`):
 
 ```bash
-# Option 1: environment variable
-export OPENROUTER_API_KEY=sk-or-v1-...
+# Option 1: environment variable (9router API key for the langchain4j brain)
+export LLM_API_KEY=<your-9router-key>
 
 # Option 2: gitignored local file
-echo "api.key=sk-or-v1-..." > backend/examples/conf/secrets.local.properties
+cp backend/examples/conf/secrets-local.properties.example backend/examples/conf/secrets-local.properties
+# then edit to fill in your key + optional llm.base.url and llm.model.name
 ```
+
+A sample file (`secrets-local.properties.example`) is committed as a template.
+The real `secrets-local.properties` is gitignored and never committed.
 
 Without a key the role agents fail fast with an actionable error.
 
-By default LLM traffic routes through a SOCKS5 proxy (`192.168.1.151:10808`,
-configurable per instance on the Scenarios page). Any OpenAI-compatible
-provider works by changing `baseUrl` + model: paid OpenRouter tiers, OpenAI,
-DeepSeek direct, or a local Ollama (`http://localhost:11434/v1`, no key).
+By default the dev-team scenario uses the langchain4j brain, which connects
+to 9router (`http://9router:20128/v1` in Docker) — a free, OpenAI-compatible
+LLM gateway. The default model is `oc/laguna-s-2.1-free` (a tool-capable model
+so each role agent can call `bash` — file ops, running tests, git — inside the
+backend container via the LLM's tool-calling loop). A fallback model
+(`combo-coding`) is used if the primary fails.
+See the 9router dashboard at `http://localhost:20129/dashboard` (Docker) or
+`http://localhost:20128/dashboard` (local) to connect providers and check your
+API key. Any OpenAI-compatible provider works by changing `llm.base.url` +
+`llm.model.name`.
+
+Tool-calling models on 9router (support the `bash` tool used by role agents):
+- `oc/laguna-s-2.1-free` — 9router's opencode-backed model, tool-capable (default)
+- `ps/laguna-s-2.1` — larger poolside model, tool-capable
+- `ps/laguna-xs-2.1` — smaller/faster poolside model, tool-capable
+Text-only fallback:
+- `combo-coding` — 9router's own reasoning model (no tools; fallback)
 
 ## Building
 

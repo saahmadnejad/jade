@@ -6,7 +6,7 @@ order:
 
 1. Environment variable (default `OPENROUTER_API_KEY`)
 2. A gitignored local properties file
-   (`backend/examples/conf/secrets.local.properties`)
+   (`backend/examples/conf/secrets-local.properties`)
 
 If neither is present, the scenario fails fast at start with an actionable
 error. The same rule covers any proxy credentials.

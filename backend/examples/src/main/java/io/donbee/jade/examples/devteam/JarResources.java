@@ -29,16 +29,21 @@ final class JarResources {
     }
 
     private static List<String> listUncached(String dirResource) {
+        String resourcePath = dirResource.startsWith("/") ? dirResource.substring(1) : dirResource;
         URI uri;
+        java.net.URL url = JarResources.class.getResource("/" + resourcePath);
+        if (url == null) {
+            return List.of();
+        }
         try {
-            uri = JarResources.class.getResource(dirResource).toURI();
+            uri = url.toURI();
         } catch (URISyntaxException e) {
             throw new IllegalStateException("Bad resource path " + dirResource, e);
         }
         try {
             if ("jar".equals(uri.getScheme())) {
                 try (FileSystem fs = FileSystems.newFileSystem(uri, Map.of())) {
-                    Path dir = fs.getPath(dirResource);
+                    Path dir = fs.getPath("/" + resourcePath);
                     try (Stream<Path> stream = Files.list(dir)) {
                         return toNames(stream);
                     }

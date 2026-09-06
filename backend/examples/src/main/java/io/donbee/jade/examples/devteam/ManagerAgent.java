@@ -113,7 +113,7 @@ public class ManagerAgent extends Agent {
 
         System.out.println("[devteam:" + teamId + "] goal: " + firstLine(brief)
             + " (maxRounds=" + maxRounds + ", maxCalls=" + maxTotalCalls
-            + ", brain=opencode, dir=" + workDir + ")"
+            + ", brain=langchain4j, dir=" + workDir + ")"
             + (githubWanted ? " github=" + githubOrg : ""));
         workspace.save("BRIEF.md", "# Brief\n\n" + brief + "\n");
 
@@ -139,13 +139,26 @@ public class ManagerAgent extends Agent {
             }
         });
 
+        // Watchdog: a role agent that never replies (provider hang) must not
+        // stall the team forever — enforce the phase deadline even while
+        // blocked on receive().
+        addBehaviour(new io.donbee.jade.core.behaviours.TickerBehaviour(this, 60_000L) {
+            @Override
+            protected void onTick() {
+                if (phase != Phase.DONE && System.currentTimeMillis() > deadlineAt) {
+                    finish("TIMEOUT", "Time budget exhausted during " + phase
+                        + " (no reply from role agent)");
+                }
+            }
+        });
+
         // Kick off phase 1: optionally clarify, then design.
         if (Boolean.parseBoolean(str(args, 7, "true"))) {
             sendTo("architect", clarifyTask(), "dt-clarify-" + round);
-            phase = Phase.CLARIFY;
+            enterPhase(Phase.CLARIFY);
         } else {
             sendTo("architect", designTask(), "dt-design-" + round);
-            phase = Phase.DESIGN;
+            enterPhase(Phase.DESIGN);
         }
     }
 
@@ -163,27 +176,27 @@ public class ManagerAgent extends Agent {
             case CLARIFY -> {
                 clarifications = reply.getContent();
                 workspace.save("CLARIFICATIONS.md", clarifications);
+                enterPhase(Phase.DESIGN);
                 sendTo("architect", designTask(), "dt-design-" + round);
-                phase = Phase.DESIGN;
             }
             case DESIGN -> {
                 designDoc = reply.getContent();
                 saveArtifacts(designDoc, "design");
                 workspace.save("DESIGN.md", designDoc);
+                enterPhase(Phase.IMPLEMENT);
                 sendTo("implementer", implementTask(), "dt-implement-" + round);
-                phase = Phase.IMPLEMENT;
             }
             case IMPLEMENT -> {
                 saveArtifacts(reply.getContent(), "src");
+                enterPhase(Phase.TEST);
                 sendTo("tester", testTask(reply.getContent()), "dt-test-" + round);
-                phase = Phase.TEST;
             }
             case TEST -> {
                 String report = reply.getContent();
                 saveArtifacts(report, "tests");
                 workspace.save("TEST-REPORT-round" + round + ".md", report);
+                enterPhase(Phase.REVIEW);
                 sendTo("reviewer", reviewTask(report), "dt-review-" + round);
-                phase = Phase.REVIEW;
             }
             case REVIEW -> {
                 String reviewText = reply.getContent();
@@ -203,6 +216,16 @@ public class ManagerAgent extends Agent {
             }
             default -> { /* DONE */ }
         }
+    }
+
+    /**
+     * Enter a phase and restart its budget. The deadline is per phase, not
+     * for the whole team lifetime: long multi-round runs otherwise die in
+     * round 2+ even while healthy.
+     */
+    private void enterPhase(Phase p) {
+        phase = p;
+        deadlineAt = System.currentTimeMillis() + roundStartTimeoutMin * 60_000L;
     }
 
     private void evaluateNextRound(boolean approved, String reviewText) {
@@ -229,8 +252,8 @@ public class ManagerAgent extends Agent {
         }
         round++;
         System.out.println("[devteam:" + teamId + "] starting round " + round + " with reviewer feedback");
+        enterPhase(Phase.IMPLEMENT);
         sendTo("implementer", implementTask(), "dt-implement-" + round);
-        phase = Phase.IMPLEMENT;
     }
 
     private boolean githubWanted() {

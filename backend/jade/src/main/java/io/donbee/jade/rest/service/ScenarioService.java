@@ -10,6 +10,13 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+import java.io.IOException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URI;
+import java.time.Duration;
+
 import io.donbee.jade.core.Profile;
 import io.donbee.jade.core.ProfileImpl;
 import io.donbee.jade.core.Runtime;
@@ -147,6 +154,9 @@ public class ScenarioService {
 
         Map<String, Object> config = validatedConfig(scenario, rawConfig);
 
+        // Verify brain provider (9router) is reachable before deploying agents.
+        checkBrainAvailability(config);
+
         // Dedicated container per instance; fall back to the Main Container on failure.
         String container = null;
         try {
@@ -281,6 +291,57 @@ public class ScenarioService {
             return Boolean.parseBoolean(s);
         }
         throw new IllegalArgumentException("Config parameter '" + name + "' must be true or false");
+    }
+
+    /**
+     * Probe the LLM provider endpoint before deploying agents, so failures
+     * surface immediately instead of after all agents are started.
+     *
+     * <p><b>Old GUI:</b> No direct Swing equivalent. The old RMA tool dispatched
+     * agents without pre-flight provider checks. This validates the LLM base URL
+     * and API key before any agent is deployed.</p>
+     */
+    private void checkBrainAvailability(Map<String, Object> config) {
+        String baseUrl = config.containsKey("baseUrl")
+            ? String.valueOf(config.get("baseUrl")) : null;
+        if (baseUrl == null || baseUrl.isBlank() || "null".equals(baseUrl)) {
+            return; // scenario does not use an LLM brain (e.g. pure shop demo)
+        }
+        String url = baseUrl + "/models";
+        System.out.println("[ScenarioService] Probing brain provider: " + url);
+        try {
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                // Some OpenAI-compatible servers mishandle the h2c upgrade and
+                // hang; force HTTP/1.1 which every provider supports.
+                .version(java.net.http.HttpClient.Version.HTTP_1_1)
+                .timeout(Duration.ofSeconds(5))
+                .GET();
+            String apiKey = System.getenv("NINEROUTER_API_KEY");
+            if (apiKey != null && !apiKey.isBlank()) {
+                builder.header("Authorization", "Bearer " + apiKey);
+            }
+            HttpResponse<String> resp = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .version(java.net.http.HttpClient.Version.HTTP_1_1)
+                .build()
+                .send(builder.build(), HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() / 100 != 2) {
+                throw new IllegalStateException("Brain provider returned HTTP "
+                    + resp.statusCode() + " for " + url
+                    + " — verify 9router is running and configured via browser at http://localhost:20129/dashboard");
+            }
+            System.out.println("[ScenarioService] Brain provider OK (HTTP "
+                + resp.statusCode() + ")");
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot reach brain provider at " + url
+                + " — is the 9router container running? Error: " + e.getMessage(), e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Brain provider probe interrupted", e);
+        } catch (IllegalStateException e) {
+            throw e;
+        }
     }
 
     /**

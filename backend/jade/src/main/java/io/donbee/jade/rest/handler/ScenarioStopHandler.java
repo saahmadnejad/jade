@@ -27,6 +27,14 @@ public class ScenarioStopHandler implements Handler<RoutingContext> {
 
     @Override
     public void handle(RoutingContext ctx) {
+        // Container kill + agent cleanup block — keep off the event loop.
+        ctx.vertx().executeBlocking(() -> {
+            handleStop(ctx);
+            return null;
+        }, false).onComplete(res -> { /* response already written */ });
+    }
+
+    private void handleStop(RoutingContext ctx) {
         String instance = ctx.pathParam("name");
         try {
             scenarioService.stop(instance);
