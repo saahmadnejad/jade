@@ -7,7 +7,7 @@ A fork of JADE (Java Agent DEvelopment Framework) running on Java 21 with virtua
 - **REST API** (~44 endpoints) + **React UI**: agents, containers, DF, tools, remote platforms
 - **Live message traffic** in the browser (WebSocket): watch FIPA ACL conversations as they happen (MessagesPage)
 - **Scenarios page**: launch configurable multi-agent demo scenarios with one click; each instance runs in its own container and can be stopped independently — or add your own scenarios by dropping a jar implementing the `io.donbee.jade.rest.scenario.Scenario` SPI on the classpath
-- **LLM-powered agents**: `io.donbee:llm` speaks any OpenAI-compatible endpoint (9router with `combo-coding` by default, paid providers or local Ollama via config) via langchain4j; the dev-team scenario has five AI agents build a small project from a brief
+- **LLM-powered agents**: `io.donbee:llm` speaks any OpenAI-compatible endpoint (9router by default, paid providers or local Ollama via config) via langchain4j; the dev-team scenario has five AI agents build a small project from a brief
 - **Library-ready artifacts**: `io.donbee:jade` (+ `fipa`, `llm`, `examples`) installable via Maven; the platform uber jar runs standalone without the UI
 
 ## Project Structure
@@ -36,7 +36,13 @@ jade/
 ## Quick Start
 
 ```bash
-# Build and start both containers
+# 1) Configure your LLM provider key for 9router (one-time):
+#    open http://localhost:20129/dashboard after first `up`, or run 9router on host.
+#    Then export it for the backend container (required for LLM scenarios):
+export NINEROUTER_API_KEY=$(grep 'llm.api.key' backend/examples/conf/secrets-local.properties | cut -d= -f2)
+#    (create that gitignored file from backend/examples/conf/secrets-local.properties.example)
+
+# 2) Build and start all containers (docker works identically)
 podman compose up --build -d
 
 # Check status
@@ -45,11 +51,12 @@ podman compose ps
 # Frontend: http://localhost:3000
 # Backend (JADE RMI): localhost:10990
 # Backend (REST API): http://localhost:8080/api
+# 9router dashboard: http://localhost:20129/dashboard
 ```
 
 ### Local Development
 
-**Backend (JADE):**
+**Backend (JADE)** (needs a full JDK 21 with `javac` on `JAVA_HOME`; distro `java-21-openjdk` is often JRE-only):
 ```bash
 cd backend && mvn compile exec:java -Dexec.mainClass="io.donbee.jade.Boot"
 ```
@@ -89,12 +96,12 @@ A pnpm monorepo with two packages:
 
 **Backend:**
 ```bash
-cd backend && JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 mvn test
+cd backend && mvn test
 ```
 
 **Frontend (unit + integration):**
 ```bash
 cd frontend
 pnpm --filter shared test:run   # API client unit tests
-pnpm --filter webapp test     # App integration tests
+pnpm --filter webapp test:run    # App integration tests (non-watch; `test` runs in watch mode)
 ```

@@ -18,7 +18,7 @@ The dev-team scenario calls LLM providers and needs an API key at runtime.
 
 ```bash
 # Option 1: environment variable (9router API key for the langchain4j brain)
-export LLM_API_KEY=<your-9router-key>
+export NINEROUTER_API_KEY=<your-9router-key>
 
 # Option 2: gitignored local file
 cp backend/examples/conf/secrets-local.properties.example backend/examples/conf/secrets-local.properties
@@ -32,21 +32,15 @@ Without a key the role agents fail fast with an actionable error.
 
 By default the dev-team scenario uses the langchain4j brain, which connects
 to 9router (`http://9router:20128/v1` in Docker) — a free, OpenAI-compatible
-LLM gateway. The default model is `oc/laguna-s-2.1-free` (a tool-capable model
-so each role agent can call `bash` — file ops, running tests, git — inside the
-backend container via the LLM's tool-calling loop). A fallback model
-(`combo-coding`) is used if the primary fails.
-See the 9router dashboard at `http://localhost:20129/dashboard` (Docker) or
-`http://localhost:20128/dashboard` (local) to connect providers and check your
-API key. Any OpenAI-compatible provider works by changing `llm.base.url` +
-`llm.model.name`.
-
-Tool-calling models on 9router (support the `bash` tool used by role agents):
-- `oc/laguna-s-2.1-free` — 9router's opencode-backed model, tool-capable (default)
-- `ps/laguna-s-2.1` — larger poolside model, tool-capable
-- `ps/laguna-xs-2.1` — smaller/faster poolside model, tool-capable
-Text-only fallback:
-- `combo-coding` — 9router's own reasoning model (no tools; fallback)
+LLM gateway. Model names come and go with the provider pool: verify what
+actually responds on your 9router via the dashboard
+(`http://localhost:20129/dashboard` in Docker, `http://localhost:20128/dashboard`
+locally) or `curl http://localhost:20129/v1/models` before starting a
+scenario, then set the six `*Model` config params accordingly. Role agents
+need a **tool-capable** model (they call a `bash` tool for file ops, running
+tests, and git inside the backend container via the LLM's tool-calling loop);
+the fallback model can be text-only. Any OpenAI-compatible provider works by
+changing `baseUrl` + the model params.
 
 ## Building
 
@@ -71,10 +65,17 @@ Start. Each launch creates its own container (`scenario-<instance>`) so you can
 run several instances side by side and kill them independently from the same
 page.
 
-For the dev team: watch the conversation on the **Messages** page; when the
-instance finishes you'll find the produced project (`BRIEF.md`, `DESIGN.md`,
-`src/…`, `tests/…`, review reports) mirrored to disk if you set a workspace
-directory — otherwise ask the team's artifacts from the instance logs.
+For the dev team: watch the conversation on the **Messages** page (Manager
+task REQUESTs and peer INFORMs, all FIPA `fipa-request` protocol). The team's
+files live in `/tmp/jade-devteam-<instance>/` inside the backend container
+(see `AGENTS.md` for the workspace layout). Review rounds iterate
+implement → test → review until the Reviewer approves or `maxRounds` /
+`maxTotalCalls` caps hit; each phase has its own time budget.
+
+GitHub publishing is opt-in: set `githubOrg` to a non-empty value AND provide
+a `GH_TOKEN` env var (PAT with repo/admin access) in the backend container.
+With `githubOrg` empty (default) the team finishes at approval without
+publishing.
 
 Programmatically the same thing:
 

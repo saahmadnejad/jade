@@ -3,8 +3,8 @@
 This document lists every functionality available in the **old Swing-based JADE GUI tools** (the "old GUI"), organized by tool. Use the checkboxes to track migration progress into the new React GUI, and the testing checklist to verify each feature's Definition of Done (DoD).
 
 The old GUI source lives in:
-- `backend/src/main/java/io/donbee/jade/tools/` (agent tool classes)
-- `backend/src/main/java/io/donbee/jade/gui/` (shared Swing components)
+- `backend/jade/src/main/java/io/donbee/jade/tools/` (agent tool classes)
+- `backend/jade/src/main/java/io/donbee/jade/gui/` (shared Swing components)
 
 The new React GUI source lives in:
 - `frontend/apps/webapp/src/`
@@ -417,7 +417,7 @@ Purpose: Reusable Swing components used across multiple old GUI tools.
 These are the backend REST endpoints available to the new React GUI for implementing the above functionality.
 
 Package: `io.donbee.jade.rest`  
-Source: `backend/src/main/java/io/donbee/jade/rest/RestAPIVerticle.java`
+Source: `backend/jade/src/main/java/io/donbee/jade/rest/RestAPIVerticle.java`
 
 | # | Endpoint | Method | Functionality | TESTED | Notes |
 |---|----------|--------|--------------|--------|-------|

@@ -2,11 +2,12 @@
 
 The development-team scenario authenticates to LLM providers at runtime, but
 no API key may ever enter the repository. Keys are resolved at startup in this
-order:
+order (`SecretsResolver`):
 
-1. Environment variable (default `OPENROUTER_API_KEY`)
+1. Environment variable (`NINEROUTER_API_KEY`)
 2. A gitignored local properties file
-   (`backend/examples/conf/secrets-local.properties`)
+   (`backend/examples/conf/secrets-local.properties`; template with
+   placeholder values only: `secrets-local.properties.example`)
 
 If neither is present, the scenario fails fast at start with an actionable
 error. The same rule covers any proxy credentials.

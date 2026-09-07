@@ -1,15 +1,15 @@
 # Messages API
 
 Live visibility into the ACL message traffic of the platform. Captures every
-ACL message **dispatched by agents hosted on the Main Container** at the
-messaging-service send point (the closest REST-era equivalent of the old
-Sniffer tool).
+ACL message **dispatched by any in-process container** (Main Container and
+scenario containers, which live in the same JVM) at the messaging-service send
+point (the closest REST-era equivalent of the old Sniffer tool).
 
-> **Capture scope (v1):** only messages sent by agents running on the Main
-> Container are captured. Traffic between agents on remote containers does not
-> transit the Main Container and is therefore not reported. All agents deployed
-> via `POST /api/agents` run on the Main Container, so typical scenarios are
-> fully covered.
+> **Capture scope:** `MessageTrafficMonitor` uses static JVM-wide listeners
+> fired in `MessagingService.CommandSourceSink`, so every container in the
+> platform process is covered, including each scenario instance's dedicated
+> container. Agents on truly remote (out-of-process) platforms are not
+> captured.
 
 All responses are JSON. Errors always follow the global format:
 `{"error": "message", "code": <status>}`.

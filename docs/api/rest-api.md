@@ -2,7 +2,10 @@
 
 **Purpose:** Quick reference for implemented REST endpoints. For detailed specifications including JADE ontology backend calls and full schemas, see individual API spec files:
 - Core platform/agents/containers → [rma-api.md](rma-api.md)
+- Scenarios → [scenarios-api.md](scenarios-api.md)
+- Messages → [messages-api.md](messages-api.md)
 - Shared components → [shared-components-api.md](shared-components-api.md)
+- Other tools → [df-gui-api.md](df-gui-api.md), [sniffer-api.md](sniffer-api.md), [introspector-api.md](introspector-api.md), [dummy-agent-api.md](dummy-agent-api.md), [log-manager-api.md](log-manager-api.md), [test-agent-api.md](test-agent-api.md)
 
 ## Old GUI Implementation References
 

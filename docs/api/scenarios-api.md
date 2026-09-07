@@ -92,8 +92,17 @@ Start a new instance of a scenario.
 - `404` unknown scenario id
 - `400` invalid config values (out of min/max range, wrong type) or bad
   instance name
-- `409` instance name already in use, or an agent/container name clash on the
-  platform
+- `409` instance name already in use, an agent/container name clash on the
+  platform, or the scenario's LLM provider probe failed (e.g. 9router
+  unreachable or the API key missing/wrong — see the error message)
+
+### Dev-team notes
+
+- The `brief` config param is required for the dev-team scenario: an empty
+  brief fails the instance immediately.
+- The `*Model` params must name models that actually respond on the
+  configured provider — verify via the 9router dashboard or
+  `GET /v1/models` before starting. Role agents need a tool-capable model.
 
 ---
 
@@ -114,8 +123,8 @@ Instances whose container disappears outside this API (e.g. killed from
       "scenarioId": "online-shop",
       "container": "scenario-shop-demo-1",
       "agents": [
-        { "name": "shop-demo-1-shop", "state": "ACTIVE" },
-        { "name": "shop-demo-1-inventory", "state": "ACTIVE" }
+        { "name": "shop-demo-1-shop" },
+        { "name": "shop-demo-1-inventory" }
       ]
     }
   ]
