@@ -46,7 +46,7 @@ public class RestockSupplierAgent extends Agent {
             LOG.info("registered in DF, ships after "
                 + (shippingDelayMs / 1000) + "s");
         } catch (Exception e) {
-            LOG.warning("DF registration failed: " + e);
+            LOG.log(io.donbee.jade.util.Logger.SEVERE, "DF registration failed", e);
             doDelete();
             return;
         }

@@ -33,21 +33,7 @@ public class ArchitectAgent extends RoleAgent {
     }
 
     @Override
-    protected void handleTask(ACLMessage request) {
-        LOG.info("[" + roleName() + "] thinking about: "
-            + firstLine(request.getContent()));
-        ACLMessage reply = request.createReply();
-        try {
-            String result = callBrain(systemPrompt(), request.getContent(), request.getConversationId());
-            reply.setPerformative(ACLMessage.INFORM);
-            reply.setContent(result);
-            // P2P: notify Implementer directly with the design
-            notifyPeer("implementer", result);
-        } catch (Exception e) {
-            reply.setPerformative(ACLMessage.FAILURE);
-            reply.setContent("(" + roleName() + "-failed " + sanitize(e.getMessage()) + ")");
-            LOG.warning("[" + roleName() + "] brain call failed: " + e.getMessage());
-        }
-        send(reply);
+    protected void onTaskCompleted(String result) {
+        notifyPeer("implementer", result);
     }
 }
