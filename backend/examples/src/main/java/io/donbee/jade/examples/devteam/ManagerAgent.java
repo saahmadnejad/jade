@@ -18,6 +18,9 @@ import io.donbee.jade.lang.acl.MessageTemplate;
  */
 public class ManagerAgent extends Agent {
 
+    private static final io.donbee.jade.util.Logger LOG =
+        io.donbee.jade.util.Logger.getJADELogger(ManagerAgent.class.getName());
+
     private enum Phase { CLARIFY, DESIGN, IMPLEMENT, TEST, REVIEW, PUBLISH, DONE }
 
     /**
@@ -87,7 +90,7 @@ public class ManagerAgent extends Agent {
             dfd.addServices(sdPeer);
             io.donbee.jade.domain.DFService.register(this, dfd);
         } catch (io.donbee.jade.domain.FIPAException e) {
-            System.err.println("[devteam:" + teamId + "] DF registration failed: " + e.getMessage());
+            LOG.warning("team=" + teamId + ": DF registration failed: " + e.getMessage());
         }
 
         if (brief == null || brief.isBlank()) {
@@ -99,7 +102,7 @@ public class ManagerAgent extends Agent {
         try {
             TeamScaffolder.scaffold(workDir, githubOrg, teamId + "-project", githubVisibility);
         } catch (IOException e) {
-            System.err.println("[devteam:" + teamId + "] scaffolding failed: " + e.getMessage());
+            LOG.warning("team=" + teamId + ": scaffolding failed: " + e.getMessage());
         }
 
         boolean githubWanted = githubOrg != null && !githubOrg.isBlank();
@@ -111,7 +114,7 @@ public class ManagerAgent extends Agent {
             return;
         }
 
-        System.out.println("[devteam:" + teamId + "] goal: " + firstLine(brief)
+        LOG.info("team=" + teamId + ": goal: " + firstLine(brief)
             + " (maxRounds=" + maxRounds + ", maxCalls=" + maxTotalCalls
             + ", brain=langchain4j, dir=" + workDir + ")"
             + (githubWanted ? " github=" + githubOrg : ""));
@@ -231,7 +234,7 @@ public class ManagerAgent extends Agent {
     private void evaluateNextRound(boolean approved, String reviewText) {
         if (approved && githubWanted() && callsUsed < maxTotalCalls) {
             // One extra call: the implementer publishes the project to GitHub itself.
-            System.out.println("[devteam:" + teamId + "] approved - asking implementer to publish to GitHub");
+            LOG.info("team=" + teamId + ": approved - asking implementer to publish to GitHub");
             sendTo("implementer", publishTask(), "dt-publish-" + round);
             phase = Phase.PUBLISH;
             return;
@@ -251,7 +254,7 @@ public class ManagerAgent extends Agent {
             return;
         }
         round++;
-        System.out.println("[devteam:" + teamId + "] starting round " + round + " with reviewer feedback");
+        LOG.info("team=" + teamId + ": starting round " + round + " with reviewer feedback");
         enterPhase(Phase.IMPLEMENT);
         sendTo("implementer", implementTask(), "dt-implement-" + round);
     }
@@ -286,7 +289,7 @@ public class ManagerAgent extends Agent {
         workspace.save("STATUS.md", "# Status: " + status + "\n\n" + reason + "\n\n"
             + "- rounds used: " + round + "\n- LLM calls used: " + callsUsed
             + "\n- finished: " + Instant.now() + "\n");
-        System.out.println("[devteam:" + teamId + "] FINISHED status=" + status
+        LOG.info("team=" + teamId + ": FINISHED status=" + status
             + " rounds=" + round + " llmCalls=" + callsUsed + " - " + reason);
     }
 
@@ -295,7 +298,7 @@ public class ManagerAgent extends Agent {
     private void sendTo(String roleSuffix, String content, String conversationId) {
         AID peer = findPeer(roleSuffix);
         if (peer == null) {
-            System.err.println("[devteam:" + teamId + "] sendTo: peer not found for " + roleSuffix
+            LOG.warning("team=" + teamId + ": sendTo: peer not found for " + roleSuffix
                 + ", falling back to hardcoded AID");
             peer = new AID(teamId + "-" + roleSuffix, AID.ISLOCALNAME);
         }
@@ -324,7 +327,7 @@ public class ManagerAgent extends Agent {
                 return results[0].getName();
             }
         } catch (io.donbee.jade.domain.FIPAException e) {
-            System.err.println("[devteam:" + teamId + "] DF lookup failed for " + roleSuffix + ": " + e.getMessage());
+            LOG.warning("team=" + teamId + ": DF lookup failed for " + roleSuffix + ": " + e.getMessage());
         }
         return null;
     }

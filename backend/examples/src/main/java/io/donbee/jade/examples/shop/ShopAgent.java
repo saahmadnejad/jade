@@ -22,6 +22,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ShopAgent extends Agent {
 
+    private static final io.donbee.jade.util.Logger LOG =
+        io.donbee.jade.util.Logger.getJADELogger(ShopAgent.class.getName());
+
     static final String SERVICE_TYPE = "shop";
 
     private final Map<String, PendingPurchase> pendingPurchases = new ConcurrentHashMap<>();
@@ -33,9 +36,9 @@ public class ShopAgent extends Agent {
     protected void setup() {
         try {
             DfUtils.registerService(this, SERVICE_TYPE, "online-shop-storefront");
-            System.out.println("[ShopAgent] registered in DF, ready to take orders");
+            LOG.info("registered in DF, ready to take orders");
         } catch (Exception e) {
-            System.err.println("[ShopAgent] DF registration failed: " + e);
+            LOG.warning("DF registration failed: " + e);
             doDelete();
             return;
         }
@@ -99,11 +102,11 @@ public class ShopAgent extends Agent {
                 if (response.getPerformative() == ACLMessage.INFORM) {
                     reply(response, ACLMessage.INFORM,
                         "(order-confirmed " + pending.sku() + " " + pending.quantity() + ")");
-                    System.out.println("[ShopAgent] order confirmed for "
+                    LOG.info("order confirmed for "
                         + pending.customer().getLocalName() + ": " + pending.sku());
                 } else {
                     reply(response, ACLMessage.REFUSE, "(out-of-stock " + pending.sku() + ")");
-                    System.out.println("[ShopAgent] refused order for "
+                    LOG.info("refused order for "
                         + pending.customer().getLocalName() + ": out of stock " + pending.sku());
                 }
             }
@@ -123,7 +126,7 @@ public class ShopAgent extends Agent {
         try {
             return DfUtils.findServiceProvider(this, InventoryAgent.SERVICE_TYPE);
         } catch (Exception e) {
-            System.err.println("[ShopAgent] DF search failed: " + e);
+            LOG.warning("DF search failed: " + e);
             return null;
         }
     }

@@ -9,6 +9,9 @@ import io.donbee.jade.lang.acl.ACLMessage;
  */
 public class ImplementerAgent extends RoleAgent {
 
+    private static final io.donbee.jade.util.Logger LOG =
+        io.donbee.jade.util.Logger.getJADELogger(ImplementerAgent.class.getName());
+
     @Override
     protected String role() {
         return "implementer";
@@ -27,7 +30,7 @@ public class ImplementerAgent extends RoleAgent {
 
     @Override
     protected void handleTask(ACLMessage request) {
-        System.out.println("[" + roleName() + "] thinking about: "
+        LOG.info("[" + roleName() + "] thinking about: "
             + firstLine(request.getContent()));
         ACLMessage reply = request.createReply();
         try {
@@ -39,7 +42,7 @@ public class ImplementerAgent extends RoleAgent {
         } catch (Exception e) {
             reply.setPerformative(ACLMessage.FAILURE);
             reply.setContent("(" + roleName() + "-failed " + sanitize(e.getMessage()) + ")");
-            System.err.println("[" + roleName() + "] brain call failed: " + e.getMessage());
+            LOG.warning("[" + roleName() + "] brain call failed: " + e.getMessage());
         }
         send(reply);
     }

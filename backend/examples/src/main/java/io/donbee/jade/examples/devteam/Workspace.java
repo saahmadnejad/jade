@@ -14,6 +14,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Workspace {
 
+    private static final io.donbee.jade.util.Logger LOG =
+        io.donbee.jade.util.Logger.getJADELogger(Workspace.class.getName());
+
     private final String id;
     private final Map<String, String> files = new ConcurrentHashMap<>();
     private final Path mirrorDir;
@@ -42,7 +45,7 @@ public class Workspace {
                 Files.createDirectories(target.getParent());
                 Files.writeString(target, content);
             } catch (IOException e) {
-                System.err.println("[Workspace:" + id + "] disk mirror failed for "
+                LOG.warning("[Workspace:" + id + "] disk mirror failed for "
                     + normalized + ": " + e.getMessage());
             }
         }

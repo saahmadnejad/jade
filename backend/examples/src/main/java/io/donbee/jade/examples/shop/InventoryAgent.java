@@ -32,6 +32,9 @@ import io.donbee.jade.proto.AchieveREResponder;
  */
 public class InventoryAgent extends Agent {
 
+    private static final io.donbee.jade.util.Logger LOG =
+        io.donbee.jade.util.Logger.getJADELogger(InventoryAgent.class.getName());
+
     static final String SERVICE_TYPE = "inventory";
     private static final int DEFAULT_THRESHOLD = 3;
     private static final int DEFAULT_CHECK_INTERVAL_SEC = 10;
@@ -51,9 +54,9 @@ public class InventoryAgent extends Agent {
 
         try {
             DfUtils.registerService(this, SERVICE_TYPE, "online-shop-inventory");
-            System.out.println("[InventoryAgent] registered in DF with stock: " + describeStock());
+            LOG.info("registered in DF with stock: " + describeStock());
         } catch (Exception e) {
-            System.err.println("[InventoryAgent] DF registration failed: " + e);
+            LOG.warning("DF registration failed: " + e);
             doDelete();
             return;
         }
@@ -67,12 +70,12 @@ public class InventoryAgent extends Agent {
                 if (reservation != null && inventory.reserve(reservation.sku(), reservation.quantity())) {
                     reply.setPerformative(ACLMessage.INFORM);
                     reply.setContent("(reserved " + reservation.sku() + " " + reservation.quantity() + ")");
-                    System.out.println("[InventoryAgent] reserved " + reservation.quantity()
+                    LOG.info("reserved " + reservation.quantity()
                         + " x " + reservation.sku() + " (stock now " + inventory.getStock(reservation.sku()) + ")");
                 } else {
                     reply.setPerformative(ACLMessage.REFUSE);
                     reply.setContent("(insufficient-stock)");
-                    System.out.println("[InventoryAgent] refused reservation: " + request.getContent());
+                    LOG.info("refused reservation: " + request.getContent());
                 }
                 return reply;
             }
@@ -96,7 +99,7 @@ public class InventoryAgent extends Agent {
                 RestockOrder order = RestockOrder.parse(confirmation.getContent(), "restocked");
                 if (order != null) {
                     inventory.addStock(order.sku(), order.quantity());
-                    System.out.println("[InventoryAgent] received restock: +" + order.quantity()
+                    LOG.info("received restock: +" + order.quantity()
                         + " x " + order.sku() + " (stock now " + inventory.getStock(order.sku()) + ")");
                 }
             }
@@ -109,7 +112,7 @@ public class InventoryAgent extends Agent {
                 for (String sku : inventory.lowStockSkus()) {
                     AID supplier = findSupplier();
                     if (supplier == null) {
-                        System.out.println("[InventoryAgent] no supplier available for " + sku);
+                        LOG.info("no supplier available for " + sku);
                         continue;
                     }
                     ACLMessage restock = new ACLMessage(ACLMessage.REQUEST);
@@ -118,7 +121,7 @@ public class InventoryAgent extends Agent {
                     restock.setConversationId("restock-" + sku + "-" + System.currentTimeMillis());
                     restock.setContent("(restock " + sku + " " + restockQuantity + ")");
                     myAgent.send(restock);
-                    System.out.println("[InventoryAgent] ordered restock of " + restockQuantity + " x " + sku);
+                    LOG.info("ordered restock of " + restockQuantity + " x " + sku);
                 }
             }
         });
@@ -137,7 +140,7 @@ public class InventoryAgent extends Agent {
         try {
             return DfUtils.findServiceProvider(this, RestockSupplierAgent.SERVICE_TYPE);
         } catch (Exception e) {
-            System.err.println("[InventoryAgent] DF search failed: " + e);
+            LOG.warning("DF search failed: " + e);
             return null;
         }
     }

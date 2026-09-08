@@ -9,6 +9,9 @@ import io.donbee.jade.lang.acl.ACLMessage;
  */
 public class ReviewerAgent extends RoleAgent {
 
+    private static final io.donbee.jade.util.Logger LOG =
+        io.donbee.jade.util.Logger.getJADELogger(ReviewerAgent.class.getName());
+
     /** Machine-readable verdict lines the Manager looks for. */
     public static final String VERDICT_APPROVED = "VERDICT: approved";
     public static final String VERDICT_CHANGES = "VERDICT: changes-requested";
@@ -38,7 +41,7 @@ public class ReviewerAgent extends RoleAgent {
 
     @Override
     protected void handleTask(ACLMessage request) {
-        System.out.println("[" + roleName() + "] thinking about: "
+        LOG.info("[" + roleName() + "] thinking about: "
             + firstLine(request.getContent()));
         ACLMessage reply = request.createReply();
         try {
@@ -51,7 +54,7 @@ public class ReviewerAgent extends RoleAgent {
         } catch (Exception e) {
             reply.setPerformative(ACLMessage.FAILURE);
             reply.setContent("(" + roleName() + "-failed " + sanitize(e.getMessage()) + ")");
-            System.err.println("[" + roleName() + "] brain call failed: " + e.getMessage());
+            LOG.warning("[" + roleName() + "] brain call failed: " + e.getMessage());
         }
         send(reply);
     }
