@@ -167,6 +167,9 @@ public class LangChain4jBrain implements Brain {
                 if (text == null || text.isBlank()) {
                     throw new BrainException("LLM returned no content for model " + modelName);
                 }
+                int llmCalls = i + 1;
+                LOG.info(() -> "agent loop done for model " + modelName
+                    + ": llmCalls=" + llmCalls);
                 return text;
             }
 
