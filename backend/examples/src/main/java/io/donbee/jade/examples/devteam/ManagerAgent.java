@@ -90,7 +90,7 @@ public class ManagerAgent extends Agent {
             dfd.addServices(sdPeer);
             io.donbee.jade.domain.DFService.register(this, dfd);
         } catch (io.donbee.jade.domain.FIPAException e) {
-            LOG.warning("team=" + teamId + ": DF registration failed: " + e.getMessage());
+            LOG.log(io.donbee.jade.util.Logger.SEVERE, "team=" + teamId + ": DF registration failed", e);
         }
 
         if (brief == null || brief.isBlank()) {

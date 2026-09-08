@@ -17,9 +17,6 @@ import io.donbee.jade.rest.scenario.ScenarioParam;
  */
 public class DevTeamScenario implements Scenario {
 
-    private static final io.donbee.jade.util.Logger LOG =
-        io.donbee.jade.util.Logger.getJADELogger(DevTeamScenario.class.getName());
-
     static final String MANAGER_CLASS = ManagerAgent.class.getName();
     static final String ARCHITECT_CLASS = ArchitectAgent.class.getName();
     static final String IMPLEMENTER_CLASS = ImplementerAgent.class.getName();

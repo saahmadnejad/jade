@@ -99,11 +99,11 @@ public abstract class RoleAgent extends Agent {
                 LOG.info("role=" + roleName() + ": brain: " + model);
             }
         } catch (IllegalStateException e) {
-            LOG.warning("role=" + roleName() + ": " + e.getMessage());
+            LOG.log(io.donbee.jade.util.Logger.SEVERE, "role=" + roleName() + ": " + e.getMessage());
             doDelete();
             return;
         } catch (Exception e) {
-            LOG.warning("role=" + roleName() + ": brain init failed: " + e.getMessage());
+            LOG.log(io.donbee.jade.util.Logger.SEVERE, "role=" + roleName() + ": brain init failed", e);
             doDelete();
             return;
         }
@@ -143,19 +143,29 @@ public abstract class RoleAgent extends Agent {
 
     /** Subclasses implement task handling (LLM delegation + response). */
     protected void handleTask(ACLMessage request) {
-        LOG.info("role=" + roleName() + ": thinking about: "
+        LOG.log(io.donbee.jade.util.Logger.INFO, "role=" + roleName() + ": thinking about: "
             + firstLine(request.getContent()));
         ACLMessage reply = request.createReply();
         try {
             String result = callBrain(systemPrompt(), request.getContent(), request.getConversationId());
             reply.setPerformative(ACLMessage.INFORM);
             reply.setContent(result);
+            onTaskCompleted(result);
         } catch (Exception e) {
             reply.setPerformative(ACLMessage.FAILURE);
             reply.setContent("(" + roleName() + "-failed " + sanitize(e.getMessage()) + ")");
-            LOG.warning("role=" + roleName() + ": brain call failed: " + e.getMessage());
+            LOG.log(java.util.logging.Level.WARNING,
+                "role=" + roleName() + ": brain call failed", e);
         }
         send(reply);
+    }
+
+    /**
+     * Hook after a successful brain call: subclasses forward results to peers
+     * (P2P INFORM). Default: nothing.
+     */
+    protected void onTaskCompleted(String result) {
+        // no-op
     }
 
     /** Called when a peer sends us an INFORM message (direct P2P comms). */
@@ -164,8 +174,8 @@ public abstract class RoleAgent extends Agent {
     }
 
     /**
-     * Invoke the brain and log the exact model response to stdout (bracketed
-     * for parseability) and to the team workspace file.
+     * Invoke the brain and log the exact model response (bracketed for
+     * parseability) and save it to the team workspace file.
      */
     protected String callBrain(String systemPrompt, String userPrompt, String conversationId) {
         List<Brain.Tool> tools = createTools();
@@ -200,7 +210,7 @@ public abstract class RoleAgent extends Agent {
             dfd.addServices(sd);
             DFService.register(this, dfd);
         } catch (FIPAException e) {
-            LOG.warning("role=" + roleName() + ": DF registration failed: " + e.getMessage());
+            LOG.log(io.donbee.jade.util.Logger.SEVERE, "role=" + roleName() + ": DF registration failed", e);
         }
     }
 

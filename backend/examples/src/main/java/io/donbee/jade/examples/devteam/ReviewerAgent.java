@@ -40,22 +40,8 @@ public class ReviewerAgent extends RoleAgent {
     }
 
     @Override
-    protected void handleTask(ACLMessage request) {
-        LOG.info("[" + roleName() + "] thinking about: "
-            + firstLine(request.getContent()));
-        ACLMessage reply = request.createReply();
-        try {
-            String result = callBrain(systemPrompt(), request.getContent(), request.getConversationId());
-            reply.setPerformative(ACLMessage.INFORM);
-            reply.setContent(result);
-            // P2P: notify Manager and Implementer with the verdict
-            notifyPeer("manager", "Verdict: " + result);
-            notifyPeer("implementer", result);
-        } catch (Exception e) {
-            reply.setPerformative(ACLMessage.FAILURE);
-            reply.setContent("(" + roleName() + "-failed " + sanitize(e.getMessage()) + ")");
-            LOG.warning("[" + roleName() + "] brain call failed: " + e.getMessage());
-        }
-        send(reply);
+    protected void onTaskCompleted(String result) {
+        notifyPeer("manager", "Verdict: " + result);
+        notifyPeer("implementer", result);
     }
 }

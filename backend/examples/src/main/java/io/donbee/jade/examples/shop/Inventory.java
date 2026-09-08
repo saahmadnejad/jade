@@ -14,9 +14,6 @@ import java.util.Map;
  */
 public class Inventory {
 
-    private static final io.donbee.jade.util.Logger LOG =
-        io.donbee.jade.util.Logger.getJADELogger(Inventory.class.getName());
-
     private final Map<String, Integer> stock = new HashMap<>();
     private final int restockThreshold;
 

@@ -56,7 +56,7 @@ public class InventoryAgent extends Agent {
             DfUtils.registerService(this, SERVICE_TYPE, "online-shop-inventory");
             LOG.info("registered in DF with stock: " + describeStock());
         } catch (Exception e) {
-            LOG.warning("DF registration failed: " + e);
+            LOG.log(io.donbee.jade.util.Logger.SEVERE, "DF registration failed", e);
             doDelete();
             return;
         }

@@ -17,9 +17,6 @@ import java.util.regex.Pattern;
  */
 public final class ArtifactParser {
 
-    private static final io.donbee.jade.util.Logger LOG =
-        io.donbee.jade.util.Logger.getJADELogger(ArtifactParser.class.getName());
-
     // ```<optional language> <path>  ... content ... ```
     private static final Pattern BLOCK = Pattern.compile(
         "```[^\\n]*?([A-Za-z0-9_./-]+\\.[A-Za-z0-9]+)[ \\t]*\\n(.*?)```",
