@@ -29,6 +29,7 @@ services:
       - JAVA_OPTS=-Xmx512m
       - NINEROUTER_API_KEY=${NINEROUTER_API_KEY:-}
       - GH_TOKEN=${GH_TOKEN:-}
+      - LOG_DIR=/app/logs
     depends_on:
       9router:
         condition: service_healthy

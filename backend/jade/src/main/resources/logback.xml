@@ -2,7 +2,11 @@
 <configuration>
     <!-- Single logging backend for the whole platform: JADE's JUL wrapper,
          plain JUL (llm module) and Vert.x all funnel through the
-         jul-to-slf4j bridge into logback. -->
+         jul-to-slf4j bridge into logback.
+
+         LOG_DIR defaults to ./logs (local dev: repo working dir); the Docker
+         compose file sets LOG_DIR=/app/logs explicitly. -->
+    <property name="LOG_DIR" value="${LOG_DIR:-./logs}"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -12,9 +16,9 @@
 
     <!-- Platform-wide daily rolling file (kept small; container filesystem). -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>/app/logs/jade.log</file>
+        <file>${LOG_DIR}/jade.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>/app/logs/jade.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>${LOG_DIR}/jade.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>20MB</maxFileSize>
             <maxHistory>3</maxHistory>
             <totalSizeCap>100MB</totalSizeCap>
@@ -27,9 +31,9 @@
     <!-- Dev-team audit trail: every role turn, tool call, model response,
          phase transition and failure, in one trackable file. -->
     <appender name="DEVTEAM" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>/app/logs/devteam-audit.log</file>
+        <file>${LOG_DIR}/devteam-audit.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>/app/logs/devteam-audit.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>${LOG_DIR}/devteam-audit.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>20MB</maxFileSize>
             <maxHistory>7</maxHistory>
             <totalSizeCap>200MB</totalSizeCap>
@@ -39,12 +43,17 @@
         </encoder>
     </appender>
 
+    <!-- Third-party chatter: keep the console and jade.log readable. -->
+    <logger name="io.vertx" level="WARN"/>
+    <logger name="org.jacorb" level="WARN"/>
+    <logger name="io.netty" level="WARN"/>
+
+    <!-- Dev-team + LLM traffic goes to the audit file AND (via additivity)
+         to console/jade.log so cross-correlation is possible when hunting
+         bugs. -->
     <logger name="io.donbee.jade.examples.devteam" level="INFO">
         <appender-ref ref="DEVTEAM"/>
     </logger>
-
-    <!-- LLM module logs (tool calls, agent-loop call counts, retries) are
-         core dev-team audit data; capture them in the audit file too. -->
     <logger name="io.donbee.llm" level="INFO">
         <appender-ref ref="DEVTEAM"/>
     </logger>

@@ -35,6 +35,7 @@ import io.donbee.jade.core.ProfileException;
 import io.donbee.jade.util.leap.Properties;
 import io.donbee.jade.util.ExtendedProperties;
 import io.donbee.jade.util.Logger;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
 /**
  * Boots the <B><em>JADE</em></b> system, parsing command line arguments.
@@ -47,16 +48,16 @@ import io.donbee.jade.util.Logger;
  *
  */
 public class Boot {
+	// Route java.util.logging (JADE's Logger wrapper, llm module) through
+	// SLF4J into logback BEFORE any JUL logger below is created. Existing
+	// handlers are removed so each record is printed once, in logback format.
+	static {
+		SLF4JBridgeHandler.removeHandlersForRootLogger();
+		SLF4JBridgeHandler.install();
+	}
+
 	public static final String DEFAULT_FILENAME = "leap.properties";
 	private static Logger logger = Logger.getMyLogger("io.donbee.jadeBoot");
-
-	static {
-		// Route java.util.logging (JADE's Logger wrapper, llm module) through
-		// SLF4J into logback BEFORE any JUL logger is used. Existing handlers
-		// are removed so each record is printed once, in logback format.
-		org.slf4j.bridge.SLF4JBridgeHandler.removeHandlersForRootLogger();
-		org.slf4j.bridge.SLF4JBridgeHandler.install();
-	}
 
 	/**
 	 * Fires up the <b><em>JADE</em></b> system.
