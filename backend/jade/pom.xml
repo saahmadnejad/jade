@@ -51,16 +51,15 @@
 
         <!-- Logging: JUL->SLF4J bridge + logback so every logger (JADE's JUL
              wrapper, plain JUL in llm, Vert.x) funnels into one backend with
-             console + rolling file appenders. -->
+             console + rolling file appenders. Versions governed by the
+             parent dependencyManagement. -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jul-to-slf4j</artifactId>
-            <version>2.0.16</version>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.5.12</version>
         </dependency>
         <!-- Test dependencies -->
         <dependency>
