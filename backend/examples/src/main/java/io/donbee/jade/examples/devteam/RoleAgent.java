@@ -20,6 +20,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
 
 /**
  * Base class for LLM-powered team members. Receives tasks as ACL REQUEST,
@@ -99,11 +100,11 @@ public abstract class RoleAgent extends Agent {
                 LOG.info("role=" + roleName() + ": brain: " + model);
             }
         } catch (IllegalStateException e) {
-            LOG.log(io.donbee.jade.util.Logger.SEVERE, "role=" + roleName() + ": " + e.getMessage());
+            LOG.severe("role=" + roleName() + ": " + e.getMessage());
             doDelete();
             return;
         } catch (Exception e) {
-            LOG.log(io.donbee.jade.util.Logger.SEVERE, "role=" + roleName() + ": brain init failed", e);
+            LOG.log(Level.SEVERE, "role=" + roleName() + ": brain init failed", e);
             doDelete();
             return;
         }
@@ -143,7 +144,7 @@ public abstract class RoleAgent extends Agent {
 
     /** Subclasses implement task handling (LLM delegation + response). */
     protected void handleTask(ACLMessage request) {
-        LOG.log(io.donbee.jade.util.Logger.INFO, "role=" + roleName() + ": thinking about: "
+        LOG.info("role=" + roleName() + ": thinking about: "
             + firstLine(request.getContent()));
         ACLMessage reply = request.createReply();
         try {
@@ -154,7 +155,7 @@ public abstract class RoleAgent extends Agent {
         } catch (Exception e) {
             reply.setPerformative(ACLMessage.FAILURE);
             reply.setContent("(" + roleName() + "-failed " + sanitize(e.getMessage()) + ")");
-            LOG.log(java.util.logging.Level.WARNING,
+            LOG.log(Level.WARNING,
                 "role=" + roleName() + ": brain call failed", e);
         }
         send(reply);
@@ -210,7 +211,7 @@ public abstract class RoleAgent extends Agent {
             dfd.addServices(sd);
             DFService.register(this, dfd);
         } catch (FIPAException e) {
-            LOG.log(io.donbee.jade.util.Logger.SEVERE, "role=" + roleName() + ": DF registration failed", e);
+            LOG.log(Level.SEVERE, "role=" + roleName() + ": DF registration failed", e);
         }
     }
 

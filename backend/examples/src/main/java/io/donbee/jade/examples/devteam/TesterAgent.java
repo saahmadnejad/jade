@@ -8,9 +8,6 @@ import io.donbee.jade.lang.acl.ACLMessage;
  */
 public class TesterAgent extends RoleAgent {
 
-    private static final io.donbee.jade.util.Logger LOG =
-        io.donbee.jade.util.Logger.getJADELogger(TesterAgent.class.getName());
-
     @Override
     protected String role() {
         return "tester";
