@@ -1,5 +1,7 @@
 package io.donbee.jade.examples.shop;
 
+import java.util.logging.Level;
+
 import io.donbee.jade.core.AID;
 import io.donbee.jade.core.Agent;
 import io.donbee.jade.core.behaviours.CyclicBehaviour;
@@ -46,7 +48,7 @@ public class RestockSupplierAgent extends Agent {
             LOG.info("registered in DF, ships after "
                 + (shippingDelayMs / 1000) + "s");
         } catch (Exception e) {
-            LOG.log(io.donbee.jade.util.Logger.SEVERE, "DF registration failed", e);
+            LOG.log(Level.SEVERE, "DF registration failed", e);
             doDelete();
             return;
         }

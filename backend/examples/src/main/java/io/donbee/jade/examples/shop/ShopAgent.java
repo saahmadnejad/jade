@@ -7,6 +7,7 @@ import io.donbee.jade.domain.DFService;
 import io.donbee.jade.lang.acl.ACLMessage;
 import io.donbee.jade.lang.acl.MessageTemplate;
 
+import java.util.logging.Level;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -38,7 +39,7 @@ public class ShopAgent extends Agent {
             DfUtils.registerService(this, SERVICE_TYPE, "online-shop-storefront");
             LOG.info("registered in DF, ready to take orders");
         } catch (Exception e) {
-            LOG.log(io.donbee.jade.util.Logger.SEVERE, "DF registration failed", e);
+            LOG.log(Level.SEVERE, "DF registration failed", e);
             doDelete();
             return;
         }

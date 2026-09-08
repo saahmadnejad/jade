@@ -9,9 +9,6 @@ import io.donbee.jade.lang.acl.ACLMessage;
  */
 public class ReviewerAgent extends RoleAgent {
 
-    private static final io.donbee.jade.util.Logger LOG =
-        io.donbee.jade.util.Logger.getJADELogger(ReviewerAgent.class.getName());
-
     /** Machine-readable verdict lines the Manager looks for. */
     public static final String VERDICT_APPROVED = "VERDICT: approved";
     public static final String VERDICT_CHANGES = "VERDICT: changes-requested";

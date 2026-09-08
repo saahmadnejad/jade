@@ -1,5 +1,6 @@
 package io.donbee.jade.examples.devteam;
 
+import java.util.logging.Level;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Map;
@@ -90,7 +91,7 @@ public class ManagerAgent extends Agent {
             dfd.addServices(sdPeer);
             io.donbee.jade.domain.DFService.register(this, dfd);
         } catch (io.donbee.jade.domain.FIPAException e) {
-            LOG.log(io.donbee.jade.util.Logger.SEVERE, "team=" + teamId + ": DF registration failed", e);
+            LOG.log(Level.SEVERE, "team=" + teamId + ": DF registration failed", e);
         }
 
         if (brief == null || brief.isBlank()) {
