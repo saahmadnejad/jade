@@ -9,6 +9,9 @@ import java.util.List;
  */
 public class FallbackBrain implements Brain {
 
+    private static final java.util.logging.Logger LOG =
+        java.util.logging.Logger.getLogger(FallbackBrain.class.getName());
+
     private final List<Brain> delegates;
 
     public FallbackBrain(List<Brain> delegates) {
@@ -26,7 +29,7 @@ public class FallbackBrain implements Brain {
                 return brain.respond(systemPrompt, userPrompt, tools);
             } catch (BrainException e) {
                 last = e;
-                System.err.println("[FallbackBrain] " + brain.model()
+                LOG.warning("brain " + brain.model()
                     + " failed, trying next: " + e.getMessage());
             }
         }
@@ -43,7 +46,7 @@ public class FallbackBrain implements Brain {
                 return brain.respond(systemPrompt, userPrompt);
             } catch (BrainException e) {
                 last = e;
-                System.err.println("[FallbackBrain] " + brain.model()
+                LOG.warning("brain " + brain.model()
                     + " failed, trying next: " + e.getMessage());
             }
         }

@@ -34,6 +34,9 @@ import java.util.Set;
  */
 public abstract class RoleAgent extends Agent {
 
+    private static final io.donbee.jade.util.Logger LOG =
+        io.donbee.jade.util.Logger.getJADELogger(RoleAgent.class.getName());
+
     protected Brain brain;
     private String githubToken;
     private String llmApiKey;
@@ -89,25 +92,25 @@ public abstract class RoleAgent extends Agent {
                 Brain fallback = buildBrain(baseUrl, fallbackModel, false,
                     null, 0, timeoutSec);
                 brain = new FallbackBrain(List.of(primary, fallback));
-                System.out.println("[" + roleName() + "] brain: " + model
+                LOG.info("role=" + roleName() + ": brain: " + model
                     + " (fallback: " + fallbackModel + ")");
             } else {
                 brain = primary;
-                System.out.println("[" + roleName() + "] brain: " + model);
+                LOG.info("role=" + roleName() + ": brain: " + model);
             }
         } catch (IllegalStateException e) {
-            System.err.println("[" + roleName() + "] " + e.getMessage());
+            LOG.warning("role=" + roleName() + ": " + e.getMessage());
             doDelete();
             return;
         } catch (Exception e) {
-            System.err.println("[" + roleName() + "] brain init failed: " + e.getMessage());
+            LOG.warning("role=" + roleName() + ": brain init failed: " + e.getMessage());
             doDelete();
             return;
         }
 
         registerInDF();
 
-        System.out.println("[" + roleName() + "] ready (model: " + brain.model() + ")");
+        LOG.info("role=" + roleName() + ": ready (model: " + brain.model() + ")");
 
         addBehaviour(new io.donbee.jade.core.behaviours.CyclicBehaviour(this) {
             @Override
@@ -140,7 +143,7 @@ public abstract class RoleAgent extends Agent {
 
     /** Subclasses implement task handling (LLM delegation + response). */
     protected void handleTask(ACLMessage request) {
-        System.out.println("[" + roleName() + "] thinking about: "
+        LOG.info("role=" + roleName() + ": thinking about: "
             + firstLine(request.getContent()));
         ACLMessage reply = request.createReply();
         try {
@@ -150,7 +153,7 @@ public abstract class RoleAgent extends Agent {
         } catch (Exception e) {
             reply.setPerformative(ACLMessage.FAILURE);
             reply.setContent("(" + roleName() + "-failed " + sanitize(e.getMessage()) + ")");
-            System.err.println("[" + roleName() + "] brain call failed: " + e.getMessage());
+            LOG.warning("role=" + roleName() + ": brain call failed: " + e.getMessage());
         }
         send(reply);
     }
@@ -176,9 +179,9 @@ public abstract class RoleAgent extends Agent {
         String result = brain.respond(sys, userPrompt, tools);
         callCount++;
         String conv = conversationId != null && !conversationId.isBlank() ? conversationId : "turn-" + callCount;
-        System.out.println("[" + roleName() + "] [model-response-start conv=" + conv + " turn=" + callCount + "]");
-        System.out.println(result);
-        System.out.println("[" + roleName() + "] [model-response-end conv=" + conv + "]");
+        LOG.info("role=" + roleName() + ": [model-response-start conv=" + conv + " turn=" + callCount + "]");
+        LOG.info(result);
+        LOG.info("role=" + roleName() + ": [model-response-end conv=" + conv + "]");
         Workspace ws = WorkspaceStore.get(teamId);
         if (ws != null) {
             ws.save("logs/" + role() + "-" + conv + ".md", result);
@@ -197,7 +200,7 @@ public abstract class RoleAgent extends Agent {
             dfd.addServices(sd);
             DFService.register(this, dfd);
         } catch (FIPAException e) {
-            System.err.println("[" + roleName() + "] DF registration failed: " + e.getMessage());
+            LOG.warning("role=" + roleName() + ": DF registration failed: " + e.getMessage());
         }
     }
 
@@ -214,7 +217,7 @@ public abstract class RoleAgent extends Agent {
                 return results[0].getName();
             }
         } catch (FIPAException e) {
-            System.err.println("[" + roleName() + "] DF lookup failed for " + roleSuffix + ": " + e.getMessage());
+            LOG.warning("role=" + roleName() + ": DF lookup failed for " + roleSuffix + ": " + e.getMessage());
         }
         return null;
     }

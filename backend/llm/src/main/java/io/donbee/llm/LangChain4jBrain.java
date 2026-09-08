@@ -35,6 +35,9 @@ import java.util.function.Supplier;
  */
 public class LangChain4jBrain implements Brain {
 
+    private static final java.util.logging.Logger LOG =
+        java.util.logging.Logger.getLogger(LangChain4jBrain.class.getName());
+
     private static final String NINEROUTER_PREFIX = "9router/";
 
     private final ChatLanguageModel model;
@@ -111,9 +114,8 @@ public class LangChain4jBrain implements Brain {
                 if (waitMs <= 0 || attempt == MAX_RETRIES) {
                     throw e;
                 }
-                System.err.println("[LangChain4jBrain] rate limited, waiting "
-                    + waitMs + "ms (attempt " + (attempt + 1) + "/" + MAX_RETRIES + "): "
-                    + e.getMessage());
+                LOG.warning("rate limited, waiting " + waitMs + "ms (attempt "
+                    + (attempt + 1) + "/" + MAX_RETRIES + "): " + e.getMessage());
                 try {
                     Thread.sleep(waitMs);
                 } catch (InterruptedException ie) {
@@ -180,7 +182,7 @@ public class LangChain4jBrain implements Brain {
     private String executeTool(List<Tool> tools, String name, String args) {
         for (Tool t : tools) {
             if (t.name().equals(name)) {
-                System.out.println("[LangChain4jBrain] tool: " + name + "(" + args + ")");
+                LOG.info(() -> "tool: " + name + "(" + args + ")");
                 return t.call(args);
             }
         }

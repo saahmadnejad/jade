@@ -9,6 +9,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class WorkspaceStore {
 
+    private static final io.donbee.jade.util.Logger LOG =
+        io.donbee.jade.util.Logger.getJADELogger(WorkspaceStore.class.getName());
+
     private static final Map<String, Workspace> WORKSPACES = new ConcurrentHashMap<>();
 
     private WorkspaceStore() {

@@ -37,6 +37,9 @@ import io.donbee.jade.rest.scenario.ScenarioParam;
  */
 public class ScenarioService {
 
+    private static final io.donbee.jade.util.Logger LOG =
+        io.donbee.jade.util.Logger.getJADELogger(ScenarioService.class.getName());
+
     /** Instance names become agent-name prefixes and container-name suffixes. */
     private static final Pattern INSTANCE_NAME = Pattern.compile("[A-Za-z0-9_-]+");
     private static final String CONTAINER_PREFIX = "scenario-";
@@ -124,14 +127,14 @@ public class ScenarioService {
                     ? !liveContainers.contains(info.container())
                     : info.agents().stream().noneMatch(liveAgents::contains);
                 if (dead) {
-                    System.err.println("[ScenarioService] Pruning instance '" + entry.getKey()
+                    LOG.warning("Pruning instance '" + entry.getKey()
                         + "': its " + (dedicated ? "container" : "agents") + " are gone");
                 }
                 return dead;
             });
         } catch (RuntimeException e) {
             // Platform info unavailable right now -> keep current view.
-            System.err.println("[ScenarioService] Skipping instance pruning: " + e.getMessage());
+            LOG.warning("Skipping instance pruning: " + e.getMessage());
         }
     }
 
@@ -162,7 +165,7 @@ public class ScenarioService {
         try {
             container = createScenarioContainer(name);
         } catch (Exception e) {
-            System.err.println("[ScenarioService] Could not create dedicated container for '"
+            LOG.warning("Could not create dedicated container for '"
                 + name + "', deploying into Main Container: " + e.getMessage());
         }
 
@@ -207,7 +210,7 @@ public class ScenarioService {
                 platformService.killContainer(info.container());
                 return;
             } catch (RuntimeException e) {
-                System.err.println("[ScenarioService] Killing container " + info.container()
+                LOG.warning("Killing container " + info.container()
                     + " failed, killing agents individually: " + e.getMessage());
             }
         }
@@ -308,7 +311,7 @@ public class ScenarioService {
             return; // scenario does not use an LLM brain (e.g. pure shop demo)
         }
         String url = baseUrl + "/models";
-        System.out.println("[ScenarioService] Probing brain provider: " + url);
+        LOG.info("Probing brain provider: " + url);
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -331,7 +334,7 @@ public class ScenarioService {
                     + resp.statusCode() + " for " + url
                     + " — verify 9router is running and configured via browser at http://localhost:20129/dashboard");
             }
-            System.out.println("[ScenarioService] Brain provider OK (HTTP "
+            LOG.info("Brain provider OK (HTTP "
                 + resp.statusCode() + ")");
         } catch (IOException e) {
             throw new IllegalStateException("Cannot reach brain provider at " + url

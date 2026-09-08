@@ -26,6 +26,9 @@ import java.util.Random;
  */
 public class CustomerAgent extends Agent {
 
+    private static final io.donbee.jade.util.Logger LOG =
+        io.donbee.jade.util.Logger.getJADELogger(CustomerAgent.class.getName());
+
     private static final int DEFAULT_INTERVAL_SEC = 8;
     private static final int DEFAULT_QUANTITY = 1;
 
@@ -66,7 +69,7 @@ public class CustomerAgent extends Agent {
                 try {
                     purchaseOnce();
                 } catch (Exception e) {
-                    System.err.println("[CustomerAgent] purchase attempt failed: " + e);
+                    LOG.warning("purchase attempt failed: " + e);
                 }
             }
         });
@@ -87,11 +90,11 @@ public class CustomerAgent extends Agent {
                 }
                 switch (outcome.getPerformative()) {
                     case ACLMessage.INFORM ->
-                        System.out.println("[CustomerAgent] happy: " + outcome.getContent());
+                        LOG.info("happy: " + outcome.getContent());
                     case ACLMessage.REFUSE ->
-                        System.out.println("[CustomerAgent] disappointed: " + outcome.getContent());
+                        LOG.info("disappointed: " + outcome.getContent());
                     default ->
-                        System.out.println("[CustomerAgent] error: " + outcome.getContent());
+                        LOG.info("error: " + outcome.getContent());
                 }
             }
         });
@@ -100,7 +103,7 @@ public class CustomerAgent extends Agent {
     private void purchaseOnce() throws Exception {
         AID shop = DfUtils.findServiceProvider(this, ShopAgent.SERVICE_TYPE);
         if (shop == null) {
-            System.out.println("[CustomerAgent] no shop found in DF yet");
+            LOG.info("no shop found in DF yet");
             return;
         }
         String sku = skus[random.nextInt(skus.length)].trim();
@@ -111,6 +114,6 @@ public class CustomerAgent extends Agent {
         buy.setConversationId("purchase-" + getLocalName() + "-" + purchaseCounter);
         buy.setContent("(buy " + sku + " " + quantity + ")");
         send(buy);
-        System.out.println("[CustomerAgent] wants " + quantity + " x " + sku);
+        LOG.info("wants " + quantity + " x " + sku);
     }
 }

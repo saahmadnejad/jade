@@ -17,6 +17,9 @@ import java.util.List;
  */
 public final class TeamScaffolder {
 
+    private static final io.donbee.jade.util.Logger LOG =
+        io.donbee.jade.util.Logger.getJADELogger(TeamScaffolder.class.getName());
+
     /** Resource root of the vendored skills inside the examples jar. */
     static final String SKILLS_RESOURCE_ROOT = "/skills";
 
@@ -31,7 +34,7 @@ public final class TeamScaffolder {
      */
     public static void scaffold(Path workDir, String githubOrg, String repoName,
                                 String visibility) throws IOException {
-        System.out.println("[devteam] scaffolding workspace " + workDir);
+        LOG.info("scaffolding workspace " + workDir);
         Files.createDirectories(workDir);
         copySkills(workDir.resolve(".opencode").resolve("skills"));
         for (String role : List.of("manager", "architect", "implementer", "tester", "reviewer")) {

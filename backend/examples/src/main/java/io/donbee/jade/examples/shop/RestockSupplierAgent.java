@@ -24,6 +24,9 @@ import io.donbee.jade.proto.AchieveREResponder;
  */
 public class RestockSupplierAgent extends Agent {
 
+    private static final io.donbee.jade.util.Logger LOG =
+        io.donbee.jade.util.Logger.getJADELogger(RestockSupplierAgent.class.getName());
+
     static final String SERVICE_TYPE = "supplier";
     private static final int DEFAULT_SHIPPING_DELAY_SEC = 5;
 
@@ -40,10 +43,10 @@ public class RestockSupplierAgent extends Agent {
 
         try {
             DfUtils.registerService(this, SERVICE_TYPE, "online-shop-supplier");
-            System.out.println("[RestockSupplierAgent] registered in DF, ships after "
+            LOG.info("registered in DF, ships after "
                 + (shippingDelayMs / 1000) + "s");
         } catch (Exception e) {
-            System.err.println("[RestockSupplierAgent] DF registration failed: " + e);
+            LOG.warning("DF registration failed: " + e);
             doDelete();
             return;
         }
@@ -77,11 +80,11 @@ public class RestockSupplierAgent extends Agent {
                         shipment.setConversationId(conversationId);
                         shipment.setContent(shipmentContent);
                         myAgent.send(shipment);
-                        System.out.println("[RestockSupplierAgent] shipped " + order.quantity()
+                        LOG.info("shipped " + order.quantity()
                             + " x " + order.sku() + " to " + requester.getLocalName());
                     }
                 });
-                System.out.println("[RestockSupplierAgent] accepted restock of "
+                LOG.info("accepted restock of "
                     + order.quantity() + " x " + order.sku());
                 return reply;
             }

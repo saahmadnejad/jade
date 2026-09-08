@@ -21,6 +21,9 @@ import io.donbee.jade.rest.scenario.ScenarioParam;
  */
 public class ShopScenario implements Scenario {
 
+    private static final io.donbee.jade.util.Logger LOG =
+        io.donbee.jade.util.Logger.getJADELogger(ShopScenario.class.getName());
+
     static final String SHOP_CLASS = ShopAgent.class.getName();
     static final String INVENTORY_CLASS = InventoryAgent.class.getName();
     static final String SUPPLIER_CLASS = RestockSupplierAgent.class.getName();

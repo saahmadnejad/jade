@@ -14,6 +14,9 @@ import java.util.function.UnaryOperator;
  */
 public final class SecretsResolver {
 
+    private static final io.donbee.jade.util.Logger LOG =
+        io.donbee.jade.util.Logger.getJADELogger(SecretsResolver.class.getName());
+
     /*     * Gitignored file that may hold {@code llm.api.key=<secret>} (default profile). */
     public static final String DEFAULT_PROFILE = "local";
 
@@ -103,7 +106,7 @@ public final class SecretsResolver {
             props.load(in);
             return props.getProperty(property);
         } catch (IOException e) {
-            System.err.println("[SecretsResolver] Could not read " + file + ": " + e.getMessage());
+            LOG.warning("Could not read " + file + ": " + e.getMessage());
             return null;
         }
     }
