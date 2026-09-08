@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Single logging backend for the whole platform: JADE's JUL wrapper,
+         plain JUL (llm module) and Vert.x all funnel through the
+         jul-to-slf4j bridge into logback. -->
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} [%thread] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Platform-wide daily rolling file (kept small; container filesystem). -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>/app/logs/jade.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>/app/logs/jade.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>20MB</maxFileSize>
+            <maxHistory>3</maxHistory>
+            <totalSizeCap>100MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{36} [%thread] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Dev-team audit trail: every role turn, tool call, model response,
+         phase transition and failure, in one trackable file. -->
+    <appender name="DEVTEAM" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>/app/logs/devteam-audit.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>/app/logs/devteam-audit.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>20MB</maxFileSize>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>200MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{36} [%thread] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="io.donbee.jade.examples.devteam" level="INFO">
+        <appender-ref ref="DEVTEAM"/>
+    </logger>
+
+    <!-- LLM module logs (tool calls, agent-loop call counts, retries) are
+         core dev-team audit data; capture them in the audit file too. -->
+    <logger name="io.donbee.llm" level="INFO">
+        <appender-ref ref="DEVTEAM"/>
+    </logger>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+</configuration>

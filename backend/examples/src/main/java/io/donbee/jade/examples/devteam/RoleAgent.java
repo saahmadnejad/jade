@@ -184,7 +184,9 @@ public abstract class RoleAgent extends Agent {
         String bashCtx = "You have a bash tool. All commands run in the team "
             + "workspace directory '" + workDir + "' (relative paths resolve "
             + "there; never use or create absolute paths like /workspace). "
-            + "Write files, run tests and git inside it via the bash tool.";
+            + "Write files, run tests and git inside it via the bash tool. "
+            + "Always respond in English; all code, comments, docs and file "
+            + "contents must be in English.";
         String sys = (systemPrompt == null || systemPrompt.isBlank())
             ? bashCtx : systemPrompt + "\n\n" + bashCtx;
         String result = brain.respond(sys, userPrompt, tools);

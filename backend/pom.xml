@@ -55,6 +55,14 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Pin SLF4J 2.x: JacORB drags in slf4j-api 1.7.x, whose
+                 StaticLoggerBinder lookup breaks logback 1.5 (SLF4J 2.0
+                 ServiceLoader binding). -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>2.0.16</version>
+            </dependency>
             <!-- Internal modules -->
             <dependency>
                 <groupId>io.donbee</groupId>

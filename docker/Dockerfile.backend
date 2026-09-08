@@ -17,7 +17,7 @@ RUN apk add --no-cache curl libstdc++ libgcc git npm nodejs bash python3 py3-pip
       -o /tmp/opencode.tar.gz && mkdir -p /opt/opencode && tar -xzf /tmp/opencode.tar.gz -C /opt/opencode \
     && ln -s /opt/opencode/opencode /usr/local/bin/opencode \
     || echo "WARNING: opencode install failed"
-RUN mkdir -p /workspace /app/conf && chmod 777 /workspace /app/conf
+RUN mkdir -p /workspace /app/conf /app/logs && chmod 777 /workspace /app/conf /app/logs
 RUN export SHELL=/bin/sh; \
     curl -fsSL "https://github.com/cli/cli/releases/download/v2.98.0/gh_2.98.0_linux_amd64.tar.gz" \
       -o /tmp/gh.tar.gz && tar -xzf /tmp/gh.tar.gz -C /tmp && mv /tmp/gh_2.98.0_linux_amd64 /opt/gh && \
