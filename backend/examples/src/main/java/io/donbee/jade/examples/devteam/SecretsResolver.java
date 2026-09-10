@@ -67,7 +67,7 @@ public final class SecretsResolver {
     /**
      * Like {@link #resolveOptional}, but with an explicit secrets profile so
      * callers can read from {@code secrets-<profile>.properties} (e.g. a future
-     * "shop" profile). Env var is still checked first.
+     * "other" profile). Env var is still checked first.
      */
     public static String resolveOptional(UnaryOperator<String> envLookup, String envVar,
                                          Path workingDir, String profile,

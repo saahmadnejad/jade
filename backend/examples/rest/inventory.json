@@ -1,5 +1,0 @@
-{
-  "name": "inventory",
-  "class": "io.donbee.jade.examples.shop.InventoryAgent",
-  "args": ["sku-laptop:10|sku-phone:5|sku-cable:50", "3", "10", "20"]
-}

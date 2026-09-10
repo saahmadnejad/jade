@@ -1,6 +1,6 @@
 # Scenarios API
 
-Manage multi-agent demo scenarios (like the bundled online shop) on a running
+Manage multi-agent demo scenarios (like the bundled dev team) on a running
 platform. A **scenario** is a named template describing a set of agents and
 their configurable parameters. An **instance** is one running copy of a
 scenario.
@@ -32,17 +32,17 @@ List all available scenario templates with their configurable parameters.
 {
   "scenarios": [
     {
-      "id": "online-shop",
-      "title": "Online Shop",
-      "description": "Customers buy from a storefront...",
+      "id": "dev-team",
+      "title": "Software Development Team",
+      "description": "Five LLM-powered agents build a small project...",
       "params": [
         {
-          "name": "initialStock",
+          "name": "maxRounds",
           "type": "int",
-          "defaultValue": 10,
-          "minValue": 0,
-          "maxValue": 1000,
-          "description": "Starting quantity per SKU"
+          "defaultValue": 5,
+          "minValue": 1,
+          "maxValue": 10,
+          "description": "Review rounds cap"
         }
       ]
     }
@@ -62,10 +62,10 @@ Start a new instance of a scenario.
 
 ```json
 {
-  "instanceName": "shop-demo-1",
+  "instanceName": "team-demo-1",
   "config": {
-    "initialStock": 25,
-    "customerCount": 2
+    "brief": "Build a tiny python string-utils library with tests",
+    "maxRounds": 3
   }
 }
 ```
@@ -80,10 +80,10 @@ Start a new instance of a scenario.
 
 ```json
 {
-  "message": "Scenario 'online-shop' started as instance 'shop-demo-1'",
-  "instance": "shop-demo-1",
-  "container": "scenario-shop-demo-1",
-  "agents": ["shop-demo-1-shop", "shop-demo-1-inventory", "..."]
+  "message": "Scenario 'dev-team' started as instance 'team-demo-1'",
+  "instance": "team-demo-1",
+  "container": "scenario-team-demo-1",
+  "agents": ["team-demo-1-manager", "team-demo-1-architect", "..."]
 }
 ```
 
@@ -92,17 +92,17 @@ Start a new instance of a scenario.
 - `404` unknown scenario id
 - `400` invalid config values (out of min/max range, wrong type) or bad
   instance name
-- `409` instance name already in use, an agent/container name clash on the
-  platform, or the scenario's LLM provider probe failed (e.g. 9router
-  unreachable or the API key missing/wrong — see the error message)
+- `409` instance name already in use or an agent/container name clash on the
+  platform
 
 ### Dev-team notes
 
 - The `brief` config param is required for the dev-team scenario: an empty
   brief fails the instance immediately.
-- The `*Model` params must name models that actually respond on the
-  configured provider — verify via the 9router dashboard or
-  `GET /v1/models` before starting. Role agents need a tool-capable model.
+- The `*Model` params are `provider/model` ids resolved by the `opencode`
+  CLI; the default provider is tokenrouter (configured per instance
+  workspace, see `docs/adr/0003`). Role agents fail fast when the CLI or the
+  provider key (`TOKENROUTER_API_KEY`) is missing.
 
 ---
 
@@ -119,12 +119,12 @@ Instances whose container disappears outside this API (e.g. killed from
 {
   "instances": [
     {
-      "instance": "shop-demo-1",
-      "scenarioId": "online-shop",
-      "container": "scenario-shop-demo-1",
+      "instance": "team-demo-1",
+      "scenarioId": "dev-team",
+      "container": "scenario-team-demo-1",
       "agents": [
-        { "name": "shop-demo-1-shop" },
-        { "name": "shop-demo-1-inventory" }
+        { "name": "team-demo-1-manager" },
+        { "name": "team-demo-1-architect" }
       ]
     }
   ]
@@ -141,7 +141,8 @@ agents. Other instances are unaffected.
 ### Response — 200 OK
 
 ```json
-{ "message": "Instance 'shop-demo-1' stopped" }
+
+{ "message": "Instance 'team-demo-1' stopped" }
 ```
 
 ### Errors

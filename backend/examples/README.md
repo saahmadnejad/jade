@@ -1,46 +1,14 @@
 # Jade Examples
 
-Example multi-agent scenarios for the Jade platform. Each subfolder is a
-self-contained scenario you can start with the platform, deploy at runtime
-through the REST API, and observe live in the React frontend.
+Example multi-agent scenarios for the Jade platform. Each scenario is
+self-contained: start it from the platform, launch instances at runtime
+through the REST API, and watch them live in the React frontend.
 
 ## Scenarios
 
 | Scenario | Folder | Description |
 |----------|--------|-------------|
-| Online shop | [`shop/`](shop/) | Customers buy from a storefront; the storefront reserves stock in the warehouse; the warehouse auto-restocks from a supplier. |
 | Dev team | `dev-team` (in `src/main/java/.../devteam/`) | Five LLM-powered agents (Manager, Architect, Implementer, Tester, Reviewer) build a small project from a brief, in bounded review rounds. |
-
-## API keys (LLM scenarios)
-
-The dev-team scenario calls LLM providers and needs an API key at runtime.
-**Keys are never stored in this repository** (see `docs/adr/0002`):
-
-```bash
-# Option 1: environment variable (9router API key for the langchain4j brain)
-export NINEROUTER_API_KEY=<your-9router-key>
-
-# Option 2: gitignored local file
-cp backend/examples/conf/secrets-local.properties.example backend/examples/conf/secrets-local.properties
-# then edit to fill in your key + optional llm.base.url and llm.model.name
-```
-
-A sample file (`secrets-local.properties.example`) is committed as a template.
-The real `secrets-local.properties` is gitignored and never committed.
-
-Without a key the role agents fail fast with an actionable error.
-
-By default the dev-team scenario uses the langchain4j brain, which connects
-to 9router (`http://9router:20128/v1` in Docker) — a free, OpenAI-compatible
-LLM gateway. Model names come and go with the provider pool: verify what
-actually responds on your 9router via the dashboard
-(`http://localhost:20129/dashboard` in Docker, `http://localhost:20128/dashboard`
-locally) or `curl http://localhost:20129/v1/models` before starting a
-scenario, then set the six `*Model` config params accordingly. Role agents
-need a **tool-capable** model (they call a `bash` tool for file ops, running
-tests, and git inside the backend container via the LLM's tool-calling loop);
-the fallback model can be text-only. Any OpenAI-compatible provider works by
-changing `baseUrl` + the model params.
 
 ## Building
 
@@ -55,22 +23,21 @@ Artifacts:
 - `backend/jade/target/jade-<version>.jar` — platform uber jar
 - `backend/examples/target/examples-<version>.jar` — example agents
 
-## Running the online-shop scenario
+## Running the dev-team scenario
 
 ### Option A: Scenarios page in the UI (recommended)
 
-Open the frontend, click a scenario card (**Online Shop** or **Software
-Development Team**), adjust the config form (defaults prefilled) and press
-Start. Each launch creates its own container (`scenario-<instance>`) so you can
-run several instances side by side and kill them independently from the same
-page.
+Open the frontend, click the **Software Development Team** card, adjust the
+config form (defaults prefilled) and press Start. Each launch creates its own
+container (`scenario-<instance>`) so you can run several instances side by
+side and kill them independently from the same page.
 
-For the dev team: watch the conversation on the **Messages** page (Manager
-task REQUESTs and peer INFORMs, all FIPA `fipa-request` protocol). The team's
-files live in `/tmp/jade-devteam-<instance>/` inside the backend container
-(see `AGENTS.md` for the workspace layout). Review rounds iterate
-implement → test → review until the Reviewer approves or `maxRounds` /
-`maxTotalCalls` caps hit; each phase has its own time budget.
+Watch the conversation on the **Messages** page (Manager task REQUESTs and
+peer INFORMs, all FIPA `fipa-request` protocol). The team's files live in
+`/tmp/jade-devteam-<instance>/` inside the backend container (see `AGENTS.md`
+for the workspace layout). Review rounds iterate implement → test → review
+until the Reviewer approves or `maxRounds` / `maxTotalCalls` caps hit; each
+phase has its own time budget.
 
 GitHub publishing is opt-in: set `githubOrg` to a non-empty value AND provide
 a `GH_TOKEN` env var (PAT with repo/admin access) in the backend container.
@@ -80,60 +47,40 @@ publishing.
 Programmatically the same thing:
 
 ```bash
-curl -s -X POST http://localhost:8080/api/scenarios/online-shop/instances \
+curl -s -X POST http://localhost:8080/api/scenarios/dev-team/instances \
   -H 'Content-Type: application/json' \
-  -d '{"instanceName":"shop-demo","config":{"initialStock":25,"customerCount":3}}'
+  -d '{"instanceName":"team-demo","config":{}}'
 
 # list / stop
 curl -s http://localhost:8080/api/scenarios/instances
-curl -s -X DELETE http://localhost:8080/api/scenarios/instances/shop-demo
+curl -s -X DELETE http://localhost:8080/api/scenarios/instances/team-demo
 ```
 
-### Option B: configuration file (all agents at startup)
+The body's `config` object MUST nest under `"config"` (a flat body is silently
+ignored → empty brief → FAILED instance).
+
+### Option B: runtime deployment via REST
+
+The scenario instances endpoint (above) deploys all five agents at once into a
+fresh per-instance container. There is no per-agent deployment flow for the
+dev-team scenario; the generic `/api/agents` endpoint remains available for
+your own agents.
+
+## API keys (LLM provider)
+
+The dev-team role agents think through the `opencode` CLI, which reaches an
+LLM provider configured per instance workspace (see `docs/adr/0003`).
+**Keys are never stored in this repository** (see `docs/adr/0002`):
 
 ```bash
-java -cp backend/jade/target/jade-*.jar:backend/examples/target/examples-*.jar \
-  io.donbee.jade.Boot -conf backend/examples/conf/shop.properties
+# Environment variable (passed through docker compose)
+export TOKENROUTER_API_KEY=<your-tokenrouter-key>
 ```
 
-### Option C: runtime deployment via REST
-
-Start an empty platform first, then deploy agents one by one:
-
-```bash
-# Deploy in this order so discovery works immediately
-curl -s -X POST http://localhost:8080/api/agents -H 'Content-Type: application/json' \
-  -d @backend/examples/rest/shop.json
-curl -s -X POST http://localhost:8080/api/agents -H 'Content-Type: application/json' \
-  -d @backend/examples/rest/inventory.json
-curl -s -X POST http://localhost:8080/api/agents -H 'Content-Type: application/json' \
-  -d @backend/examples/rest/supplier.json
-curl -s -X POST http://localhost:8080/api/agents -H 'Content-Type: application/json' \
-  -d @backend/examples/rest/customer1.json
-```
-
-## Watching it live
-
-1. Open the frontend at `http://localhost:3000`
-2. **Messages page** — watch the FIPA-REQUEST conversation flow between
-   customers, shop, inventory and supplier in real time (WebSocket)
-3. **DF page** — see the services each agent registered (`shop`,
-   `inventory`, `supplier`)
-4. **Agents page** — deploy more customers at runtime and watch traffic pick up
-
-## Scenario walkthrough
-
-```
-customer1 ──(buy sku-phone 1)──▶ shop ──(reserve sku-phone 1)──▶ inventory
-customer1 ◀─(order-confirmed)── shop ◀─(reserved sku-phone 1)── inventory
-
-inventory (ticker: stock <= threshold) ──(restock sku-phone 20)──▶ supplier
-inventory ◀─(restocked sku-phone 20)───────────────────────────── supplier
-```
-
-All messages use the FIPA-REQUEST interaction protocol; service lookup goes
-through the Directory Facilitator. See each agent's JavaDoc for its role,
-content language and configurable arguments.
+The provider is defined in an `opencode.json` written into each instance
+workspace at start; the API key is injected from the environment, never from
+a file. Role agents fail fast with an actionable error when the CLI or the
+key is missing.
 
 ## Using Jade as a library (no UI, no bundled examples)
 

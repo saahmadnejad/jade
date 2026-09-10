@@ -59,12 +59,12 @@ const renderWithTheme = (ui: React.ReactElement) => {
 const sampleMessage = {
   id: '1',
   timestamp: '2026-08-25T10:15:30.123Z',
-  sender: 'shop',
-  receiver: 'inventory',
+  sender: 'manager',
+  receiver: 'architect',
   performative: 'request',
   protocol: 'fipa-request',
-  ontology: 'shop-ontology',
-  content: '(reserve sku-1 2)',
+  ontology: 'dev-team-ontology',
+  content: '(task architect DESIGN)',
 };
 
 describe('MessagesPage', () => {
@@ -91,9 +91,9 @@ describe('MessagesPage', () => {
     renderWithTheme(<MessagesPage />);
 
     // --- Assert ---
-    await waitFor(() => expect(screen.getByText('shop')).toBeInTheDocument());
-    expect(screen.getByText('inventory')).toBeInTheDocument();
-    expect(screen.getByText('(reserve sku-1 2)')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('manager')).toBeInTheDocument());
+    expect(screen.getByText('architect')).toBeInTheDocument();
+    expect(screen.getByText('(task architect DESIGN)')).toBeInTheDocument();
   });
 
   it('Given live stream frame arrives, When page is open, Then the new message appears at the top', async () => {
@@ -106,19 +106,19 @@ describe('MessagesPage', () => {
     streamListener?.({
       id: '2',
       timestamp: '2026-08-25T10:15:31.000Z',
-      sender: 'customer1',
-      receiver: 'shop',
+      sender: 'implementer',
+      receiver: 'tester',
       performative: 'request',
       protocol: 'fipa-request',
-      ontology: 'shop-ontology',
-      content: '(buy sku-9)',
+      ontology: 'dev-team-ontology',
+      content: '(peer-task tester TEST-REPORT)',
     });
 
     // --- Assert ---
-    await waitFor(() => expect(screen.getByText('customer1')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('implementer')).toBeInTheDocument());
     const rows = screen.getAllByRole('row');
-    expect(rows[1]).toHaveTextContent('customer1'); // first data row = newest message
-    expect(rows[2]).toHaveTextContent('shop');      // older history below
+    expect(rows[1]).toHaveTextContent('implementer'); // first data row = newest message
+    expect(rows[2]).toHaveTextContent('manager');      // older history below
   });
 
   it('Given stream is paused, When a live frame arrives, Then it is not displayed', async () => {
@@ -142,27 +142,27 @@ describe('MessagesPage', () => {
     mockRecent.mockResolvedValue({
       messages: [
         sampleMessage,
-        { ...sampleMessage, id: '5', sender: 'restock', receiver: 'supplier', content: '(ship sku-7)' },
+        { ...sampleMessage, id: '5', sender: 'reviewer', receiver: 'manager', content: '(round-1 REJECTED)' },
       ],
       total: 2,
       dropped: 0,
     });
     renderWithTheme(<MessagesPage />);
-    await waitFor(() => expect(screen.getByText(/sku-7/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/REJECTED/)).toBeInTheDocument());
 
     // --- Act ---
     fireEvent.change(screen.getByPlaceholderText(/filter by agent or content/i), {
-      target: { value: 'sku-7' },
+      target: { value: 'REJECTED' },
     });
 
     // --- Assert ---
-    expect(screen.queryByText('(reserve sku-1 2)')).not.toBeInTheDocument();
-    expect(screen.getByText(/sku-7/)).toBeInTheDocument();
+    expect(screen.queryByText('(task architect DESIGN)')).not.toBeInTheDocument();
+    expect(screen.getByText(/REJECTED/)).toBeInTheDocument();
   });
 
   it('Given a message row, When the eye button is clicked, Then a modal shows all details including full content', async () => {
     // --- Arrange ---
-    const longContent = '(action shop (buy sku-123 2)) /* ' + 'x'.repeat(120) + ' */';
+    const longContent = '(task implementer IMPLEMENT) -- ' + 'x'.repeat(120) + ' --';
     mockRecent.mockResolvedValue({
       messages: [{ ...sampleMessage, content: longContent }],
       total: 1,
@@ -181,9 +181,9 @@ describe('MessagesPage', () => {
     await waitFor(() => expect(mockGetById).toHaveBeenCalledWith('1'));
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent('#1');                  // id chip
-    expect(dialog).toHaveTextContent('shop → inventory');     // route
+    expect(dialog).toHaveTextContent('manager → architect');     // route
     expect(dialog).toHaveTextContent('fipa-request');        // protocol
-    expect(dialog).toHaveTextContent('shop-ontology');       // ontology
+    expect(dialog).toHaveTextContent('dev-team-ontology');       // ontology
     // Full untruncated content fetched by id and rendered in the modal
     expect(within(dialog).getByText(fullContent)).toBeInTheDocument();
   });

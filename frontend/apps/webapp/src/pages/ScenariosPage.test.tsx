@@ -49,20 +49,20 @@ const renderWithTheme = (ui: React.ReactElement) => {
   );
 };
 
-const shopScenario = {
-  id: 'online-shop',
-  title: 'Online Shop',
-  description: 'Customers buy from a storefront.',
+const devTeamScenario = {
+  id: 'dev-team',
+  title: 'Software Development Team',
+  description: 'Five LLM-powered agents build a small project from a brief.',
   params: {
-    initialStock: { type: 'int', defaultValue: 10, minValue: 0, maxValue: 1000, description: 'Starting quantity' },
-    customerCount: { type: 'int', defaultValue: 2, minValue: 0, maxValue: 20, description: 'Customers' },
+    maxRounds: { type: 'int', defaultValue: 5, minValue: 1, maxValue: 10, description: 'Review rounds cap' },
+    maxTotalCalls: { type: 'int', defaultValue: 40, minValue: 1, maxValue: 200, description: 'LLM call cap' },
   },
 };
 
 describe('ScenariosPage', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    mockList.mockResolvedValue({ scenarios: [shopScenario] });
+    mockList.mockResolvedValue({ scenarios: [devTeamScenario] });
     mockListInstances.mockResolvedValue({ instances: [] });
   });
 
@@ -71,44 +71,44 @@ describe('ScenariosPage', () => {
     renderWithTheme(<ScenariosPage />);
 
     // --- Assert ---
-    await waitFor(() => expect(screen.getByText('Online Shop')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Software Development Team')).toBeInTheDocument());
   });
 
   it('Given a scenario card, When clicked, Then config modal opens prefilled with defaults', async () => {
     // --- Arrange ---
     renderWithTheme(<ScenariosPage />);
-    await waitFor(() => expect(screen.getByText('Online Shop')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Software Development Team')).toBeInTheDocument());
 
     // --- Act ---
-    fireEvent.click(screen.getByText('Online Shop'));
+    fireEvent.click(screen.getByText('Software Development Team'));
 
     // --- Assert ---
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByDisplayValue('10')).toBeInTheDocument();   // initialStock default
-    expect(within(dialog).getByDisplayValue('2')).toBeInTheDocument();    // customerCount default
-    expect(within(dialog).getByDisplayValue('online-shop-1')).toBeInTheDocument(); // auto instance name
+    expect(within(dialog).getByDisplayValue('5')).toBeInTheDocument();    // maxRounds default
+    expect(within(dialog).getByDisplayValue('40')).toBeInTheDocument();  // maxTotalCalls default
+    expect(within(dialog).getByDisplayValue('dev-team-1')).toBeInTheDocument(); // auto instance name
   });
 
   it('Given configured values, When Start clicked, Then start API called with typed config', async () => {
     // --- Arrange ---
     mockStart.mockResolvedValue({
-      message: "Scenario 'online-shop' started as instance 'shop-1'",
-      instance: 'shop-1', scenarioId: 'online-shop', container: 'scenario-shop-1', agents: [],
+      message: "Scenario 'dev-team' started as instance 'team-1'",
+      instance: 'team-1', scenarioId: 'dev-team', container: 'scenario-team-1', agents: [],
     });
     renderWithTheme(<ScenariosPage />);
-    await waitFor(() => expect(screen.getByText('Online Shop')).toBeInTheDocument());
-    fireEvent.click(screen.getByText('Online Shop'));
+    await waitFor(() => expect(screen.getByText('Software Development Team')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Software Development Team'));
     const dialog = await screen.findByRole('dialog');
 
     // --- Act ---
-    const stockField = within(dialog).getByLabelText(/initialStock/i);
-    fireEvent.change(stockField, { target: { value: '42' } });
+    const roundsField = within(dialog).getByLabelText(/maxRounds/i);
+    fireEvent.change(roundsField, { target: { value: '3' } });
     fireEvent.click(within(dialog).getByRole('button', { name: /start/i }));
 
     // --- Assert ---
-    await waitFor(() => expect(mockStart).toHaveBeenCalledWith('online-shop', {
-      instanceName: 'online-shop-1',
-      config: { initialStock: 42, customerCount: 2 },
+    await waitFor(() => expect(mockStart).toHaveBeenCalledWith('dev-team', {
+      instanceName: 'dev-team-1',
+      config: { maxRounds: 3, maxTotalCalls: 40 },
     }));
   });
 
@@ -116,14 +116,14 @@ describe('ScenariosPage', () => {
     // --- Arrange ---
     mockListInstances.mockResolvedValue({
       instances: [{
-        instance: 'shop-1', scenarioId: 'online-shop',
-        container: 'scenario-shop-1', agents: [{ name: 'shop-1-shop' }],
+        instance: 'team-1', scenarioId: 'dev-team',
+        container: 'scenario-team-1', agents: [{ name: 'team-1-manager' }],
       }],
     });
     renderWithTheme(<ScenariosPage />);
 
     // --- Act / Assert ---
-    await waitFor(() => expect(screen.getByText('shop-1')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('team-1')).toBeInTheDocument());
     expect(screen.getByText(/running ×1/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /kill this scenario instance/i })).toBeInTheDocument();
   });
@@ -131,21 +131,20 @@ describe('ScenariosPage', () => {
   it('Given running instance, When kill confirmed, Then stop API called', async () => {
     // --- Arrange ---
     window.confirm = vi.fn().mockReturnValue(true);
-    mockStop.mockResolvedValue({ message: "Instance 'shop-1' stopped" });
+    mockStop.mockResolvedValue({ message: "Instance 'team-1' stopped" });
     mockListInstances.mockResolvedValue({
       instances: [{
-        instance: 'shop-1', scenarioId: 'online-shop',
-        container: 'scenario-shop-1', agents: [{ name: 'shop-1-shop' }],
+        instance: 'team-1', scenarioId: 'dev-team',
+        container: 'scenario-team-1', agents: [{ name: 'team-1-manager' }],
       }],
     });
     renderWithTheme(<ScenariosPage />);
-    await waitFor(() => expect(screen.getByText('shop-1')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('team-1')).toBeInTheDocument());
 
     // --- Act ---
     fireEvent.click(screen.getByRole('button', { name: /kill this scenario instance/i }));
 
     // --- Assert ---
-    await waitFor(() => expect(mockStop).toHaveBeenCalledWith('shop-1'));
+    await waitFor(() => expect(mockStop).toHaveBeenCalledWith('team-1'));
   });
 });
-

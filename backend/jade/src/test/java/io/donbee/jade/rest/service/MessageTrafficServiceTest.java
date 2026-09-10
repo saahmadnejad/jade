@@ -25,8 +25,8 @@ public class MessageTrafficServiceTest {
 
     @Before
     public void setUp() {
-        sender = new AID("shop@platform", AID.ISGUID);
-        receiver = new AID("inventory@platform", AID.ISGUID);
+        sender = new AID("seller@platform", AID.ISGUID);
+        receiver = new AID("warehouse@platform", AID.ISGUID);
     }
 
     private ACLMessage message(int performative, String content) {
@@ -34,7 +34,7 @@ public class MessageTrafficServiceTest {
         when(msg.getPerformative()).thenReturn(performative);
         when(msg.getContent()).thenReturn(content);
         when(msg.getProtocol()).thenReturn("fipa-request");
-        when(msg.getOntology()).thenReturn("shop-ontology");
+        when(msg.getOntology()).thenReturn("devteam-ontology");
         return msg;
     }
 
@@ -51,11 +51,11 @@ public class MessageTrafficServiceTest {
         List<JsonObject> recent = service.recent(0, null, null);
         assertThat(recent).hasSize(1);
         JsonObject json = recent.get(0);
-        assertThat(json.getString("sender")).isEqualTo("shop");
-        assertThat(json.getString("receiver")).isEqualTo("inventory");
+        assertThat(json.getString("sender")).isEqualTo("seller");
+        assertThat(json.getString("receiver")).isEqualTo("warehouse");
         assertThat(json.getString("performative")).isEqualTo("request");
         assertThat(json.getString("protocol")).isEqualTo("fipa-request");
-        assertThat(json.getString("ontology")).isEqualTo("shop-ontology");
+        assertThat(json.getString("ontology")).isEqualTo("devteam-ontology");
         assertThat(json.getString("content")).isEqualTo("(buy sku-1 1)");
         assertThat(json.getString("timestamp")).isNotBlank();
         assertThat(json.getString("id")).isEqualTo("1");
@@ -90,14 +90,14 @@ public class MessageTrafficServiceTest {
         service.onMessage(sender, new AID("restock@platform", AID.ISGUID), message(ACLMessage.INFORM, "c"));
 
         // --- Act ---
-        List<JsonObject> fromShop = service.recent(0, "shop", null);
-        List<JsonObject> toInventory = service.recent(0, null, "inventory");
+        List<JsonObject> fromSeller = service.recent(0, "seller", null);
+        List<JsonObject> toWarehouse = service.recent(0, null, "warehouse");
 
         // --- Assert ---
-        assertThat(fromShop).hasSize(2);
-        assertThat(fromShop).allMatch(m -> m.getString("sender").equals("shop"));
-        assertThat(toInventory).hasSize(1);
-        assertThat(toInventory.get(0).getString("content")).isEqualTo("a");
+        assertThat(fromSeller).hasSize(2);
+        assertThat(fromSeller).allMatch(m -> m.getString("sender").equals("seller"));
+        assertThat(toWarehouse).hasSize(1);
+        assertThat(toWarehouse.get(0).getString("content")).isEqualTo("a");
     }
 
     @Test
