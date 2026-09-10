@@ -75,6 +75,18 @@ public abstract class RoleAgent extends Agent {
 
     @Override
     protected void setup() {
+        try {
+            doSetup();
+        } catch (Throwable t) {
+            // Any setup failure must be visible in logs before the agent dies;
+            // JADE's own "died without being properly terminated" hides the cause.
+            LOG.log(Level.SEVERE, "role=" + roleName()
+                + ": setup failed: " + t, t);
+            doDelete();
+        }
+    }
+
+    private void doSetup() {
         Object[] args = getArguments();
         teamId = extractTeamId(getLocalName());
 

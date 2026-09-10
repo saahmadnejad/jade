@@ -1,6 +1,7 @@
 package io.donbee.llm;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,15 +42,33 @@ public class CliBrain implements Brain {
      * @param workDir  directory the CLI runs in (persona + opencode.json live
      *                 there); nullable defaults to cwd
      * @param timeout  per-call process timeout; nullable defaults to 600s
-     * @param cliPath  executable to invoke; nullable defaults to
-     *                 {@link #DEFAULT_CLI} (tests inject a stub script here)
+     * @param cliPath  executable to invoke; nullable resolves from the
+     *                 {@code OPENCODE_CLI} env var then {@link #DEFAULT_CLI}
+     *                 (tests point OPENCODE_CLI at a stub script)
      */
     public CliBrain(String model, String role, Path workDir, Duration timeout, String cliPath) {
         this.model = model;
         this.role = role;
         this.workDir = workDir != null ? workDir : Paths.get("").toAbsolutePath();
         this.timeout = timeout != null ? timeout : Duration.ofSeconds(600);
-        this.cliPath = cliPath != null && !cliPath.isBlank() ? cliPath : DEFAULT_CLI;
+        this.cliPath = resolveCli(cliPath);
+    }
+
+    private static String resolveCli(String cliPath) {
+        if (cliPath != null && !cliPath.isBlank()) {
+            return cliPath;
+        }
+        // Test seam: a mutable system property (env vars cannot be changed
+        // after JVM start, which in-process tests need).
+        String fromProp = System.getProperty("opencode.cli");
+        if (fromProp != null && !fromProp.isBlank()) {
+            return fromProp;
+        }
+        String fromEnv = System.getenv("OPENCODE_CLI");
+        if (fromEnv != null && !fromEnv.isBlank()) {
+            return fromEnv;
+        }
+        return DEFAULT_CLI;
     }
 
     @Override
@@ -78,22 +97,35 @@ public class CliBrain implements Brain {
             pb.redirectErrorStream(true);
             Process proc = pb.start();
 
+            // Gobble output on a separate thread: reading synchronously
+            // would block past the timeout when the CLI is hung and silent.
             StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
+            Thread gobbler = Thread.ofVirtual().start(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        synchronized (output) {
+                            output.append(line).append("\n");
+                        }
+                    }
+                } catch (IOException ignored) {
+                    // process died mid-read; exit code decides
                 }
-            }
+            });
 
             boolean finished = proc.waitFor(timeout.getSeconds(), TimeUnit.SECONDS);
             if (!finished) {
                 proc.destroyForcibly();
+                gobbler.interrupt();
                 throw new BrainException("opencode CLI timed out after " + timeout.getSeconds() + "s");
             }
+            gobbler.join(5000);
 
             int exitCode = proc.exitValue();
-            String text = output.toString().trim();
+            String text;
+            synchronized (output) {
+                text = output.toString().trim();
+            }
             if (exitCode != 0 || text.isEmpty()) {
                 throw new BrainException("opencode CLI failed (exit " + exitCode
                     + ", output " + output.length() + " chars): "
