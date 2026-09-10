@@ -26,6 +26,9 @@ public final class TeamScaffolder {
     private TeamScaffolder() {
     }
 
+    /** Default tokenrouter base URL for the opencode provider config. */
+    static final String DEFAULT_PROVIDER_BASE_URL = "https://tokenrouter.com/v1";
+
     /**
      * @param workDir      the instance working directory (also CLI cwd)
      * @param githubOrg    target GitHub org, empty = memory-only mode
@@ -34,13 +37,47 @@ public final class TeamScaffolder {
      */
     public static void scaffold(Path workDir, String githubOrg, String repoName,
                                 String visibility) throws IOException {
+        scaffold(workDir, githubOrg, repoName, visibility, DEFAULT_PROVIDER_BASE_URL);
+    }
+
+    /**
+     * @param providerBaseUrl OpenAI-compatible base URL written into the
+     *                        workspace's {@code opencode.json} provider block
+     */
+    public static void scaffold(Path workDir, String githubOrg, String repoName,
+                                String visibility, String providerBaseUrl) throws IOException {
         LOG.info("scaffolding workspace " + workDir);
         Files.createDirectories(workDir);
         copySkills(workDir.resolve(".opencode").resolve("skills"));
         for (String role : List.of("manager", "architect", "implementer", "tester", "reviewer")) {
             writePersona(workDir, role);
         }
+        writeOpencodeJson(workDir, providerBaseUrl);
         writeAgentsMd(workDir, githubOrg, repoName, visibility);
+    }
+
+    /**
+     * Provider config for the opencode CLI (ADR-0003): tokenrouter reached
+     * as an OpenAI-compatible endpoint; the API key is injected from the
+     * {@code TOKENROUTER_API_KEY} environment variable, never stored on disk.
+     */
+    private static void writeOpencodeJson(Path workDir, String baseUrl) throws IOException {
+        String json = """
+            {
+              "$schema": "https://opencode.ai/config.json",
+              "provider": {
+                "tokenrouter": {
+                  "npm": "@ai-sdk/openai-compatible",
+                  "name": "TokenRouter",
+                  "options": {
+                    "baseURL": "%s",
+                    "apiKey": "{env:TOKENROUTER_API_KEY}"
+                  }
+                }
+              }
+            }
+            """.formatted(baseUrl);
+        Files.writeString(workDir.resolve("opencode.json"), json);
     }
 
     private static void copySkills(Path target) throws IOException {

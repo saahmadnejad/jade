@@ -2,6 +2,7 @@ package io.donbee.llm;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -12,23 +13,43 @@ import java.util.concurrent.TimeUnit;
 /**
  * A {@link Brain} that shells out to the opencode CLI agent. Instead of
  * calling an HTTP LLM endpoint, this implementation invokes the {@code opencode}
- * binary in a working directory, running its {@code run} subcommand with the
- * prompt as the message.
+ * binary in a working directory with its {@code run} subcommand, the prompt as
+ * the message, and the role agent's persona loaded via {@code --agent}.
  *
  * <p>Useful when you want the full opencode agent inside a JADE role agent
- * (file system access, tool execution, multi-step reasoning). The opencode
- * CLI must be on PATH and authenticated (via 9router in this project).
+ * (file system access, tool execution, multi-step reasoning). The opencode CLI
+ * must be on PATH and its provider configured (see ADR-0003: an
+ * {@code opencode.json} in the work directory defines the provider, with the
+ * API key injected from the environment).</p>
  */
 public class CliBrain implements Brain {
 
+    /** Default opencode executable resolved from PATH. */
+    public static final String DEFAULT_CLI = "opencode";
+
+    private final String cliPath;
     private final String model;
+    private final String role;
     private final Path workDir;
     private final Duration timeout;
 
-    public CliBrain(String model, Path workDir, Duration timeout) {
-        this.model = model != null ? model : "combo-coding";
+    /**
+     * @param model    opencode model id in {@code provider/model} form (e.g.
+     *                 {@code tokenrouter/z-ai/glm-5.3-free}); nullable
+     * @param role     agent persona name for {@code --agent} (e.g. the JADE
+     *                 role: architect, implementer, ...); nullable/blank omits the flag
+     * @param workDir  directory the CLI runs in (persona + opencode.json live
+     *                 there); nullable defaults to cwd
+     * @param timeout  per-call process timeout; nullable defaults to 600s
+     * @param cliPath  executable to invoke; nullable defaults to
+     *                 {@link #DEFAULT_CLI} (tests inject a stub script here)
+     */
+    public CliBrain(String model, String role, Path workDir, Duration timeout, String cliPath) {
+        this.model = model;
+        this.role = role;
         this.workDir = workDir != null ? workDir : Paths.get("").toAbsolutePath();
-        this.timeout = timeout != null ? timeout : Duration.ofSeconds(300);
+        this.timeout = timeout != null ? timeout : Duration.ofSeconds(600);
+        this.cliPath = cliPath != null && !cliPath.isBlank() ? cliPath : DEFAULT_CLI;
     }
 
     @Override
@@ -38,8 +59,13 @@ public class CliBrain implements Brain {
             : userPrompt;
 
         List<String> cmd = new ArrayList<>();
-        cmd.add("opencode");
+        cmd.add(cliPath);
         cmd.add("run");
+        cmd.add("--auto");
+        if (role != null && !role.isBlank()) {
+            cmd.add("--agent");
+            cmd.add(role);
+        }
         if (model != null && !model.isBlank()) {
             cmd.add("-m");
             cmd.add(model);
@@ -67,23 +93,49 @@ public class CliBrain implements Brain {
             }
 
             int exitCode = proc.exitValue();
-            if (exitCode != 0 && output.length() == 0) {
-                throw new BrainException("opencode CLI exited with code " + exitCode);
+            String text = output.toString().trim();
+            if (exitCode != 0 || text.isEmpty()) {
+                throw new BrainException("opencode CLI failed (exit " + exitCode
+                    + ", output " + output.length() + " chars): "
+                    + truncate(text, 200));
             }
-            return output.toString().trim();
+            return text;
+        } catch (BrainException e) {
+            throw e;
         } catch (Exception e) {
-            if (e instanceof BrainException) throw (BrainException) e;
             throw new BrainException("opencode CLI failed: " + e.getMessage(), e);
         }
     }
 
+    private static String truncate(String s, int max) {
+        return s.length() <= max ? s : s.substring(0, max) + "...";
+    }
+
     @Override
     public String model() {
-        return model;
+        return model != null ? model : DEFAULT_CLI;
     }
 
     @Override
     public String respond(String systemPrompt, String userPrompt, List<Tool> tools) {
         return respond(systemPrompt, userPrompt);
+    }
+
+    /** Work directory the CLI runs in (exposed for tests). */
+    Path workDir() {
+        return workDir;
+    }
+
+    /** True when the CLI binary is invokable (at least exists on PATH). */
+    public boolean cliAvailable() {
+        if (!cliPath.equals(DEFAULT_CLI)) {
+            return Files.isExecutable(Paths.get(cliPath));
+        }
+        for (String dir : System.getenv("PATH").split(java.io.File.pathSeparator)) {
+            if (!dir.isBlank() && Files.isExecutable(Paths.get(dir, DEFAULT_CLI))) {
+                return true;
+            }
+        }
+        return false;
     }
 }

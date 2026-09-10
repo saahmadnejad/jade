@@ -8,16 +8,19 @@ import java.util.Properties;
 import java.util.function.UnaryOperator;
 
 /**
- * Resolves the LLM API key without ever reading it from the repository
+ * Resolves secrets without ever reading them from the repository
  * (ADR-0002): environment variable first, then a gitignored local properties
- * file, then failure with an actionable message.
+ * file, then failure with an actionable message. LLM provider keys are
+ * injected directly from the environment by the opencode CLI
+ * ({@code {env:TOKENROUTER_API_KEY}} in the workspace {@code opencode.json},
+ * see ADR-0003); this class only resolves the GitHub publish token.
  */
 public final class SecretsResolver {
 
     private static final io.donbee.jade.util.Logger LOG =
         io.donbee.jade.util.Logger.getJADELogger(SecretsResolver.class.getName());
 
-    /*     * Gitignored file that may hold {@code llm.api.key=<secret>} (default profile). */
+    /** Gitignored file that may hold {@code github.token=<secret>} (default profile). */
     public static final String DEFAULT_PROFILE = "local";
 
     private SecretsResolver() {
@@ -26,21 +29,6 @@ public final class SecretsResolver {
     /** Name of the profile file: {@code secrets-<profile>.properties}. */
     static Path secretsFile(String profile) {
         return Path.of("conf", "secrets-" + profile + ".properties");
-    }
-
-    /**
-     * Resolve the LLM API key from {@code NINEROUTER_API_KEY} env var first,
-     * then the gitignored local file's {@code llm.api.key} property.
-     *
-     * @param envLookup    environment lookup (injectable for tests)
-     * @param workingDir   directory containing {@code conf/secrets-local.properties}
-     * @return the resolved API key
-     * @throws IllegalStateException when no source provides a key
-     */
-    public static String resolveApiKey(UnaryOperator<String> envLookup,
-                                       Path workingDir) {
-        return resolve(envLookup, "NINEROUTER_API_KEY", workingDir, DEFAULT_PROFILE, "llm.api.key",
-            "No LLM API key found. Set the 'NINEROUTER_API_KEY' environment variable ");
     }
 
     /**
@@ -55,8 +43,7 @@ public final class SecretsResolver {
     /**
      * Read an optional configuration property, checking environment variable
      * first then the local secrets file, falling back to {@code defaultValue}.
-     * Unlike {@link #resolveApiKey}, this never throws — missing values use the
-     * default (useful for non-secret settings like base URL or model name).
+     * Never throws — missing values use the default.
      */
     public static String resolveOptional(UnaryOperator<String> envLookup, String envVar,
                                          Path workingDir, String fileProperty, String defaultValue) {
@@ -66,8 +53,8 @@ public final class SecretsResolver {
 
     /**
      * Like {@link #resolveOptional}, but with an explicit secrets profile so
-     * callers can read from {@code secrets-<profile>.properties} (e.g. a future
-     * "other" profile). Env var is still checked first.
+     * callers can read from {@code secrets-<profile>.properties}. Env var is
+     * still checked first.
      */
     public static String resolveOptional(UnaryOperator<String> envLookup, String envVar,
                                          Path workingDir, String profile,

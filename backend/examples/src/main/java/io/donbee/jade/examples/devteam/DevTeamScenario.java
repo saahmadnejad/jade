@@ -51,28 +51,26 @@ public class DevTeamScenario implements Scenario {
             ScenarioParam.intParam("maxRounds", 5, 1, 100, "Max implement/review rounds"),
             ScenarioParam.intParam("maxTotalCalls", 40, 4, 500,
                 "Hard cap on LLM calls per instance (free tiers allow ~50/day)"),
-            ScenarioParam.intParam("callTimeoutSec", 600, 10, 1800, "Timeout per LLM call"),
+            ScenarioParam.intParam("callTimeoutSec", 600, 10, 1800, "Timeout per CLI call"),
             ScenarioParam.boolParam("clarify", true,
                 "Run a clarification pass before design (set false to skip it and start faster)"),
             ScenarioParam.stringParam("workspaceDir", "",
                 "Optional directory mirroring the team's produced files; also the CLI working directory"),
-            ScenarioParam.stringParam("baseUrl", "http://9router:20128/v1",
-                "OpenAI-compatible endpoint of the LLM provider (langchain4j brain)"),
-            ScenarioParam.boolParam("proxyEnabled", false, "Route LLM traffic through SOCKS5 proxy"),
-            ScenarioParam.stringParam("proxyHost", "192.168.1.151", "SOCKS5 proxy host"),
-            ScenarioParam.intParam("proxyPort", 10808, 1, 65535, "SOCKS5 proxy port"),
-            ScenarioParam.stringParam("fallbackModel", "glm",
-                "Fallback brain model when the role model fails or times out"),
-            ScenarioParam.stringParam("managerModel", "glm", "Manager model"),
-            ScenarioParam.stringParam("architectModel", "glm", "Architect model"),
-            ScenarioParam.stringParam("implementerModel", "glm", "Implementer model"),
-            ScenarioParam.stringParam("testerModel", "glm", "Tester model"),
-            ScenarioParam.stringParam("reviewerModel", "glm", "Reviewer model"),
+            ScenarioParam.stringParam("fallbackModel", DEFAULT_MODEL,
+                "Fallback opencode model id when the role model fails or times out"),
+            ScenarioParam.stringParam("managerModel", DEFAULT_MODEL, "Manager model (unused: manager is deterministic)"),
+            ScenarioParam.stringParam("architectModel", DEFAULT_MODEL, "Architect model (opencode provider/model id)"),
+            ScenarioParam.stringParam("implementerModel", DEFAULT_MODEL, "Implementer model (opencode provider/model id)"),
+            ScenarioParam.stringParam("testerModel", DEFAULT_MODEL, "Tester model (opencode provider/model id)"),
+            ScenarioParam.stringParam("reviewerModel", DEFAULT_MODEL, "Reviewer model (opencode provider/model id)"),
             ScenarioParam.stringParam("githubOrg", "",
                 "GitHub org the team publishes to (empty = skip GitHub publishing)"),
             ScenarioParam.stringParam("githubVisibility", "private",
                 "Created repository visibility: private or public"));
     }
+
+    /** Default opencode model id (tokenrouter provider, see ADR-0003). */
+    static final String DEFAULT_MODEL = "tokenrouter/z-ai/glm-5.3-free";
 
     @Override
     public List<AgentSpec> agents(Map<String, Object> config) {
@@ -80,10 +78,6 @@ public class DevTeamScenario implements Scenario {
         int maxRounds = (Integer) config.get("maxRounds");
         int maxTotalCalls = (Integer) config.get("maxTotalCalls");
         int callTimeoutSec = (Integer) config.get("callTimeoutSec");
-        boolean proxyEnabled = (Boolean) config.get("proxyEnabled");
-        String proxyHost = str(config, "proxyHost");
-        int proxyPort = (Integer) config.get("proxyPort");
-        String baseUrl = str(config, "baseUrl");
         String workspaceDir = str(config, "workspaceDir");
 
         List<AgentSpec> specs = new ArrayList<>();
@@ -104,12 +98,8 @@ public class DevTeamScenario implements Scenario {
 
     private static AgentSpec roleSpec(String suffix, String className, Map<String, Object> config) {
         return new AgentSpec(suffix, className, List.of(
-            str(config, "baseUrl"),
             str(config, modelKey(suffix)),
             str(config, "fallbackModel"),
-            String.valueOf(config.get("proxyEnabled")),
-            str(config, "proxyHost"),
-            String.valueOf(config.get("proxyPort")),
             String.valueOf(config.get("callTimeoutSec")),
             str(config, "workspaceDir")));
     }
