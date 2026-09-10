@@ -37,12 +37,12 @@ in-memory ring buffer (default capacity 500).
     {
       "id": "42",
       "timestamp": "2026-08-25T10:15:30.123Z",
-      "sender": "customer1",
-      "receiver": "shop",
+      "sender": "team-demo-1-manager",
+      "receiver": "team-demo-1-architect",
       "performative": "request",
       "protocol": "fipa-request",
-      "ontology": "shop-ontology",
-      "content": "(action shop (buy sku-123 2))"
+      "ontology": "dev-team-ontology",
+      "content": "(task architect DESIGN ...)"
     }
   ],
   "total": 1,
@@ -70,11 +70,11 @@ the buffer.
 {
   "id": "42",
   "timestamp": "2026-08-25T10:15:30.123Z",
-  "sender": "customer1",
-  "receiver": "shop",
+  "sender": "team-demo-1-manager",
+  "receiver": "team-demo-1-architect",
   "performative": "request",
   "protocol": "fipa-request",
-  "ontology": "shop-ontology",
+  "ontology": "dev-team-ontology",
   "content": "... complete, untruncated content ..."
 }
 ```
@@ -90,12 +90,12 @@ the same schema as one element of the `messages` array above:
 {
   "id": "43",
   "timestamp": "2026-08-25T10:15:31.456Z",
-  "sender": "shop",
-  "receiver": "inventory",
+  "sender": "team-demo-1-implementer",
+  "receiver": "team-demo-1-tester",
   "performative": "request",
   "protocol": "fipa-request",
-  "ontology": "shop-ontology",
-  "content": "(action inventory (reserve sku-123 2))"
+  "ontology": "dev-team-ontology",
+  "content": "(peer-task tester TEST-REPORT ...)"
 }
 ```
 

@@ -15,7 +15,7 @@ package io.donbee.jade.rest.scenario;
  */
 public interface Scenario {
 
-    /** Unique scenario id, e.g. {@code online-shop}. Lowercase, no spaces. */
+    /** Unique scenario id, e.g. {@code dev-team}. Lowercase, no spaces. */
     String id();
 
     /** Human-readable title shown in the UI. */

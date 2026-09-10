@@ -4,7 +4,7 @@ A fork of JADE (Java Agent DEvelopment Framework) running on Java 21 with virtua
 
 ## Highlights
 
-- **REST API** (~44 endpoints) + **React UI**: agents, containers, DF, tools, remote platforms
+- **REST API** (~46 endpoints) + **React UI**: agents, containers, DF, tools, remote platforms, scenarios, live messages
 - **Live message traffic** in the browser (WebSocket): watch FIPA ACL conversations as they happen (MessagesPage)
 - **Scenarios page**: launch configurable multi-agent demo scenarios with one click; each instance runs in its own container and can be stopped independently — or add your own scenarios by dropping a jar implementing the `io.donbee.jade.rest.scenario.Scenario` SPI on the classpath
 - **LLM-powered agents**: `io.donbee:llm` speaks any OpenAI-compatible endpoint (9router by default, paid providers or local Ollama via config) via langchain4j; the dev-team scenario has five AI agents build a small project from a brief
@@ -19,7 +19,7 @@ jade/
 │   ├── fipa/                   # FIPA common library (CORBA-generated classes, FIPANames)
 │   ├── llm/                    # Framework-agnostic LLM client (OpenAI-compatible, SOCKS5 proxy)
 │   ├── jade/                   # Platform code (shade plugin -> uber jar jade-<version>.jar)
-│   └── examples/               # Example scenarios (online shop, dev team) - see backend/examples/README.md
+│   └── examples/               # Example scenarios (dev team) - see backend/examples/README.md
 ├── frontend/                   # React + Vite + TypeScript UI
 │   ├── pnpm-workspace.yaml     # pnpm monorepo config
 │   ├── package.json            # Root workspace package
@@ -58,7 +58,7 @@ podman compose ps
 
 **Backend (JADE)** (needs a full JDK 21 with `javac` on `JAVA_HOME`; distro `java-21-openjdk` is often JRE-only):
 ```bash
-cd backend && mvn compile exec:java -Dexec.mainClass="io.donbee.jade.Boot"
+cd backend && mvn -pl jade -am compile exec:java -Dexec.mainClass="io.donbee.jade.Boot"
 ```
 
 **Frontend (React):**
@@ -77,20 +77,20 @@ The backend is a fork of JADE under the `io.donbee.jade` package. Key components
 - **`io.donbee.jade.core.Runtime`** — Singleton managing JADE container lifecycle.
 - **`io.donbee.jade.core.Profile` / `ProfileImpl`** — Configuration properties for platform startup.
 - **Virtual threads** — All threads use `Thread.ofVirtual()` (Java 21+).
-- **REST API** — Built-in Vert.x REST server on port 8080. 38 endpoints covering platform info, containers, agents, tools, and remote platform management. Configurable via `-rest-port <n>`.
+- **REST API** — Built-in Vert.x REST server on port 8080. ~46 endpoints covering platform info, containers, agents, tools, remote platforms, scenarios, DF, and live message traffic. Configurable via `-rest-port <n>`.
 
 ### Frontend (`frontend/`)
 
 A pnpm monorepo with two packages:
 
 - **`apps/webapp/`** — React 18 + Vite + TypeScript webapp. Uses Vitest + React Testing Library for tests.
-- **`packages/shared/`** — Shared TypeScript library with `HttpClient` interface (DIP), typed API clients per domain (PlatformAPI, ContainerAPI, AgentAPI, ToolAPI, RemotePlatformAPI), and TypeScript types for all API responses. Shared between webapp and mobile apps.
+- **`packages/shared/`** — Shared TypeScript library with `HttpClient` interface (DIP), typed per-domain API clients (`platform`, `containers`, `agents`, `tools`, `platforms`, `df`, `messages`, `scenarios`), and a WebSocket subscription for live ACL traffic. Shared between webapp and mobile apps.
 
 ### Docker
 
-- **Backend**: Multi-stage build (Maven → JRE 21 Alpine). Runs `java -jar app.jar`.
+- **Backend**: Multi-stage build (Maven → JRE 21 Alpine). Runs `java -cp app.jar:examples.jar:llm.jar io.donbee.jade.Boot`.
 - **Frontend**: Multi-stage build (Node → pnpm install → Vite build → nginx Alpine).
-- **docker-compose.yml** — Both services on a single network; webapp depends on backend.
+- **docker-compose.yml** — Three services (9router, backend, frontend) on a single network; backend waits for 9router health, frontend depends on backend.
 
 ## Testing
 

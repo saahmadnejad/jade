@@ -308,7 +308,7 @@ public class ScenarioService {
         String baseUrl = config.containsKey("baseUrl")
             ? String.valueOf(config.get("baseUrl")) : null;
         if (baseUrl == null || baseUrl.isBlank() || "null".equals(baseUrl)) {
-            return; // scenario does not use an LLM brain (e.g. pure shop demo)
+            return; // scenario does not use an LLM brain
         }
         String url = baseUrl + "/models";
         LOG.info("Probing brain provider: " + url);

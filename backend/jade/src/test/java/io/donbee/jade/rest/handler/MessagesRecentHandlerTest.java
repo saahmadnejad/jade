@@ -25,8 +25,8 @@ public class MessagesRecentHandlerTest {
 
     private static final JsonObject SAMPLE = new JsonObject()
         .put("id", "1")
-        .put("sender", "shop")
-        .put("receiver", "inventory")
+        .put("sender", "seller")
+        .put("receiver", "warehouse")
         .put("performative", "request")
         .put("content", "(buy sku-1 1)");
 
@@ -78,14 +78,14 @@ public class MessagesRecentHandlerTest {
     @Test
     public void Given_LimitAndFilters_When_RecentRequested_Then_PassedToService() {
         // --- Arrange ---
-        mockQueryParams("25", "shop", "inventory");
-        when(mockTrafficService.recent(25, "shop", "inventory")).thenReturn(List.of());
+        mockQueryParams("25", "seller", "warehouse");
+        when(mockTrafficService.recent(25, "seller", "warehouse")).thenReturn(List.of());
 
         // --- Act ---
         handler.handle(mockContext);
 
         // --- Assert ---
-        verify(mockTrafficService).recent(25, "shop", "inventory");
+        verify(mockTrafficService).recent(25, "seller", "warehouse");
         verify(mockResponse).end(org.mockito.ArgumentMatchers.any(io.vertx.core.buffer.Buffer.class));
     }
 

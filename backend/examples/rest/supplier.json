@@ -1,5 +1,0 @@
-{
-  "name": "supplier",
-  "class": "io.donbee.jade.examples.shop.RestockSupplierAgent",
-  "args": ["5"]
-}
