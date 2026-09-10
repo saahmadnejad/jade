@@ -1,16 +1,20 @@
 # LLM API keys are never committed
 
 The development-team scenario authenticates to LLM providers at runtime, but
-no API key may ever enter the repository. Keys are resolved at startup in this
-order (`SecretsResolver`):
+no API key may ever enter the repository. The tokenrouter provider key is
+injected from the environment (`TOKENROUTER_API_KEY`) directly into the
+workspace `opencode.json` (see ADR-0003). The GitHub publish token is resolved
+by `SecretsResolver`:
 
-1. Environment variable (`NINEROUTER_API_KEY`)
+1. Environment variable (`GH_TOKEN`)
 2. A gitignored local properties file
    (`backend/examples/conf/secrets-local.properties`; template with
-   placeholder values only: `secrets-local.properties.example`)
+   placeholder values only: `secrets-local.properties.example`, which holds
+   only the optional `github.token` line)
 
-If neither is present, the scenario fails fast at start with an actionable
-error. The same rule covers any proxy credentials.
+If a publish run has neither, publishing is skipped (or fails fast with an
+actionable error when a `githubOrg` was requested). The same rule covers any
+proxy credentials.
 
 ## Consequences
 
