@@ -56,13 +56,19 @@ podman compose ps
 
 **Backend (JADE)** (needs a full JDK 21 with `javac` on `JAVA_HOME`; distro `java-21-openjdk` is often JRE-only):
 ```bash
-cd backend && mvn -pl jade -am compile exec:java -Dexec.mainClass="io.donbee.jade.Boot"
+# Compile the reactor once (jade depends on fipa/llm), then run only the jade
+# module — exec:java on the whole reactor fails (no Boot class in the parent):
+cd backend && mvn -pl jade -am compile
+cd backend && mvn -pl jade exec:java -Dexec.mainClass="io.donbee.jade.Boot"
+# Ports clash with a running docker stack: use -rest-port 18080 -port 11997
+# (see `Boot -help` for all options)
 ```
 
 **Frontend (React):**
 ```bash
 cd frontend && pnpm install && pnpm --filter webapp dev
 # Vite dev server: http://localhost:3000
+# (auto-moves to :3001 etc. if the port is busy, e.g. while the docker stack runs)
 ```
 
 ## Architecture
