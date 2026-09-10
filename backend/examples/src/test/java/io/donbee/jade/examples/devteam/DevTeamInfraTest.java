@@ -57,24 +57,8 @@ public class DevTeamInfraTest {
     }
 
     // ===== SecretsResolver (ADR-0002) =====
-
-    @Test
-    public void Given_EnvVarPresent_When_KeyResolved_Then_EnvWins() {
-        String key = SecretsResolver.resolveApiKey(
-            name -> "env-key", Path.of("nonexistent-dir"));
-        assertThat(key).isEqualTo("env-key");
-    }
-
-    @Test
-    public void Given_NoEnvButLocalFile_When_KeyResolved_Then_FileUsed() throws Exception {
-        Path dir = Files.createTempDirectory("devteam-test");
-        Path conf = dir.resolve("conf");
-        Files.createDirectories(conf);
-        Files.writeString(conf.resolve("secrets-local.properties"), "llm.api.key=file-key\n");
-
-        String key = SecretsResolver.resolveApiKey(name -> null, dir);
-        assertThat(key).isEqualTo("file-key");
-    }
+    // LLM provider keys are injected from the environment by the opencode CLI
+    // (ADR-0003); only the GitHub token is resolved here.
 
     @Test
     public void Given_GithubTokenInFile_When_EnvEmpty_Then_TokenFromFileUsed() throws Exception {
@@ -92,12 +76,12 @@ public class DevTeamInfraTest {
     }
 
     @Test
-    public void Given_NeitherSource_When_KeyResolved_Then_ActionableFailure() throws Exception {
+    public void Given_NeitherSource_When_GithubTokenResolved_Then_ActionableFailure() throws Exception {
         Path dir = Files.createTempDirectory("devteam-empty").toAbsolutePath();
         assertThatThrownBy(() ->
-            SecretsResolver.resolveApiKey(name -> null, dir))
+            SecretsResolver.resolveGithubToken(name -> null, dir))
             .isInstanceOf(IllegalStateException.class)
-            .hasMessageContaining("NINEROUTER_API_KEY")
+            .hasMessageContaining("GH_TOKEN")
             .hasMessageContaining("Never commit secrets");
     }
 
@@ -124,8 +108,8 @@ public class DevTeamInfraTest {
     @Test
     public void Given_NeitherSource_When_OptionalResolved_Then_DefaultReturned() {
         String val = SecretsResolver.resolveOptional(name -> null, "MY_URL", Path.of("nonexistent"),
-            "llm.base.url", "http://default:20128/v1");
-        assertThat(val).isEqualTo("http://default:20128/v1");
+            "some.prop", "default-value");
+        assertThat(val).isEqualTo("default-value");
     }
 
     // ===== Workspace disk mirror =====

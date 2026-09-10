@@ -33,31 +33,30 @@ public class DevTeamScenarioTest {
     }
 
     @Test
-    public void Given_Defaults_When_AgentsComputed_Then_LangChain4jBrainIsDefault() {
+    public void Given_Defaults_When_AgentsComputed_Then_CliBrainModelIsDefault() {
         var specs = scenario.agents(config("workspaceDir", "/tmp/team-ws"));
 
         AgentSpec architect = specs.get(1);
-        assertThat(architect.getArgs().get(0)).isEqualTo("http://9router:20128/v1");  // baseUrl
+        assertThat(architect.getArgs().get(0))
+            .isEqualTo("tokenrouter/z-ai/glm-5.3-free");     // model
+        assertThat(architect.getArgs().get(1))
+            .isEqualTo("tokenrouter/z-ai/glm-5.3-free");     // fallback model
+        assertThat(architect.getArgs().get(2)).isEqualTo("600"); // callTimeoutSec
         assertThat(architect.getArgs()).contains("/tmp/team-ws");
-        assertThat(architect.getArgs().get(1)).isEqualTo("glm");      // model
-        assertThat(architect.getArgs().get(2)).isEqualTo("glm");              // fallback model
     }
 
     @Test
-    public void Given_RoleOverrides_When_AgentsComputed_Then_BrainArgsCarryModelAndProvider() {
+    public void Given_RoleOverrides_When_AgentsComputed_Then_BrainArgsCarryModelAndTimeout() {
         var specs = scenario.agents(config(
             "implementerModel", "some/paid-model",
             "fallbackModel", "backup/model",
-            "proxyEnabled", false,
-            "proxyPort", 9999,
+            "callTimeoutSec", 900,
             "workspaceDir", "/tmp/team-ws"));
 
         AgentSpec implementer = specs.get(2);
         assertThat(implementer.getClassName()).isEqualTo(DevTeamScenario.IMPLEMENTER_CLASS);
         assertThat(implementer.getArgs()).containsExactly(
-            "http://9router:20128/v1", "some/paid-model", "backup/model",
-            "false", "192.168.1.151", "9999", "600",
-            "/tmp/team-ws");
+            "some/paid-model", "backup/model", "900", "/tmp/team-ws");
     }
 
     @Test
@@ -68,6 +67,6 @@ public class DevTeamScenarioTest {
         AgentSpec manager = specs.get(0);
         assertThat(manager.getArgs()).containsExactly(
             "Build X", "5", "30", "10", "/tmp/team-ws", "", "private",
-            "true"); // 300s call timeout -> >=10min phase budget, clarify on
+            "true"); // 600s call timeout -> 10min phase budget, clarify on
     }
 }

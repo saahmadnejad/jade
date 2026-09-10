@@ -10,10 +10,10 @@ import io.donbee.jade.domain.FIPAAgentManagement.ServiceDescription;
 import io.donbee.jade.domain.FIPANames;
 import io.donbee.jade.lang.acl.ACLMessage;
 import io.donbee.jade.lang.acl.MessageTemplate;
-import io.donbee.llm.BashTool;
 import io.donbee.llm.Brain;
+import io.donbee.llm.CliBrain;
 import io.donbee.llm.FallbackBrain;
-import io.donbee.llm.LangChain4jBrain;
+import io.donbee.llm.RetryingBrain;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -30,17 +30,22 @@ import java.util.logging.Level;
  * each other via DF and send direct messages, bypassing the Manager hub.</p>
  *
  * <p>Brain args (passed by {@link DevTeamScenario}, identical order for all
- * roles): baseUrl, model, fallbackModel, proxyEnabled, proxyHost,
- * proxyPort, callTimeoutSec, workingDir.</p>
+ * roles): model, fallbackModel, callTimeoutSec, workingDir. The brain is an
+ * {@link CliBrain} shelling the opencode CLI with the role's persona
+ * ({@code --agent <role>}); each brain is wrapped in
+ * {@link RetryingBrain} and pairs are chained via {@link FallbackBrain}
+ * (see ADR-0003).</p>
  */
 public abstract class RoleAgent extends Agent {
 
     private static final io.donbee.jade.util.Logger LOG =
         io.donbee.jade.util.Logger.getJADELogger(RoleAgent.class.getName());
 
+    /** Default opencode model id (provider/model) when the arg is missing. */
+    static final String DEFAULT_MODEL = "tokenrouter/z-ai/glm-5.3-free";
+
     protected Brain brain;
     private String githubToken;
-    private String llmApiKey;
     private String teamId;
     private int callCount = 0;
     protected String workDir;
@@ -73,25 +78,18 @@ public abstract class RoleAgent extends Agent {
         Object[] args = getArguments();
         teamId = extractTeamId(getLocalName());
 
-        String baseUrl = str(args, 0, "http://9router:20128/v1");
-        String model = str(args, 1, "oc/laguna-s-2.1-free");
-        String fallbackModel = str(args, 2, null);
-        boolean proxyEnabled = Boolean.parseBoolean(str(args, 3, "false"));
-        String proxyHost = str(args, 4, null);
-        int proxyPort = intArg(args, 5, 1080);
-        timeoutSec = intArg(args, 6, 300);
-        workDir = str(args, 7, null);
+        String model = str(args, 0, DEFAULT_MODEL);
+        String fallbackModel = str(args, 1, null);
+        timeoutSec = intArg(args, 2, 600);
+        workDir = str(args, 3, null);
 
         githubToken = resolveGithubTokenQuietly();
-        llmApiKey = resolveApiKeyQuietly();
 
         try {
-            Brain primary = buildBrain(baseUrl, model, proxyEnabled, proxyHost,
-                proxyPort, timeoutSec);
+            Brain primary = buildBrain(model);
             if (fallbackModel != null && !fallbackModel.isBlank()
                 && !fallbackModel.equalsIgnoreCase(model)) {
-                Brain fallback = buildBrain(baseUrl, fallbackModel, false,
-                    null, 0, timeoutSec);
+                Brain fallback = buildBrain(fallbackModel);
                 brain = new FallbackBrain(List.of(primary, fallback));
                 LOG.info("role=" + roleName() + ": brain: " + model
                     + " (fallback: " + fallbackModel + ")");
@@ -179,17 +177,16 @@ public abstract class RoleAgent extends Agent {
      * parseability) and save it to the team workspace file.
      */
     protected String callBrain(String systemPrompt, String userPrompt, String conversationId) {
-        List<Brain.Tool> tools = createTools();
-        // Bash tool context: models otherwise invent absolute paths (/workspace, ...)
-        String bashCtx = "You have a bash tool. All commands run in the team "
-            + "workspace directory '" + workDir + "' (relative paths resolve "
-            + "there; never use or create absolute paths like /workspace). "
-            + "Write files, run tests and git inside it via the bash tool. "
+        // Workspace context: the CLI agent runs inside the team workspace
+        // directory; all paths resolve there. Respond in English.
+        String bashCtx = "You are an agent working inside the team workspace "
+            + "directory '" + workDir + "' (relative paths resolve there; "
+            + "never use or create absolute paths like /workspace). "
             + "Always respond in English; all code, comments, docs and file "
             + "contents must be in English.";
         String sys = (systemPrompt == null || systemPrompt.isBlank())
             ? bashCtx : systemPrompt + "\n\n" + bashCtx;
-        String result = brain.respond(sys, userPrompt, tools);
+        String result = brain.respond(sys, userPrompt);
         callCount++;
         String conv = conversationId != null && !conversationId.isBlank() ? conversationId : "turn-" + callCount;
         LOG.info("role=" + roleName() + ": [model-response-start conv=" + conv + " turn=" + callCount + "]");
@@ -266,40 +263,18 @@ public abstract class RoleAgent extends Agent {
         } catch (FIPAException ignored) {}
     }
 
-    private Brain buildBrain(String baseUrl, String model,
-                             boolean proxyEnabled, String proxyHost, int proxyPort,
-                             int timeoutSec) {
+    private Brain buildBrain(String model) {
         Duration timeout = Duration.ofSeconds(timeoutSec);
-        String proxyH = proxyEnabled ? proxyHost : null;
-        int proxyP = proxyEnabled ? proxyPort : 0;
         Path brainWorkDir = workDir != null && !workDir.isBlank()
             ? Path.of(workDir.trim())
-            : null;
-        return LangChain4jBrain.build(baseUrl, model,
-            () -> llmApiKey, timeout, proxyH, proxyP, brainWorkDir);
-    }
-
-    private List<Brain.Tool> createTools() {
-        Path toolWorkDir = workDir != null && !workDir.isBlank()
-            ? Path.of(workDir.trim())
             : Path.of(System.getProperty("java.io.tmpdir"), "jade-devteam-" + teamId);
-        // Cap each bash invocation below the whole-call LLM timeout so one
-        // runaway command cannot eat the entire agent-loop budget.
-        Duration bashTimeout = Duration.ofSeconds(Math.min(timeoutSec, 120));
-        return List.of(new BashTool(toolWorkDir, bashTimeout));
+        return new RetryingBrain(
+            new CliBrain(model, role(), brainWorkDir, timeout, null));
     }
 
     private String resolveGithubTokenQuietly() {
         try {
             return SecretsResolver.resolveGithubToken(System::getenv, Path.of(""));
-        } catch (IllegalStateException e) {
-            return null;
-        }
-    }
-
-    private String resolveApiKeyQuietly() {
-        try {
-            return SecretsResolver.resolveApiKey(System::getenv, Path.of(""));
         } catch (IllegalStateException e) {
             return null;
         }
