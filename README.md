@@ -7,7 +7,7 @@ A fork of JADE (Java Agent DEvelopment Framework) running on Java 21 with virtua
 - **REST API** (~46 endpoints) + **React UI**: agents, containers, DF, tools, remote platforms, scenarios, live messages
 - **Live message traffic** in the browser (WebSocket): watch FIPA ACL conversations as they happen (MessagesPage)
 - **Scenarios page**: launch configurable multi-agent demo scenarios with one click; each instance runs in its own container and can be stopped independently — or add your own scenarios by dropping a jar implementing the `io.donbee.jade.rest.scenario.Scenario` SPI on the classpath
-- **LLM-powered agents**: `io.donbee:llm` speaks any OpenAI-compatible endpoint (9router by default, paid providers or local Ollama via config) via langchain4j; the dev-team scenario has five AI agents build a small project from a brief
+- **LLM-powered agents**: role agents think through the `opencode` CLI (bundled in the backend image) reaching any provider it supports — tokenrouter by default (see `docs/adr/0003`); the dev-team scenario's five AI agents build a small project from a brief
 - **Library-ready artifacts**: `io.donbee:jade` (+ `fipa`, `llm`, `examples`) installable via Maven; the platform uber jar runs standalone without the UI
 
 ## Project Structure
@@ -36,11 +36,10 @@ jade/
 ## Quick Start
 
 ```bash
-# 1) Configure your LLM provider key for 9router (one-time):
-#    open http://localhost:20129/dashboard after first `up`, or run 9router on host.
-#    Then export it for the backend container (required for LLM scenarios):
-export NINEROUTER_API_KEY=$(grep 'llm.api.key' backend/examples/conf/secrets-local.properties | cut -d= -f2)
-#    (create that gitignored file from backend/examples/conf/secrets-local.properties.example)
+# 1) LLM provider key (required for the dev-team scenario): the backend
+#    reaches tokenrouter through the opencode CLI bundled in its image
+#    (see docs/adr/0003). The key is injected from the environment:
+export TOKENROUTER_API_KEY=<your-tokenrouter-key>
 
 # 2) Build and start all containers (docker works identically)
 podman compose up --build -d
@@ -51,7 +50,6 @@ podman compose ps
 # Frontend: http://localhost:3000
 # Backend (JADE RMI): localhost:10990
 # Backend (REST API): http://localhost:8080/api
-# 9router dashboard: http://localhost:20129/dashboard
 ```
 
 ### Local Development
@@ -90,7 +88,7 @@ A pnpm monorepo with two packages:
 
 - **Backend**: Multi-stage build (Maven → JRE 21 Alpine). Runs `java -cp app.jar:examples.jar:llm.jar io.donbee.jade.Boot`.
 - **Frontend**: Multi-stage build (Node → pnpm install → Vite build → nginx Alpine).
-- **docker-compose.yml** — Three services (9router, backend, frontend) on a single network; backend waits for 9router health, frontend depends on backend.
+- **docker-compose.yml** — Two services (backend, frontend) on a single network; frontend depends on backend. LLM access goes through the `opencode` CLI inside the backend image (no gateway container).
 
 ## Testing
 
@@ -104,4 +102,14 @@ cd backend && mvn test
 cd frontend
 pnpm --filter shared test:run   # API client unit tests
 pnpm --filter webapp test:run    # App integration tests (non-watch; `test` runs in watch mode)
+```
+
+**Dev-team scenario:**
+```bash
+# Offline flow test (stubbed CLI, no network) — runs in the default suite:
+cd backend && mvn -pl examples -am test -Dtest=DevTeamFlowIntegrationTest
+
+# Real run against tokenrouter (costs tokens; needs network + key):
+TOKENROUTER_API_KEY=... cd backend && \
+  mvn -pl examples -am test -Dtest=DevTeamRealIT -Dit.real=true -Dsurefire.failIfNoSpecifiedTests=false
 ```
