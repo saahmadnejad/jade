@@ -69,7 +69,10 @@ public class ManagerAgent extends Agent {
         workDir = TeamDirs.resolve(teamId, workspaceDirParam);
         workspace = WorkspaceStore.getOrCreate(teamId,
             workspaceDirParam != null && !workspaceDirParam.isBlank()
-                ? java.nio.file.Path.of(workspaceDirParam.trim()) : null);
+                ? java.nio.file.Path.of(workspaceDirParam.trim())
+                // Default: mirror into the same team directory the scaffolder
+                // already uses, so STATUS/artifacts are visible without config.
+                : workDir);
         deadlineAt = System.currentTimeMillis() + roundStartTimeoutMin * 60_000L;
 
         // Visible on the DF page as the team's coordinator.

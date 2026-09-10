@@ -7,7 +7,7 @@
 cd backend && mvn package -DskipTests
 cd backend && mvn test                         # full suite across all modules
 cd backend && mvn test -pl llm -am             # single module (-am builds deps)
-cd backend && mvn -pl jade -am compile exec:java -Dexec.mainClass="io.donbee.jade.Boot"
+cd backend && mvn -pl jade -am compile && mvn -pl jade exec:java -Dexec.mainClass="io.donbee.jade.Boot"
 
 # Frontend
 cd frontend && pnpm --filter webapp dev        # Vite, http://localhost:3000
@@ -25,7 +25,7 @@ docker compose up -d --build                   # podman compose works identicall
 **Gotchas**
 - Root `package.json` `dev`/`build` run `pnpm --filter frontend dev` — but "frontend" matches no workspace package, so it does nothing. Always `--filter webapp` or `--filter shared`.
 - `pnpm --filter webapp test` runs in watch mode (hangs an agent). Use `test:run`.
-- Running the backend: do **not** use plain `mvn compile exec:java` from `backend/` — there is no exec-maven-plugin in any pom (only the shade plugin), and `exec:java` runs in every reactor module, failing to find `Boot` in fipa/llm. Use `-pl jade -am` (jade depends on fipa).
+- Running the backend locally: do **not** use plain `mvn compile exec:java` from `backend/` — `exec:java` runs in every reactor module and fails with `ClassNotFoundException: Boot` on the parent (no Boot there). Compile the reactor once (`-pl jade -am compile`), then run `exec:java` on `-pl jade` only. Ports 8080/1099 clash with the docker stack — pass `-rest-port`/`-port` overrides.
 - Frontend tests mock `shared/api/factory`; add new API methods to the mock or tests crash.
 - Docker Hub pulls occasionally 5xx/timeout — retry; base images cache after first pull.
 - `docker compose up` without `--build` reuses the stale `jade-backend:latest` image even after `mvn package`. Source changes need `up -d --build` (or `docker compose build backend` first).
