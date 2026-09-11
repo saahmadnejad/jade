@@ -185,7 +185,8 @@ public class DevTeamRealIT {
             End your reply with EXACTLY one final line: SCORE: <number 0-10>
             """.formatted(lib, Files.readString(lib), tests, Files.readString(tests));
 
-        Sh judgeRun = sh("cd " + workspaceDir + " && opencode run --auto " + shellQuote(prompt));
+        Sh judgeRun = sh("cd " + workspaceDir
+            + " && opencode run --auto -m tokenrouter/z-ai/glm-5.3-free " + shellQuote(prompt));
         assertThat(judgeRun.exit).as("judge opencode run").isZero();
         String lastLine = lastNonEmptyLine(judgeRun.out);
         assertThat(lastLine).as("judge verdict line, got: " + firstLines(judgeRun.out))

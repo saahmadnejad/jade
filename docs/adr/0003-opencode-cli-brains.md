@@ -27,10 +27,12 @@ HTTP gateway) via `LangChain4jBrain`. Problems:
    workspace. The CLI (and its personas/skills) does the reasoning; the JADE
    agent handles the FIPA conversation and artifact bookkeeping.
 2. **`RetryingBrain` decorator**: any `BrainException` (timeout, exit≠0,
-   empty output) is retried 3 times with growing gaps (5s/15s/45s).
+   empty output) is retried — 4 attempts total (1 initial + 3 retries) with
+   growing gaps (5s/15s/45s).
 3. **`FallbackBrain` chains primary → fallback model** when retries are
    exhausted. Both layers compose: `FallbackBrain([RetryingBrain(primary),
-   RetryingBrain(fallback)])`.
+   RetryingBrain(fallback)])`. By default `fallbackModel` is empty (single
+   brain); configure a distinct model id to activate the chain.
 4. **tokenrouter provider** reaches opencode through an `opencode.json`
    written into each instance workspace by `TeamScaffolder`
    (`@ai-sdk/openai-compatible`, `baseURL` default `https://tokenrouter.com/v1`).
