@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, Chip,
+  TableHead, TableRow, Paper,
   IconButton, Tooltip, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Button,
 } from '@mui/material';
@@ -13,8 +13,6 @@ import {
   api,
   type RemotePlatformInfo,
   type RemotePlatformListResponse,
-  type RemotePlatformAddRequest,
-  type RemotePlatformFetchRequest,
 } from 'shared';
 import TopProgressBar from '../components/TopProgressBar';
 import PageHeader from '../components/PageHeader';
@@ -187,7 +185,7 @@ export default function PlatformsPage() {
       <Dialog open={addOpen} onClose={() => setAddOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Add Remote Platform</DialogTitle>
         <DialogContent>
-          <Box display="flex" gap={2} mb={2}>
+          <Box sx={{display: 'flex', gap: 2, mb: 2}}>
             <Button
               variant={addMode === 'ams' ? 'contained' : 'outlined'}
               onClick={() => setAddMode('ams')}
@@ -202,7 +200,7 @@ export default function PlatformsPage() {
             </Button>
           </Box>
           {addMode === 'ams' ? (
-            <Box display="flex" flexDirection="column" gap={2} pt={1}>
+            <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
               <TextField
                 label="AMS Agent Identifier"
                 value={addForm.ams}
@@ -219,7 +217,7 @@ export default function PlatformsPage() {
               />
             </Box>
           ) : (
-            <Box display="flex" flexDirection="column" gap={2} pt={1}>
+            <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
               <TextField
                 label="AP Description URL"
                 value={urlForm.url}
@@ -246,7 +244,7 @@ export default function PlatformsPage() {
         <DialogTitle>Platform Description</DialogTitle>
         <DialogContent>
           {selectedPlatform && (
-            <Box display="flex" flexDirection="column" gap={1} pt={1}>
+            <Box sx={{display: 'flex', flexDirection: 'column', gap: 1, pt: 1}}>
               <Typography><strong>Name:</strong> {selectedPlatform.name}</Typography>
               <Typography><strong>AMS:</strong> {selectedPlatform.ams}</Typography>
               <Typography><strong>Addresses:</strong> {selectedPlatform.addresses.join(', ') || 'N/A'}</Typography>

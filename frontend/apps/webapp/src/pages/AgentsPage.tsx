@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  Box, Typography, Table, TableBody, TableCell, TableContainer,
+  Box, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton,
   Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Button,
@@ -16,7 +16,6 @@ import MergeIcon from '@mui/icons-material/Merge';
 import LockIcon from '@mui/icons-material/Lock';
 import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
-import PublicIcon from '@mui/icons-material/Public';
 import AddIcon from '@mui/icons-material/Add';
 import { api, type AgentInfo, type AgentListResponse } from 'shared';
 import TopProgressBar from '../components/TopProgressBar';
@@ -343,7 +342,7 @@ export default function AgentsPage() {
       <Dialog open={deployOpen} onClose={() => setDeployOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Deploy New Agent</DialogTitle>
         <DialogContent>
-          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+          <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
             <TextField
               label="Agent Name"
               value={deployForm.name}
@@ -377,7 +376,7 @@ export default function AgentsPage() {
       <Dialog open={cloneOpen} onClose={() => setCloneOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Clone Agent</DialogTitle>
         <DialogContent>
-          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+          <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
             <TextField
               label="New Agent Name"
               value={cloneForm.newName}
@@ -405,7 +404,7 @@ export default function AgentsPage() {
       <Dialog open={moveOpen} onClose={() => setMoveOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Move Agent</DialogTitle>
         <DialogContent>
-          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+          <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
             <TextField
               label="Target Container"
               value={moveForm.targetContainer}
@@ -426,7 +425,7 @@ export default function AgentsPage() {
       <Dialog open={ownershipOpen} onClose={() => setOwnershipOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Change Agent Ownership</DialogTitle>
         <DialogContent>
-          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+          <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
             <TextField
               label="New Ownership"
               value={ownershipForm.ownership}
@@ -447,7 +446,7 @@ export default function AgentsPage() {
       <Dialog open={saveOpen} onClose={() => setSaveOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Save Agent</DialogTitle>
         <DialogContent>
-          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+          <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
             <TextField
               label="Repository"
               value={saveForm.repository}
@@ -468,7 +467,7 @@ export default function AgentsPage() {
       <Dialog open={loadOpen} onClose={() => setLoadOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Load Agent</DialogTitle>
         <DialogContent>
-          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+          <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
             <TextField
               label="Agent Name"
               value={loadForm.name}
@@ -503,7 +502,7 @@ export default function AgentsPage() {
       <Dialog open={registerRemoteOpen} onClose={() => setRegisterRemoteOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Register Remote Agent</DialogTitle>
         <DialogContent>
-          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+          <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
             <TextField
               label="Remote Agent AID"
               value={registerRemoteForm.aid}

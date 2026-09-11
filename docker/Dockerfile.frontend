@@ -6,7 +6,7 @@ WORKDIR /app
 COPY frontend/package.json frontend/pnpm-workspace.yaml ./
 COPY frontend/apps/webapp/package.json ./apps/webapp/
 COPY frontend/packages/shared/package.json ./packages/shared/
-RUN pnpm install --frozen-lockfile=false
+RUN pnpm install --frozen-lockfile
 COPY frontend/apps/webapp/ ./apps/webapp/
 COPY frontend/packages/shared/ ./packages/shared/
 WORKDIR /app/apps/webapp

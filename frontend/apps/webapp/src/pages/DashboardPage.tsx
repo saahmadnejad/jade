@@ -22,7 +22,7 @@ export default function DashboardPage() {
       ]);
       setHealth(healthData);
       setPlatform(platformData);
-    } catch (e) {
+    } catch {
       setError('Failed to connect to backend');
     } finally {
       setLoading(false);
@@ -72,7 +72,7 @@ export default function DashboardPage() {
         <Card>
           <CardContent>
             <Typography variant="h6">Platform Info</Typography>
-            <Box mt={1}>
+            <Box sx={{mt: 1}}>
               <Typography><strong>Platform ID:</strong> {platform.platformID}</Typography>
               <Typography><strong>Container:</strong> {platform.containerName}</Typography>
               <Typography><strong>Main Container:</strong> {platform.isMain ? 'Yes' : 'No'}</Typography>

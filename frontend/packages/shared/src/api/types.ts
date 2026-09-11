@@ -89,8 +89,8 @@ export interface AgentThawRequest {
 
 export interface AgentCloneRequest {
   name: string;
-  newName: string;
-  container: string;
+  newName?: string;
+  container?: string;
 }
 
 export interface AgentMoveRequest {

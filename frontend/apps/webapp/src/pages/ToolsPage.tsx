@@ -30,7 +30,7 @@ export default function ToolsPage() {
 
       <Grid container spacing={2}>
         {tools.map((tool) => (
-          <Grid item xs={12} sm={6} md={3} key={tool}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={tool}>
             <Button
               variant="contained"
               fullWidth

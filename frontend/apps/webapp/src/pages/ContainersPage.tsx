@@ -246,16 +246,16 @@ export default function ContainersPage() {
       )}
 
       {containers.length > 0 && (
-        <Box mt={3}>
+        <Box sx={{mt: 3}}>
           <Typography variant="h6" gutterBottom>MTP Management</Typography>
           {Object.entries(mtps).map(([containerName, containerMtps]) => (
-            <Box key={containerName} mb={2}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+            <Box sx={{mb: 2}} key={containerName}>
+              <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1}}>
                 <Typography variant="subtitle1">{containerName}</Typography>
                 {mtpsLoading[containerName] ? (
                   <CircularProgress size={16} />
                 ) : (
-                  <Box display="flex" gap={1} alignItems="center">
+                  <Box sx={{display: 'flex', gap: 1, alignItems: 'center'}}>
                     {containerMtps.map((mtp) => (
                       <Chip
                         key={mtp.address}
@@ -263,7 +263,6 @@ export default function ContainersPage() {
                         size="small"
                         onDelete={() => handleUninstallMtp(containerName, mtp.address)}
                         disabled={actionLoading === 'uninstall:' + containerName + ':' + mtp.address}
-                        DeleteIcon={<DeleteForeverIcon fontSize="small" />}
                       />
                     ))}
                     <Tooltip title="Install MTP">
@@ -290,7 +289,7 @@ export default function ContainersPage() {
       <Dialog open={saveOpen} onClose={() => setSaveOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Save Container</DialogTitle>
         <DialogContent>
-          <Box pt={1}>
+          <Box sx={{pt: 1}}>
             <TextField
               label="Repository URL"
               value={saveForm.repository}
@@ -311,7 +310,7 @@ export default function ContainersPage() {
         <Dialog open={loadOpen} onClose={() => setLoadOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Load Container</DialogTitle>
         <DialogContent>
-          <Box pt={1}>
+          <Box sx={{pt: 1}}>
             <TextField
               label="Repository URL"
               value={loadForm.repository}
@@ -332,7 +331,7 @@ export default function ContainersPage() {
       <Dialog open={mtpInstallOpen} onClose={() => setMtpInstallOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Install MTP on Container</DialogTitle>
         <DialogContent>
-          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+          <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
             <TextField
               label="MTP Class Name"
               value={mtpForm.className}

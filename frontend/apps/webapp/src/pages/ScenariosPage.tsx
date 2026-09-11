@@ -143,7 +143,7 @@ export default function ScenariosPage() {
       ) : (
         <Grid container spacing={2} sx={{ mb: 3 }}>
           {scenarios.map((scenario) => (
-            <Grid item xs={12} sm={6} md={4} key={scenario.id}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={scenario.id}>
               <Card variant="outlined" sx={{ height: '100%' }}>
                 <CardActionArea onClick={() => openConfigDialog(scenario)} sx={{ height: '100%' }}>
                   <CardContent>
@@ -218,9 +218,9 @@ export default function ScenariosPage() {
                   type={param.type === 'int' ? 'number' : 'text'}
                   value={form.values[name] ?? ''}
                   onChange={(e) => setForm({ ...form, values: { ...form.values, [name]: e.target.value } })}
-                  inputProps={
+                  slotProps={
                     param.type === 'int'
-                      ? { min: param.minValue, max: param.maxValue }
+                      ? { htmlInput: { min: param.minValue, max: param.maxValue } }
                       : undefined
                   }
                   helperText={`${param.description ?? ''} (default: ${String(param.defaultValue)})`}
