@@ -16,7 +16,7 @@ import type {
 export class AgentAPI {
   constructor(private httpClient: HttpClient) {}
 
-  list = async (params?: { container?: string; state?: string }): Promise<AgentListResponse> => {
+  list = async (params?: { container?: string; state?: string; detail?: boolean }): Promise<AgentListResponse> => {
     const res = await this.httpClient.get<AgentListResponse>('/agents', { params });
     return res.data;
   };

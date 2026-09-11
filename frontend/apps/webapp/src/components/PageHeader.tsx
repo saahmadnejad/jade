@@ -8,9 +8,9 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, actions }: PageHeaderProps) {
   return (
-    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+    <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
       <Typography variant="h4">{title}</Typography>
-      {actions && <Box display="flex" gap={1} alignItems="center">{actions}</Box>}
+      {actions && <Box sx={{display: 'flex', gap: 1, alignItems: 'center'}}>{actions}</Box>}
     </Box>
   );
 }

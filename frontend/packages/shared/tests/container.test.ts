@@ -51,7 +51,9 @@ describe('ContainerAPI', () => {
     await containerAPI.kill('Main-Container');
 
     // Assert
-    expect(mockHttpClient.delete).toHaveBeenCalledWith('/containers/Main-Container');
+    expect(mockHttpClient.delete).toHaveBeenCalledWith('/containers/Main-Container', {
+      params: { confirm: true },
+    });
   });
 
   it('Given container name and repository, When save() resolves, Then calls POST with repository', async () => {

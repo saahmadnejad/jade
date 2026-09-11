@@ -3,7 +3,7 @@ import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton,
   Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Button, Chip, Tabs, Tab,
+  TextField, Button, Chip,
 } from '@mui/material';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import AddIcon from '@mui/icons-material/Add';
@@ -23,7 +23,6 @@ import {
 } from 'shared';
 import TopProgressBar from '../components/TopProgressBar';
 import PageHeader from '../components/PageHeader';
-import EmptyState from '../components/EmptyState';
 import NotificationSnackbar, { useFeedback } from '../components/NotificationSnackbar';
 
 interface TabPanelProps {
@@ -36,7 +35,7 @@ function TabPanel(props: TabPanelProps) {
   const { children, value, index } = props;
   return (
     <div hidden={value !== index} style={{ display: value === index ? 'block' : 'none' }}>
-      {value === index && <Box pt={2}>{children}</Box>}
+      {value === index && <Box sx={{pt: 2}}>{children}</Box>}
     </div>
   );
 }
@@ -107,15 +106,6 @@ export default function DFPage() {
       notify(`Failed to fetch DF registrations: ${e.message || 'unknown error'}`, 'error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchDfStatus = async () => {
-    try {
-      const status = await api.df.getStatus();
-      setDfStatus(status);
-    } catch (e) {
-      console.error('Failed to fetch DF status', e);
     }
   };
 
@@ -225,7 +215,7 @@ export default function DFPage() {
       notify(`DF federated with '${federateForm.parentDF}'`, 'success');
       setFederateOpen(false);
       setFederateForm({ parentDF: '', parentDFAddresses: '' });
-      setParents([...parents, { name: federateForm.parentDF, addresses: request.parentDFAddresses }]);
+      setParents([...parents, { name: federateForm.parentDF, addresses: request.parentDFAddresses ?? [] }]);
     } catch (e: any) {
       notify(`Federation failed: ${e.message || 'unknown error'}`, 'error');
     }
@@ -318,7 +308,7 @@ export default function DFPage() {
 
       {dfStatus && (
         <Paper sx={{ p: 2, mb: 2 }}>
-          <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
+          <Box sx={{display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap'}}>
             <Chip
               label={dfStatus.running ? 'DF Running' : 'DF Not Running'}
               color={dfStatus.running ? 'success' : 'default'}
@@ -333,7 +323,7 @@ export default function DFPage() {
         </Paper>
       )}
 
-      <Box display="flex" mb={2} gap={1}>
+      <Box sx={{display: 'flex', mb: 2, gap: 1}}>
         <Chip
           icon={<PublicIcon />}
           label={`Parents: ${parents.length}`}
@@ -445,7 +435,7 @@ export default function DFPage() {
             </Table>
           </TableContainer>
         )}
-        <Box mt={2}>
+        <Box sx={{mt: 2}}>
           <Button variant="contained" onClick={() => setFederateOpen(true)} startIcon={<AddIcon />}>
             Federate with Parent DF
           </Button>
@@ -493,7 +483,7 @@ export default function DFPage() {
       <Dialog open={registerOpen} onClose={() => setRegisterOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Register Agent with DF</DialogTitle>
         <DialogContent>
-          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+          <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
             <TextField
               label="Agent Name"
               value={registerForm.name}
@@ -535,7 +525,7 @@ export default function DFPage() {
       <Dialog open={modifyOpen} onClose={() => setModifyOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Modify Registration</DialogTitle>
         <DialogContent>
-          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+          <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
             <TextField
               label="Agent Name"
               value={registerForm.name}
@@ -574,7 +564,7 @@ export default function DFPage() {
       <Dialog open={searchOpen} onClose={() => setSearchOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Search DF</DialogTitle>
         <DialogContent>
-          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+          <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
             <TextField
               label="Service Type"
               value={searchForm.serviceType}
@@ -602,7 +592,7 @@ export default function DFPage() {
       <Dialog open={federateOpen} onClose={() => setFederateOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Federate with Parent DF</DialogTitle>
         <DialogContent>
-          <Box display="flex" flexDirection="column" gap={2} pt={1}>
+          <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
             <TextField
               label="Parent DF Name"
               value={federateForm.parentDF}
@@ -631,12 +621,12 @@ export default function DFPage() {
         <DialogTitle>DF Description</DialogTitle>
         <DialogContent>
           {dfDescription && (
-            <Box display="flex" flexDirection="column" gap={1} pt={1}>
+            <Box sx={{display: 'flex', flexDirection: 'column', gap: 1, pt: 1}}>
               <Typography><strong>Name:</strong> {dfDescription.name}</Typography>
               <Typography><strong>Addresses:</strong> {dfDescription.addresses?.join(', ') || 'N/A'}</Typography>
               <Typography><strong>Services:</strong>
                 {dfDescription.services && dfDescription.services.length > 0 ? (
-                  <Box display="flex" gap={1} mt={1} flexWrap="wrap">
+                  <Box sx={{display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap'}}>
                     {dfDescription.services.map((svc, i) => (
                       <Chip key={i} label={`${svc.name || svc.type} (${svc.type})`} size="small" />
                     ))}

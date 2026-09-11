@@ -18,7 +18,6 @@ target/
 ### Node ###
 frontend/node_modules/
 **/node_modules/
-frontend/pnpm-lock.yaml
 dist/
 
 ### LLM API keys (ADR-0002) - never commit ###
