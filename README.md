@@ -1,5 +1,11 @@
 # Jade – Java Agent DEvelopment Framework (Modernized)
 
+[![CI](https://github.com/saahmadnejad/jade/actions/workflows/ci.yml/badge.svg)](https://github.com/saahmadnejad/jade/actions/workflows/ci.yml)
+[![Real IT](https://github.com/saahmadnejad/jade/actions/workflows/real-it.yml/badge.svg)](https://github.com/saahmadnejad/jade/actions/workflows/real-it.yml)
+[![Java 21](https://img.shields.io/badge/Java-21-blue)](https://openjdk.org/projects/jdk/21/)
+[![License: LGPL-2.1](https://img.shields.io/badge/License-LGPL--2.1-blue)](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html)
+[![JADE](https://img.shields.io/badge/JADE-jade.tilab.com-orange)](https://jade.tilab.com/)
+
 A fork of JADE (Java Agent DEvelopment Framework) running on Java 21 with virtual threads, bundled with a React + Vite frontend and Docker compose for local development.
 
 ## Highlights
