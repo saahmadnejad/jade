@@ -145,7 +145,7 @@ public class CliBrain implements Brain {
 
     @Override
     public String model() {
-        return model != null ? model : DEFAULT_CLI;
+        return model != null ? model : "";
     }
 
     @Override
@@ -158,7 +158,11 @@ public class CliBrain implements Brain {
         return workDir;
     }
 
-    /** True when the CLI binary is invokable (at least exists on PATH). */
+    /**
+     * True when the CLI binary is invokable (exists on PATH / at cliPath).
+     * Deliberate test seam: no production caller — tests assert binary
+     * presence; kept for diagnostics.
+     */
     public boolean cliAvailable() {
         if (!cliPath.equals(DEFAULT_CLI)) {
             return Files.isExecutable(Paths.get(cliPath));

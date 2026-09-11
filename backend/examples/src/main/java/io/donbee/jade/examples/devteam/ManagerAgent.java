@@ -120,7 +120,7 @@ public class ManagerAgent extends Agent {
 
         LOG.info("team=" + teamId + ": goal: " + firstLine(brief)
             + " (maxRounds=" + maxRounds + ", maxCalls=" + maxTotalCalls
-            + ", brain=langchain4j, dir=" + workDir + ")"
+            + ", brain=cli, dir=" + workDir + ")"
             + (githubWanted ? " github=" + githubOrg : ""));
         workspace.save("BRIEF.md", "# Brief\n\n" + brief + "\n");
 

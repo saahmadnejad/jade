@@ -41,7 +41,7 @@ in-memory ring buffer (default capacity 500).
       "receiver": "team-demo-1-architect",
       "performative": "request",
       "protocol": "fipa-request",
-      "ontology": "dev-team-ontology",
+      "ontology": "",
       "content": "(task architect DESIGN ...)"
     }
   ],
@@ -74,7 +74,7 @@ the buffer.
   "receiver": "team-demo-1-architect",
   "performative": "request",
   "protocol": "fipa-request",
-  "ontology": "dev-team-ontology",
+  "ontology": "",
   "content": "... complete, untruncated content ..."
 }
 ```
@@ -94,7 +94,7 @@ the same schema as one element of the `messages` array above:
   "receiver": "team-demo-1-tester",
   "performative": "request",
   "protocol": "fipa-request",
-  "ontology": "dev-team-ontology",
+  "ontology": "",
   "content": "(peer-task tester TEST-REPORT ...)"
 }
 ```
