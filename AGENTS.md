@@ -42,7 +42,7 @@ docker compose up -d --build                   # podman compose works identicall
 
 ### Backend (`io.donbee.jade.*`, Maven multi-module: `fipa`, `llm`, `jade`, `examples`)
 - **Entry**: `io.donbee.jade.Boot` (CLI args → `ProfileImpl` → `Runtime`). `-conf` loads a properties file; `-name/-container/-host/-port/-rest-port` override defaults.
-- **REST API & Vert.x**: Vert.x 5.1.6 singleton per JVM (`Runtime.getVertxInstance()`) shared by `RestAPIVerticle` on :8080 (configurable `-rest-port`, Main Container only) and agent verticles. `RestAPIVerticle` only configures the router (SRP); ~46 routes under `/api/*`. Paths in `ApiRoutes`; one dedicated class per route group in `rest/handler/`.
+- **REST API & Vert.x**: Vert.x 5.1.6 singleton per JVM (`Runtime.instance().getVertx()`) shared by `RestAPIVerticle` on :8080 (configurable `-rest-port`, Main Container only) and agent verticles. `RestAPIVerticle` only configures the router (SRP); ~46 routes under `/api/*`. Paths in `ApiRoutes`; one dedicated class per route group in `rest/handler/`.
 - **Agent runtimes** (ADR-0004): `-agent-runtime thread|verticle` (default `thread`, override via CLI flag, profile, or `-Djade.agent-runtime=...`). `thread` = one persistent virtual thread per agent running `Agent.run()`. `verticle` = `AgentVerticle` per agent (`c/<container>/a/<name>`); cooperative per-step dispatch via `Agent.drain()` (WIP-counter serial gate on pooled virtual threads); idle agents park zero threads.
 - **Blocking rule**: handlers that do blocking work (LLM probes, container create/kill, synchronized service calls) MUST wrap it in `ctx.vertx().executeBlocking(...)` — the event loop froze 130s+ before this rule existed (`ScenarioStartHandler`/`ScenarioStopHandler` are the working exemplars).
 - **Main Container** = AMS + DF + REST API + all UI/REST-deployed agents. Each scenario instance gets its own container `scenario-<name>`.
@@ -73,7 +73,7 @@ docker compose up -d --build                   # podman compose works identicall
 ## Secrets (ADR-0002 — never commit)
 - GitHub publish token: `GH_TOKEN` env or gitignored `backend/examples/conf/secrets-local.properties` (`github.token`; template `secrets-local.properties.example`). `SecretsResolver` resolves only this now.
 - LLM provider key: `TOKENROUTER_API_KEY` env, injected into the workspace `opencode.json` (`{env:TOKENROUTER_API_KEY}`) — never on disk (ADR-0003).
-- `.gitignore` covers `secrets*.properties` + `secrets-*.properties`.
+- `.gitignore` covers specific `secrets.local.properties`/`secrets-local.properties` paths and the glob `secrets-*.properties` (with dash). Files like `secretsfoo.properties` (no dash) are NOT ignored.
 
 ## Key files
 - `backend/jade/src/main/java/io/donbee/jade/Boot.java` — CLI entry
