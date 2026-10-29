@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed (pending spike: thread-affinity audit + drain-task prototype).
+Accepted (spike complete: thread-affinity audit and drain-task prototype verified green).
 
 ## Context
 
@@ -121,22 +121,46 @@ Problems this proposal addresses:
     manager for distributed agents. Separate ADR when phase 2 proves
     local fabric.
 
-### Thread-affinity audit (required before prototype)
+### Thread-affinity audit (completed — no blockers)
 
 The per-step dispatch model (decision 3) changes which thread runs agent
-code. Four sites in `Agent.java` assume a persistent `myThread`:
+code. Deep scan of `Agent.java`, `core/`, `devteam/`, `llm/`, and `ThreadedBehaviourFactory`
+confirmed **no blockers**. Decision 3 is viable; retreat to shell model (decision 6) is not required.
 
-| Site | Lines | Migration |
+#### 1. `Agent.java` persistent-thread sites
+
+| Site | Lines | Finding & Migration |
 |---|---|---|
-| `myThread.interrupt()` | 882, 2409 | Volatile "current step thread" handle; pending-interrupt flag between steps |
-| `myThread.join()` in delete/takeDown | 861–894 | Death signal (CountDownLatch/promise) set when drain task observes `lifecycle.alive()==false` after final step |
-| `isAlive()` | 797 | Use `myLifeCycle.alive()` |
-| `Thread.currentThread().equals(myThread)` | 982, 1186, 2137 | Always "foreign" — verify each branch is correct for the agent's main loop |
+| `isAlive()` | 797 | Currently checks `myThread != null && myThread.isAlive()`. In per-step dispatch, an idle agent has no active thread, causing `isAlive()` to return `false`. **Critical impact**: `ThreadedBehaviourFactory:428` calls `checkAgentTerminated()` which checks `!myAgent.isAlive()`, prematurely killing threaded behaviours if `isAlive()` is false between steps. **Migration**: Decouple from thread; return `myLifeCycle != null && myLifeCycle.alive()`. |
+| `join()` in delete/takeDown | 861–894 | Called by `AgentContainerImpl.shutDown()` (line 657) and `MainContainerImpl.removeLocalContainer()` (lines 163, 169) to wait for agent termination. If `myThread` is transient, joining a single step thread does not wait for full teardown, and if `myThread` is null it returns `true` immediately before `clean()` finishes. **Migration**: Use a termination latch/future (`CompletableFuture<Void>`). When the agent transitions to deleted and finishes `myLifeCycle.end()` (`clean()`), complete the future. `join()` waits on this future with timeout. |
+| `interruptThread()` / `myThread.interrupt()` | 882, 2409 | Line 2409 directly calls `myThread.interrupt()`. If the agent is idle between steps, `myThread` is null and throws NPE. **Migration**: Guard against null: `Thread t = myThread; if (t != null) t.interrupt();`. Maintain a pending-interrupt flag between steps. While a drain step runs, bind volatile `myThread = Thread.currentThread()` so in-flight blocking calls (e.g. LLM I/O, `blockingReceive`) receive interrupts promptly, clearing `myThread = null` in a finally block upon step completion. |
+| `Thread.currentThread().equals(myThread)` | 982, 1186, 2137 | **Line 982** (`changeStateTo`): only interrupts thread if called from an external thread. Binding `myThread = Thread.currentThread()` during step execution preserves this.<br>**Line 1186** (`doWait`): no-op if foreign. Binding `myThread` during step execution preserves `doWait` for in-step callers.<br>**Line 2137** (`blockingReceive`): if foreign, calls `waitUntilWake` which parks on `msgQueue` monitor without updating lifecycle state; if current, calls `doWait` which marks `AP_WAITING`. Both park on `msgQueue` and wake on `doWake()`. On virtual threads inside drain tasks, both branches work safely. |
+| Idle `doDelete()` / `takeDown()` trigger | 980–1000, 1618, 1776 | **Critical architectural finding**: In standard JADE, an idle agent is parked inside `schedule()` -> `idle()`. Calling `doDelete()` interrupts that parked thread, the `run()` loop catches `InterruptedException`, evaluates `!alive()`, and calls `myLifeCycle.end()` -> `takeDown()`. In per-step dispatch, an idle agent has no thread running. If `doDelete()` is called while idle, `takeDown()` will **never execute** unless `doDelete()` / state transition explicitly calls `ensureScheduled()` to dispatch a final termination task that executes `clean(true)` and signals the termination latch. |
 
-Additional scan items:
-- `ThreadLocal` usage in `core/`, `devteam/`, `CliBrain` (different
-  pooled vthread per step → stale ThreadLocals).
-- `ThreadedBehaviourFactory` interaction with the serial gate.
+#### 2. `ThreadLocal` audit
+
+- `core/`:
+  - `AgentReplicationHandle.java:37`: `static ThreadLocal<Boolean> replicatedCalls`. Bound strictly around synchronous replicated method invocation (`enterReplicatedCall` ... `exitReplicatedCall` in `finally`). Never leaks across steps.
+  - `DBKB.java:63`: `ThreadLocal connections`. Used only in optional JDBC-backed DF knowledge base (`DBKB`), not in default in-memory DF (`MemoryKB`). Re-authenticates lazily per thread.
+  - `DeliveryTracing.java:9`: `static final ThreadLocal<DeliveryTracing> tracing`. Used strictly inside `MessageManager` deliverer threads, not on agent threads.
+- `devteam/`: Zero `ThreadLocal` usage.
+- `llm/` (`CliBrain`, `RetryingBrain`, `LangChain4jBrain`, `BashTool`): Zero `ThreadLocal` usage.
+- `fipa/`: Zero `ThreadLocal` usage.
+- **Verdict**: No `ThreadLocal` leaks or staleness across pooled virtual threads.
+
+#### 3. `ThreadedBehaviourFactory` audit
+
+- `ThreadedBehaviourWrapper` executes `b.actionWrapper()` in its own dedicated virtual thread (`Thread.ofVirtual().start(this)`), while its agent scheduler step is a non-busy `block()`.
+- It interacts with `myAgent` exclusively via `checkAgentTerminated()` calling `myAgent.isAlive()`.
+- Migrating `isAlive()` to check `myLifeCycle.alive()` guarantees `ThreadedBehaviourFactory` functions identically without premature aborts.
+- **Verdict**: Fully compatible with per-step serial dispatch.
+
+#### 4. Dev-team & LLM audit
+
+- `ManagerAgent` is a pure deterministic state machine (`CyclicBehaviour` + `TickerBehaviour`).
+- `RoleAgent` delegates to `Brain.think()`. `CliBrain` spawns and joins short-lived virtual threads for stdout/stderr stream consumption; `RetryingBrain` uses `Thread.sleep` for exponential backoff on virtual threads.
+- All operations are completely non-reliant on thread identity or thread naming.
+- **Verdict**: Fully compatible.
 
 ## Testing
 
@@ -180,10 +204,6 @@ Additional scan items:
 
 ## Spike plan
 
-1. **ADR-0004 draft** (this document) — captures decisions while fresh.
-2. **Thread-affinity audit** (parallel with draft) — deep scan of
-   `myThread`/`currentThread`/`ThreadLocal` across `core/` + dev-team.
-   If blocker found: amend decision 3 to shell model (decision 6).
-3. **Prototype** (after audit) — drain task + `ensureScheduled()` seam +
-   flag + `DevTeamFlowIntegrationTest` green under
-   `-agent-runtime verticle`.
+1. **ADR-0004 draft** (this document) — Done (captured decisions).
+2. **Thread-affinity audit** — Done (audit complete; no blockers; per-step dispatch confirmed viable; see findings above).
+3. **Prototype** — Done (drain task + `ensureScheduled()` seam + `-agent-runtime verticle` flag; `AgentVerticleTest` (6 tests) and `DevTeamFlowIntegrationTest` green under both `thread` and `verticle` runtimes).

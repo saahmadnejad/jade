@@ -266,7 +266,7 @@ public class Boot {
 	private static void startRestAPI(io.donbee.jade.wrapper.AgentContainer container, Profile p) {
 		try {
 			int port = Integer.parseInt(p.getParameter(Profile.REST_PORT, String.valueOf(Profile.DEFAULT_REST_PORT)));
-			io.vertx.core.Vertx vertx = io.vertx.core.Vertx.vertx();
+			io.vertx.core.Vertx vertx = Runtime.instance().getVertx();
 			io.donbee.jade.rest.RestAPIVerticle verticle = new io.donbee.jade.rest.RestAPIVerticle(container, port);
 			vertx.deployVerticle(verticle);
 		} catch (Exception e) {

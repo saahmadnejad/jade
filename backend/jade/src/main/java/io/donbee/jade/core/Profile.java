@@ -304,6 +304,11 @@ public abstract class Profile {
 	public static final String REST_PORT = "rest-port";
 	public static final int DEFAULT_REST_PORT = 8080;
 
+	public static final String AGENT_RUNTIME = "agent-runtime";
+	public static final String AGENT_RUNTIME_THREAD = "thread";
+	public static final String AGENT_RUNTIME_VERTICLE = "verticle";
+	public static final String DEFAULT_AGENT_RUNTIME = AGENT_RUNTIME_THREAD;
+
 	
 	
 	/**
