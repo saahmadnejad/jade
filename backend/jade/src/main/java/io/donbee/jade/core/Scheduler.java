@@ -99,6 +99,7 @@ class Scheduler implements Serializable {
 		//#MIDP_EXCLUDE_BEGIN
 		owner.notifyAddBehaviour(b);
 		//#MIDP_EXCLUDE_END
+		owner.ensureScheduled();
 	}
 	
 	// Moves a behaviour from the ready queue to the sleeping queue.
@@ -129,6 +130,7 @@ class Scheduler implements Serializable {
 			//#MIDP_EXCLUDE_BEGIN
 			owner.notifyChangeBehaviourState(b, Behaviour.STATE_BLOCKED, Behaviour.STATE_READY);
 			//#MIDP_EXCLUDE_END
+			owner.ensureScheduled();
 		}
 	}
 	
@@ -196,6 +198,7 @@ class Scheduler implements Serializable {
 			b.restart();
 			
 		}
+		owner.ensureScheduled();
 	}
 	
 	/**
@@ -230,6 +233,22 @@ class Scheduler implements Serializable {
 		 #MIDP_INCLUDE_END*/
 		currentIndex = (currentIndex + 1) % readyBehaviours.size();
 		return b;
+	}
+
+	public synchronized Behaviour pollReady() {
+		if (readyBehaviours.isEmpty()) {
+			return null;
+		}
+		if (currentIndex >= readyBehaviours.size()) {
+			currentIndex = 0;
+		}
+		Behaviour b = (Behaviour) readyBehaviours.get(currentIndex);
+		currentIndex = (currentIndex + 1) % readyBehaviours.size();
+		return b;
+	}
+
+	public synchronized boolean hasReady() {
+		return !readyBehaviours.isEmpty();
 	}
 	
 	public synchronized int size() {

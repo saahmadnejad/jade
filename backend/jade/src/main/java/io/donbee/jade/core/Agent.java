@@ -489,7 +489,14 @@ public class Agent implements Runnable, Serializable
 
 	private transient Object stateLock;
 
-	private transient Thread myThread;
+	private transient volatile Thread myThread;
+	private boolean verticleMode = false;
+	private AgentVerticle myAgentVerticle = null;
+	private final java.util.concurrent.atomic.AtomicBoolean scheduled = new java.util.concurrent.atomic.AtomicBoolean(false);
+	private final java.util.concurrent.CompletableFuture<Void> terminationFuture = new java.util.concurrent.CompletableFuture<>();
+	private static final java.util.concurrent.ExecutorService drainExecutor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
+	private boolean initialized = false;
+
 	private transient TimerDispatcher theDispatcher;
 
 	private Scheduler myScheduler;
@@ -794,6 +801,9 @@ public class Agent implements Runnable, Serializable
 	 * @return true if the agent implemented by this Agent object is alive
 	 */
 	public boolean isAlive() {
+		if (verticleMode) {
+			return myLifeCycle != null && myLifeCycle.alive() && myAID != null;
+		}
 		if (myThread != null) {
 			return myThread.isAlive();
 		}
@@ -856,6 +866,18 @@ public class Agent implements Runnable, Serializable
 	 * FIXME: the timeout value should be got by Profile
 	 */
 	public boolean join() {
+		if (verticleMode) {
+			try {
+				terminationFuture.get(5000, java.util.concurrent.TimeUnit.MILLISECONDS);
+				return true;
+			} catch (java.util.concurrent.TimeoutException te) {
+				log.log(Logger.WARNING, "*** Agent " + myName + " did not terminate when requested to do so.");
+				interruptThread();
+				return false;
+			} catch (Exception e) {
+				return !isAlive();
+			}
+		}
 		//#MIDP_EXCLUDE_BEGIN
 		try {
 			if(myThread == null) {
@@ -984,6 +1006,7 @@ public class Agent implements Runnable, Serializable
 				// the agent thread to allow the state change to take place
 				interruptThread();
 			}
+			ensureScheduled();
 		}
 	}
 
@@ -1225,6 +1248,7 @@ public class Agent implements Runnable, Serializable
 			synchronized(msgQueue) {
 				msgQueue.notifyAll(); // Wakes up the embedded thread
 			}
+			ensureScheduled();
 		}
 	}
 
@@ -1777,6 +1801,16 @@ public class Agent implements Runnable, Serializable
 		pendingTimers.clear();
 		myToolkit.handleEnd(myAID);
 		myLifeCycle = myBufferedLifeCycle;
+		terminationFuture.complete(null);
+		if (verticleMode && myAgentVerticle != null && !myAgentVerticle.isUndeploying()) {
+			try {
+				io.vertx.core.Vertx vx = myAgentVerticle.getVertx();
+				String depId = myAgentVerticle.deploymentID();
+				if (vx != null && depId != null) {
+					vx.undeploy(depId);
+				}
+			} catch (Exception ignored) {}
+		}
 	}
 	//#APIDOC_EXCLUDE_END
 
@@ -1877,6 +1911,122 @@ public class Agent implements Runnable, Serializable
 
 			myThread = t;
 			myThread.start();
+		}
+	}
+
+	// Package-scoped for verticle runtime
+	synchronized void powerUpVerticle(AID id, AgentVerticle verticle) {
+		if (myAgentVerticle == null) {
+			verticleMode = true;
+			myAgentVerticle = verticle;
+			myName = id.getLocalName();
+			myHap = id.getHap();
+
+			myAID = id;
+			myToolkit.setPlatformAddresses(myAID);
+			ensureScheduled();
+		}
+	}
+
+	public boolean isVerticleMode() {
+		return verticleMode;
+	}
+
+	public java.util.concurrent.CompletableFuture<Void> getTerminationFuture() {
+		return terminationFuture;
+	}
+
+	public AgentVerticle getAgentVerticle() {
+		return myAgentVerticle;
+	}
+
+	public void ensureScheduled() {
+		if (!verticleMode) {
+			return;
+		}
+		if (scheduled.compareAndSet(false, true)) {
+			drainExecutor.execute(this::drain);
+		}
+	}
+
+	private void drain() {
+		try {
+			if (!initialized) {
+				initialized = true;
+				try {
+					myLifeCycle.init();
+				} catch (Throwable t) {
+					log.log(Logger.SEVERE, "*** Exception in agent setup for " + myName + " ***", t);
+					terminating = true;
+					myLifeCycle.end();
+					terminationFuture.complete(null);
+					scheduled.set(false);
+					return;
+				}
+			}
+
+			while (true) {
+				if (!myLifeCycle.alive()) {
+					terminating = true;
+					myLifeCycle.end();
+					terminationFuture.complete(null);
+					scheduled.set(false);
+					return;
+				}
+
+				Behaviour currentBehaviour;
+				synchronized (myScheduler) {
+					currentBehaviour = myScheduler.pollReady();
+				}
+
+				if (currentBehaviour == null) {
+					scheduled.set(false);
+					if ((myScheduler.hasReady() || !myLifeCycle.alive()) && scheduled.compareAndSet(false, true)) {
+						continue;
+					}
+					break;
+				}
+
+				try {
+					myThread = Thread.currentThread();
+					long oldRestartCounter = currentBehaviour.getRestartCounter();
+
+					currentBehaviour.actionWrapper();
+					executedBehavioursCnt++;
+
+					if (currentBehaviour.done()) {
+						currentBehaviour.onEnd();
+						removeBehaviour(currentBehaviour);
+					} else {
+						synchronized (myScheduler) {
+							if (oldRestartCounter != currentBehaviour.getRestartCounter()) {
+								currentBehaviour.handleRestartEvent();
+							}
+							if (!currentBehaviour.isRunnable()) {
+								myScheduler.block(currentBehaviour);
+							}
+						}
+					}
+					Thread.yield();
+				} catch (Interrupted ie) {
+					// Outside state change or interrupt; next iteration checks alive()
+				} catch (Throwable t) {
+					if (t instanceof InterruptedException || t instanceof InterruptedIOException) {
+						// Outside state change or interrupt; next iteration checks alive()
+					} else {
+						log.log(Logger.SEVERE, "*** Uncaught Exception for agent " + myName + " ***", t);
+						terminating = true;
+						myLifeCycle.end();
+						terminationFuture.complete(null);
+						scheduled.set(false);
+						return;
+					}
+				} finally {
+					myThread = null;
+				}
+			}
+		} finally {
+			scheduled.set(false);
 		}
 	}
 
@@ -2406,7 +2556,10 @@ public class Agent implements Runnable, Serializable
 	 */
 	private void interruptThread() {
 		//#MIDP_EXCLUDE_BEGIN
-		myThread.interrupt();
+		Thread t = myThread;
+		if (t != null) {
+			t.interrupt();
+		}
 		//#MIDP_EXCLUDE_END
 		/*#MIDP_INCLUDE_BEGIN
 		 synchronized (this) {

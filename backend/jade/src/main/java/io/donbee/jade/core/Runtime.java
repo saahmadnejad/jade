@@ -85,6 +85,23 @@ public class Runtime {
 	private int mode = UNKNOWN_MODE;
 
 	private Logger myLogger = Logger.getMyLogger(getClass().getName());
+	private io.vertx.core.Vertx vertx = null;
+	private String agentRuntime = Profile.DEFAULT_AGENT_RUNTIME;
+
+	public synchronized io.vertx.core.Vertx getVertx() {
+		if (vertx == null) {
+			vertx = io.vertx.core.Vertx.vertx();
+		}
+		return vertx;
+	}
+
+	public String getAgentRuntime() {
+		return agentRuntime;
+	}
+
+	public void setAgentRuntime(String agentRuntime) {
+		this.agentRuntime = agentRuntime;
+	}
 	
 	// Private constructor to forbid instantiation outside the class.
 	private Runtime() {
@@ -126,6 +143,9 @@ public class Runtime {
 		if (mode == UNKNOWN_MODE || mode == MULTIPLE_MODE) {
 			mode = MULTIPLE_MODE;
 			p.setParameter(Profile.MAIN, "false"); // set to an agent container
+			if (p.getParameter(Profile.AGENT_RUNTIME, null) == null) {
+				p.setParameter(Profile.AGENT_RUNTIME, getAgentRuntime());
+			}
 			AgentContainerImpl impl = new AgentContainerImpl(p);
 			beginContainer();
 			if (impl.joinPlatform()) {
@@ -158,6 +178,9 @@ public class Runtime {
 		if (mode == UNKNOWN_MODE || mode == MULTIPLE_MODE) {
 			mode = MULTIPLE_MODE;
 			p.setParameter(Profile.MAIN, "true"); // set to a main container
+			String rt = p.getParameter(Profile.AGENT_RUNTIME, System.getProperty("jade.agent-runtime", System.getProperty("jade.agent.runtime", Profile.DEFAULT_AGENT_RUNTIME)));
+			setAgentRuntime(rt);
+			p.setParameter(Profile.AGENT_RUNTIME, rt);
 			AgentContainerImpl impl = new AgentContainerImpl(p);
 			beginContainer();
 			if (impl.joinPlatform()) {
@@ -252,7 +275,7 @@ public class Runtime {
 			//#MIDP_EXCLUDE_BEGIN
 			// Set up group and attributes for time critical threads
 			Thread t = Thread.ofVirtual().name("JADE Timer dispatcher").unstarted(theDispatcher);
-			CRITICAL_THREAD_GROUP.get("CRITICAL_THREADS").add(t);
+			CRITICAL_THREAD_GROUP.computeIfAbsent("CRITICAL_THREADS", k -> ConcurrentHashMap.newKeySet()).add(t);
 			//#MIDP_EXCLUDE_END
 			/*#MIDP_INCLUDE_BEGIN
 			Thread t = Thread.ofVirtual().unstarted(theDispatcher);
@@ -284,6 +307,13 @@ public class Runtime {
 
 			// Terminate the TimerDispatcher and release its resources
 			TimerDispatcher.getTimerDispatcher().stop();
+
+			if (vertx != null) {
+				try {
+					vertx.close();
+				} catch (Exception ignored) {}
+				vertx = null;
+			}
 
 			// Reset mode
 			mode = UNKNOWN_MODE;

@@ -688,6 +688,10 @@ class AgentContainerImpl implements AgentContainer, AgentToolkit {
 		// Release Thread resources
 		myResourceManager.releaseResources();
 
+		if (isVerticleRuntime()) {
+			verticleDeployments.clear();
+		}
+
 		// Notify the JADE Runtime that the container has terminated execution
 		endContainer();
 		
@@ -997,10 +1001,38 @@ class AgentContainerImpl implements AgentContainer, AgentToolkit {
 		if (instance == null) {
 			throw new NotFoundException("powerUpLocalAgent() failed to find agent "+agentID.getName());
 		}
-		int type = (agentID.equals(theAMS) || agentID.equals(theDefaultDF) ? ResourceManager.SYSTEM_AGENTS : ResourceManager.USER_AGENTS);
-		Thread t = myResourceManager.getThread(type, agentID.getLocalName(), instance);
-		instance.powerUp(agentID, t);
+		if (isVerticleRuntime()) {
+			powerUpVerticleAgent(agentID, instance);
+		} else {
+			int type = (agentID.equals(theAMS) || agentID.equals(theDefaultDF) ? ResourceManager.SYSTEM_AGENTS : ResourceManager.USER_AGENTS);
+			Thread t = myResourceManager.getThread(type, agentID.getLocalName(), instance);
+			instance.powerUp(agentID, t);
+		}
 		localAgents.release(agentID);
+	}
+
+	private final java.util.Map<String, String> verticleDeployments = new java.util.concurrent.ConcurrentHashMap<>();
+
+	public boolean isVerticleRuntime() {
+		String mode = myProfile.getParameter(Profile.AGENT_RUNTIME, null);
+		if (mode == null) {
+			mode = Runtime.instance().getAgentRuntime();
+		}
+		return Profile.AGENT_RUNTIME_VERTICLE.equalsIgnoreCase(mode);
+	}
+
+	private void powerUpVerticleAgent(AID agentID, Agent instance) {
+		io.vertx.core.Vertx vertx = Runtime.instance().getVertx();
+		AgentVerticle verticle = new AgentVerticle(instance, agentID, getID().getName());
+		try {
+			String deploymentId = vertx.deployVerticle(verticle)
+					.toCompletionStage().toCompletableFuture()
+					.get(10, java.util.concurrent.TimeUnit.SECONDS);
+			verticleDeployments.put(verticle.getAgentAddress(), deploymentId);
+		} catch (Exception e) {
+			myLogger.log(Logger.SEVERE, "Failed to deploy verticle for agent " + agentID.getName(), e);
+			throw new RuntimeException("Verticle deployment failed for agent " + agentID.getName(), e);
+		}
 	}
 
 	public void removeLocalAgent(AID id) {
