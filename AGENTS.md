@@ -9,10 +9,12 @@ cd backend && mvn test                         # full suite across all modules
 cd backend && mvn test -pl llm -am             # single module (-am builds deps)
 cd backend && mvn -pl jade -am compile && mvn -pl jade exec:java -Dexec.mainClass="io.donbee.jade.Boot"
 
-# Frontend
-cd frontend && pnpm --filter webapp dev        # Vite, http://localhost:3000
+# Frontend (every pnpm command runs from frontend/ — the repo root has no package.json)
+cd frontend && pnpm install
+cd frontend && pnpm --filter webapp dev        # Vite, http://localhost:3000 (UI only — see gotchas)
 pnpm --filter shared test:run                   # non-watch
 pnpm --filter webapp test:run
+pnpm --filter webapp typecheck
 pnpm --filter webapp lint
 
 # Docker (compose at repo root; TOKENROUTER_API_KEY required or dev-team role agents fail)
@@ -22,9 +24,12 @@ docker compose up -d --build                   # podman compose works identicall
 
 **JDK gotcha**: distro `java-21-openjdk` is often JRE-only (no `javac`) and breaks `mvn` with cryptic errors. `JAVA_HOME` must point at a full JDK 21 that has `bin/javac` (SDKMAN JDKs qualify).
 
+**CI gate** (`.github/workflows/ci.yml`): backend `mvn -B test` + `mvn -B package -DskipTests`; frontend `pnpm install --frozen-lockfile`, `shared` + `webapp` `test:run`, `webapp` `typecheck` + `lint`; both docker images build + entrypoint smoke. `real-it.yml` is nightly/manual only (real tokens, `-Dit.real=true` + `TOKENROUTER_API_KEY`). The backend has no linter/formatter plugin (no checkstyle/spotless).
+
 **Gotchas**
-- Root `package.json` `dev`/`build` run `pnpm --filter frontend dev` — but "frontend" matches no workspace package, so it does nothing. Always `--filter webapp` or `--filter shared`.
+- Workspace root is `frontend/` (pnpm 9, `packageManager` pinned; lockfile `frontend/pnpm-lock.yaml`). Its `dev`/`build` scripts run `pnpm --filter frontend ...` — "frontend" matches no package (`webapp`, `shared`), so they silently do nothing. Always `--filter webapp` or `--filter shared`.
 - `pnpm --filter webapp test` runs in watch mode (hangs an agent). Use `test:run`.
+- Vite dev has no `/api` proxy — API-backed pages only work through the docker/nginx frontend. Local `webapp dev` serves the UI alone; use tests or the docker stack to exercise API behavior.
 - Running the backend locally: do **not** use plain `mvn compile exec:java` from `backend/` — `exec:java` runs in every reactor module and fails with `ClassNotFoundException: Boot` on the parent (no Boot there). Compile the reactor once (`-pl jade -am compile`), then run `exec:java` on `-pl jade` only. Ports 8080/1099 clash with the docker stack — pass `-rest-port`/`-port` overrides.
 - Frontend tests mock `shared/api/factory`; add new API methods to the mock or tests crash.
 - Docker Hub pulls occasionally 5xx/timeout — retry; base images cache after first pull.
@@ -37,12 +42,13 @@ docker compose up -d --build                   # podman compose works identicall
 ### Backend (`io.donbee.jade.*`, Maven multi-module: `fipa`, `llm`, `jade`, `examples`)
 - **Entry**: `io.donbee.jade.Boot` (CLI args → `ProfileImpl` → `Runtime`). `-conf` loads a properties file; `-name/-container/-host/-port/-rest-port` override defaults.
 - **REST API**: Vert.x 5.1.6 on :8080 (configurable `-rest-port`), Main Container only. `RestAPIVerticle` only configures the router (SRP); ~46 routes under `/api/*`. Paths in `ApiRoutes`; one dedicated class per route group in `rest/handler/`.
-- **Blocking rule**: handlers that do blocking work (LLM probes, container create/kill, synchronized service calls) MUST wrap it in `ctx.vertx().executeBlocking(...)` — the event loop froze 130s+ before this rule existed.
+- **Blocking rule**: handlers that do blocking work (LLM probes, container create/kill, synchronized service calls) MUST wrap it in `ctx.vertx().executeBlocking(...)` — the event loop froze 130s+ before this rule existed (`ScenarioStartHandler`/`ScenarioStopHandler` are the working exemplars).
 - **Main Container** = AMS + DF + REST API + all UI/REST-deployed agents. Each scenario instance gets its own container `scenario-<name>`.
 - **Message capture**: `MessageTrafficMonitor` (`io.donbee.jade.core.messaging`) is a static JVM-wide registry; `MessagingService.CommandSourceSink` calls `MessageTrafficMonitor.notifyMessage(...)` for every dispatched ACL message across ALL in-process containers. Streamed via `WS /api/messages/stream`.
 - **Scenario SPI**: any jar with `META-INF/services/io.donbee.jade.rest.scenario.Scenario` appears in `/api/scenarios`.
 - **LLM brains** (`backend/llm`): `Brain` (interface), `CliBrain` (shells `opencode run --auto --agent <role> -m <model>`; used by dev-team per ADR-0003; `opencode.cli` system property / `OPENCODE_CLI` env override the binary — test seam), `RetryingBrain` (4 attempts = 1 + 3 retries, 5/15/45s gaps), `FallbackBrain` (chains on `BrainException` when a distinct fallbackModel is configured; empty default = single brain), plus the kept lib stack `LangChain4jBrain`+`BashTool` (langchain4j 0.35; unused by dev-team).
 - All agent/platform threads are virtual (`Thread.ofVirtual()`). `kill -3` thread dumps show carrier frames only, not virtual-thread stacks.
+- Logging goes through logback (`backend/jade/src/main/resources/logback.xml`): `LOG_DIR` env (default `./logs`; compose sets `/app/logs`) → `jade.log` + `devteam-audit.log`. Never System.out/err in new code.
 - Deps: JacORB 3.9, commons-codec 1.18.0, Vert.x 5.1.6, langchain4j 0.35.0.
 
 ### Frontend (`frontend/`, pnpm 9 monorepo: `apps/webapp` + `packages/shared`)
@@ -52,12 +58,12 @@ docker compose up -d --build                   # podman compose works identicall
 
 ### Docker
 - **Backend image**: multi-stage (Maven → `eclipse-temurin:21-jre-alpine`). `CMD ["java","-cp","app.jar:examples.jar:llm.jar","io.donbee.jade.Boot","-host","localhost","-local-host","localhost"]` (note the triple-classpath `-cp` — README's `java -jar app.jar` is incomplete). Includes `gh`, `opencode`, python3/node for agent tooling.
-- **Ports**: backend RMI 1099→10990, REST 8080→8080; frontend nginx 80→3000. (No 9router service anymore — LLM access is the bundled `opencode` CLI inside the backend image; provider config is a workspace `opencode.json` per instance.)
+- **Ports** (host→container): backend RMI 10990→1099, REST 8080→8080; frontend nginx 3000→80. Compose passes `TOKENROUTER_API_KEY`/`GH_TOKEN` env and mounts `backend/examples/conf` → `/app/conf` (ro). (No 9router service anymore — LLM access is the bundled `opencode` CLI inside the backend image; provider config is a workspace `opencode.json` per instance.)
 
 ### Dev-team scenario (`backend/examples/.../devteam/`)
 - 5 agents: Manager (deterministic state machine, no LLM) → Architect → Implementer → Tester → Reviewer. Manager phases: CLARIFY→DESIGN→IMPLEMENT→TEST→REVIEW→PUBLISH with per-phase deadlines (`enterPhase()`) + 60s `TickerBehaviour` watchdog.
 - Start body: `{"instanceName":"...","config":{...}}` — config MUST nest under `"config"`; a flat body is silently ignored → empty brief → instance FAILED.
-- Agent workspace: `/tmp/jade-devteam-<instance>/` inside the backend container.
+- Agent workspace: `${java.io.tmpdir}/jade-devteam-<instance>/` (i.e. `/tmp/...` inside the backend container); the `workspaceDir` config param overrides it — compose mounts a `devteam-workspaces` volume at `/workspace` for persistent use.
 - `*Model` params are `provider/model` ids resolved by the opencode CLI (default `tokenrouter/z-ai/glm-5.3-free`). A model the CLI/auth can't serve fails at the first role-agent call → STATUS.md FAILED with reason.
 - Peer messages use `PEER_PROTOCOL` = `FIPANames.InteractionProtocol.FIPA_REQUEST` (exact `fipa-request` token, case-sensitive — never hand-write it). Manager filters its own `dt-*` conversation IDs and ignores `dt-peer-*`.
 - `githubOrg` defaults empty (memory-only, skips publish). Publishing needs non-empty `githubOrg` + `GH_TOKEN` env in the backend container.
@@ -79,7 +85,7 @@ docker compose up -d --build                   # podman compose works identicall
 - `backend/examples/README.md`, `docs/api/` — scenario + REST schema docs
 
 ## Standards
-- **Tests** (mandatory for new code): Arrange-Act-Assert, Given-When-Then naming. Backend: `src/test/java` mirrors, Mockito-mocked handlers, `RestAPIIntegrationTest` for endpoints. Frontend: `apps/webapp/src/**/*.test.tsx`, `packages/shared/src/**/*.test.ts`; mock axios/API factory; cover success/error/disabled/validation states.
+- **Tests** (mandatory for new code): Arrange-Act-Assert, Given-When-Then naming. Backend: `src/test/java` mirrors, Mockito-mocked handlers, `RestAPIIntegrationTest` for endpoints. Frontend: `apps/webapp/src/**/*.test.tsx`, `packages/shared/tests/*.test.ts`; mock axios/API factory; cover success/error/disabled/validation states.
 - **REST rules**: resource naming (`/api/agents`, `/api/containers`); verbs = CRUD; errors `{"error":"...","code":<status>}` via global failure handler; every endpoint has input/output schema in `docs/api/`. Update the doc spec first, match code before committing.
 - **REST handler JavaDoc**: every `rest/handler` class carries a `<b>Old GUI implementation</b>` JavaDoc section (old Swing class+method, FIPA protocol/ontology, delegated service method; "No direct Swing GUI equivalent" when none).
 - **Docs hygiene**: never commit host-specific values (absolute/home paths, JDK paths, hostnames, usernames, real keys/tokens, ephemeral model names). Use repo-relative paths, env-var names, and "verify via `/v1/models`".
