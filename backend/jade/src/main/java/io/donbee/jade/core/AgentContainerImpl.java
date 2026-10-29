@@ -23,6 +23,9 @@
 
 package io.donbee.jade.core;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 //#APIDOC_EXCLUDE_FILE
 
 import io.donbee.jade.util.leap.Iterator;
@@ -689,6 +692,7 @@ class AgentContainerImpl implements AgentContainer, AgentToolkit {
 		myResourceManager.releaseResources();
 
 		if (isVerticleRuntime()) {
+			undeployByPrefix("c/" + getID().getName() + "/");
 			verticleDeployments.clear();
 		}
 
@@ -1011,7 +1015,11 @@ class AgentContainerImpl implements AgentContainer, AgentToolkit {
 		localAgents.release(agentID);
 	}
 
-	private final java.util.Map<String, String> verticleDeployments = new java.util.concurrent.ConcurrentHashMap<>();
+	private final Map<String, String> verticleDeployments = new ConcurrentHashMap<>();
+
+	int getVerticleDeploymentCount() {
+		return verticleDeployments.size();
+	}
 
 	public boolean isVerticleRuntime() {
 		String mode = myProfile.getParameter(Profile.AGENT_RUNTIME, null);
@@ -1024,19 +1032,46 @@ class AgentContainerImpl implements AgentContainer, AgentToolkit {
 	private void powerUpVerticleAgent(AID agentID, Agent instance) {
 		io.vertx.core.Vertx vertx = Runtime.instance().getVertx();
 		AgentVerticle verticle = new AgentVerticle(instance, agentID, getID().getName());
-		try {
-			String deploymentId = vertx.deployVerticle(verticle)
-					.toCompletionStage().toCompletableFuture()
-					.get(10, java.util.concurrent.TimeUnit.SECONDS);
+		instance.powerUpVerticle(agentID, verticle);
+		vertx.deployVerticle(verticle).onSuccess(deploymentId -> {
 			verticleDeployments.put(verticle.getAgentAddress(), deploymentId);
-		} catch (Exception e) {
-			myLogger.log(Logger.SEVERE, "Failed to deploy verticle for agent " + agentID.getName(), e);
-			throw new RuntimeException("Verticle deployment failed for agent " + agentID.getName(), e);
+			if (!instance.isAlive()) {
+				// Agent was already terminated before verticle deployment completed
+				try {
+					vertx.undeploy(deploymentId);
+				} catch (Exception ignored) {}
+				verticleDeployments.remove(verticle.getAgentAddress());
+			}
+		}).onFailure(err -> {
+			myLogger.log(Logger.SEVERE, "Failed to deploy verticle for agent " + agentID.getName(), err);
+		});
+	}
+
+	public void undeployByPrefix(String prefix) {
+		if (isVerticleRuntime()) {
+			io.vertx.core.Vertx vx = Runtime.instance().getVertx();
+			java.util.Iterator<Map.Entry<String, String>> it = verticleDeployments.entrySet().iterator();
+			while (it.hasNext()) {
+				Map.Entry<String, String> entry = it.next();
+				if (entry.getKey().startsWith(prefix)) {
+					try {
+						vx.undeploy(entry.getValue());
+					} catch (Exception e) {
+						if (myLogger.isLoggable(Logger.FINE)) {
+							myLogger.log(Logger.FINE, "Could not undeploy " + entry.getKey() + ": " + e.getMessage());
+						}
+					}
+					it.remove();
+				}
+			}
 		}
 	}
 
 	public void removeLocalAgent(AID id) {
 		localAgents.remove(id);
+		if (isVerticleRuntime()) {
+			verticleDeployments.remove("c/" + getID().getName() + "/a/" + id.getLocalName());
+		}
 	}
 
 	public Agent acquireLocalAgent(AID id) {

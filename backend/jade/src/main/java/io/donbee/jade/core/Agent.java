@@ -25,6 +25,13 @@ package io.donbee.jade.core;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import io.donbee.jade.content.ContentManager;
 import io.donbee.jade.util.Logger;
@@ -492,10 +499,11 @@ public class Agent implements Runnable, Serializable
 	private transient volatile Thread myThread;
 	private boolean verticleMode = false;
 	private AgentVerticle myAgentVerticle = null;
-	private final java.util.concurrent.atomic.AtomicBoolean scheduled = new java.util.concurrent.atomic.AtomicBoolean(false);
-	private final java.util.concurrent.CompletableFuture<Void> terminationFuture = new java.util.concurrent.CompletableFuture<>();
-	private static final java.util.concurrent.ExecutorService drainExecutor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
-	private boolean initialized = false;
+	private final AtomicInteger wip = new AtomicInteger(0);
+	private final AtomicBoolean pendingInterrupt = new AtomicBoolean(false);
+	private final CompletableFuture<Void> terminationFuture = new CompletableFuture<>();
+	private static final ExecutorService drainExecutor = Executors.newVirtualThreadPerTaskExecutor();
+	private volatile boolean initialized = false;
 
 	private transient TimerDispatcher theDispatcher;
 
@@ -868,12 +876,15 @@ public class Agent implements Runnable, Serializable
 	public boolean join() {
 		if (verticleMode) {
 			try {
-				terminationFuture.get(5000, java.util.concurrent.TimeUnit.MILLISECONDS);
+				terminationFuture.get(5000, TimeUnit.MILLISECONDS);
 				return true;
-			} catch (java.util.concurrent.TimeoutException te) {
+			} catch (TimeoutException te) {
 				log.log(Logger.WARNING, "*** Agent " + myName + " did not terminate when requested to do so.");
 				interruptThread();
 				return false;
+			} catch (InterruptedException ie) {
+				Thread.currentThread().interrupt();
+				return !isAlive();
 			} catch (Exception e) {
 				return !isAlive();
 			}
@@ -1809,7 +1820,11 @@ public class Agent implements Runnable, Serializable
 				if (vx != null && depId != null) {
 					vx.undeploy(depId);
 				}
-			} catch (Exception ignored) {}
+			} catch (Exception e) {
+				if (log.isLoggable(Logger.FINE)) {
+					log.log(Logger.FINE, "Could not undeploy verticle for " + myName + ": " + e.getMessage());
+				}
+			}
 		}
 	}
 	//#APIDOC_EXCLUDE_END
@@ -1932,7 +1947,7 @@ public class Agent implements Runnable, Serializable
 		return verticleMode;
 	}
 
-	public java.util.concurrent.CompletableFuture<Void> getTerminationFuture() {
+	public CompletableFuture<Void> getTerminationFuture() {
 		return terminationFuture;
 	}
 
@@ -1944,12 +1959,13 @@ public class Agent implements Runnable, Serializable
 		if (!verticleMode) {
 			return;
 		}
-		if (scheduled.compareAndSet(false, true)) {
+		if (wip.getAndIncrement() == 0) {
 			drainExecutor.execute(this::drain);
 		}
 	}
 
 	private void drain() {
+		int missed = 1;
 		try {
 			if (!initialized) {
 				initialized = true;
@@ -1960,73 +1976,78 @@ public class Agent implements Runnable, Serializable
 					terminating = true;
 					myLifeCycle.end();
 					terminationFuture.complete(null);
-					scheduled.set(false);
 					return;
 				}
 			}
 
 			while (true) {
-				if (!myLifeCycle.alive()) {
-					terminating = true;
-					myLifeCycle.end();
-					terminationFuture.complete(null);
-					scheduled.set(false);
-					return;
-				}
-
-				Behaviour currentBehaviour;
-				synchronized (myScheduler) {
-					currentBehaviour = myScheduler.pollReady();
-				}
-
-				if (currentBehaviour == null) {
-					scheduled.set(false);
-					if ((myScheduler.hasReady() || !myLifeCycle.alive()) && scheduled.compareAndSet(false, true)) {
-						continue;
-					}
-					break;
-				}
-
-				try {
-					myThread = Thread.currentThread();
-					long oldRestartCounter = currentBehaviour.getRestartCounter();
-
-					currentBehaviour.actionWrapper();
-					executedBehavioursCnt++;
-
-					if (currentBehaviour.done()) {
-						currentBehaviour.onEnd();
-						removeBehaviour(currentBehaviour);
-					} else {
-						synchronized (myScheduler) {
-							if (oldRestartCounter != currentBehaviour.getRestartCounter()) {
-								currentBehaviour.handleRestartEvent();
-							}
-							if (!currentBehaviour.isRunnable()) {
-								myScheduler.block(currentBehaviour);
-							}
-						}
-					}
-					Thread.yield();
-				} catch (Interrupted ie) {
-					// Outside state change or interrupt; next iteration checks alive()
-				} catch (Throwable t) {
-					if (t instanceof InterruptedException || t instanceof InterruptedIOException) {
-						// Outside state change or interrupt; next iteration checks alive()
-					} else {
-						log.log(Logger.SEVERE, "*** Uncaught Exception for agent " + myName + " ***", t);
+				while (true) {
+					if (!myLifeCycle.alive()) {
 						terminating = true;
 						myLifeCycle.end();
 						terminationFuture.complete(null);
-						scheduled.set(false);
 						return;
 					}
-				} finally {
-					myThread = null;
+
+					Behaviour currentBehaviour;
+					synchronized (myScheduler) {
+						currentBehaviour = myScheduler.pollReady();
+					}
+
+					if (currentBehaviour == null) {
+						break;
+					}
+
+					try {
+						myThread = Thread.currentThread();
+						if (pendingInterrupt.getAndSet(false)) {
+							myThread.interrupt();
+						}
+						long oldRestartCounter = currentBehaviour.getRestartCounter();
+
+						currentBehaviour.actionWrapper();
+						executedBehavioursCnt++;
+
+						if (currentBehaviour.done()) {
+							currentBehaviour.onEnd();
+							removeBehaviour(currentBehaviour);
+						} else {
+							synchronized (myScheduler) {
+								if (oldRestartCounter != currentBehaviour.getRestartCounter()) {
+									currentBehaviour.handleRestartEvent();
+								}
+								if (!currentBehaviour.isRunnable()) {
+									myScheduler.block(currentBehaviour);
+								}
+							}
+						}
+						Thread.yield();
+					} catch (Interrupted ie) {
+						// Outside state change or interrupt; next iteration checks alive()
+					} catch (Throwable t) {
+						if (t instanceof InterruptedException || t instanceof InterruptedIOException) {
+							// Outside state change or interrupt; next iteration checks alive()
+						} else {
+							log.log(Logger.SEVERE, "*** Uncaught Exception for agent " + myName + " ***", t);
+							terminating = true;
+							myLifeCycle.end();
+							terminationFuture.complete(null);
+							return;
+						}
+					} finally {
+						myThread = null;
+					}
+				}
+
+				missed = wip.addAndGet(-missed);
+				if (missed == 0) {
+					break;
 				}
 			}
 		} finally {
-			scheduled.set(false);
+			if (missed != 0) {
+				wip.set(0);
+			}
 		}
 	}
 
@@ -2554,11 +2575,13 @@ public class Agent implements Runnable, Serializable
 	 The idea is: set the 'isInterrupted' flag, then wake up the
 	 thread wherever it may be
 	 */
-	private void interruptThread() {
+	void interruptThread() {
 		//#MIDP_EXCLUDE_BEGIN
 		Thread t = myThread;
 		if (t != null) {
 			t.interrupt();
+		} else {
+			pendingInterrupt.set(true);
 		}
 		//#MIDP_EXCLUDE_END
 		/*#MIDP_INCLUDE_BEGIN
