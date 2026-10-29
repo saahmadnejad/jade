@@ -3,6 +3,7 @@ package io.donbee.jade.rest.service;
 
 import java.util.List;
 
+import io.donbee.jade.lang.acl.ACLMessage;
 import io.donbee.jade.mtp.MTPDescriptor;
 
 /**
@@ -92,6 +93,38 @@ public interface PlatformService {
     void removeRemotePlatform(String platformName);
 
     RemotePlatformInfo fetchRemotePlatform(String url);
+
+    PlatformTree getPlatformTree();
+
+    void sendMessage(ACLMessage message);
+
+    class PlatformTree {
+        public final String platformID;
+        public final java.util.List<ContainerTreeNode> containers;
+        public final java.util.List<RemotePlatformInfo> remotePlatforms;
+
+        public PlatformTree(String platformID, java.util.List<ContainerTreeNode> containers, java.util.List<RemotePlatformInfo> remotePlatforms) {
+            this.platformID = platformID;
+            this.containers = containers;
+            this.remotePlatforms = remotePlatforms;
+        }
+    }
+
+    class ContainerTreeNode {
+        public final String name;
+        public final String address;
+        public final String port;
+        public final boolean isMain;
+        public final java.util.List<AgentInfo> agents;
+
+        public ContainerTreeNode(String name, String address, String port, boolean isMain, java.util.List<AgentInfo> agents) {
+            this.name = name;
+            this.address = address;
+            this.port = port;
+            this.isMain = isMain;
+            this.agents = agents;
+        }
+    }
 
     class PlatformInfo {
         public final String platformID;

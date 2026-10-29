@@ -51,6 +51,31 @@ describe('PlatformAPI', () => {
     expect(result).toEqual(mockPlatform);
   });
 
+  it('Given platform tree endpoint called, When getTree() resolves, Then returns PlatformTreeResponse', async () => {
+    // Arrange
+    const mockTree = {
+      platformID: 'jade-main',
+      containers: [
+        {
+          name: 'Main-Container',
+          address: '127.0.0.1',
+          port: '1099',
+          isMain: true,
+          agents: [],
+        },
+      ],
+      remotePlatforms: [],
+    };
+    vi.mocked(mockHttpClient.get).mockResolvedValue({ data: mockTree });
+
+    // Act
+    const result = await platformAPI.getTree();
+
+    // Assert
+    expect(mockHttpClient.get).toHaveBeenCalledWith('/platform/tree');
+    expect(result).toEqual(mockTree);
+  });
+
   it('Given shutdown endpoint called, When shutdown() resolves, Then returns ShutdownResponse', async () => {
     // Arrange
     vi.mocked(mockHttpClient.post).mockResolvedValue({ data: { message: 'Platform shutdown initiated' } });

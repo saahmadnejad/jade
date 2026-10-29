@@ -1221,4 +1221,65 @@ public class JadesPlatformService implements PlatformService, DFService {
         }
         return dfd;
     }
+
+    @Override
+    public PlatformTree getPlatformTree() {
+        if (agentManager == null) {
+            return new PlatformTree(impl.getPlatformID(), new ArrayList<>(), new ArrayList<>());
+        }
+        ContainerID[] cids = agentManager.containerIDs();
+        List<ContainerTreeNode> containerNodes = new ArrayList<>();
+        String mainContainerName = impl.here().getName();
+        for (ContainerID cid : cids) {
+            List<AgentInfo> agents = new ArrayList<>();
+            try {
+                io.donbee.jade.util.leap.List leapAgents = agentManager.containerAgents(cid);
+                for (int i = 0; i < leapAgents.size(); i++) {
+                    AID aid = (AID) leapAgents.get(i);
+                    String state = "UNKNOWN";
+                    String ownership = "";
+                    try {
+                        AMSAgentDescription amsDesc = agentManager.getAMSDescription(aid);
+                        state = amsDesc.getState() != null ? amsDesc.getState() : "UNKNOWN";
+                        ownership = amsDesc.getOwnership() != null ? amsDesc.getOwnership() : "";
+                    } catch (Exception ignored) {
+                    }
+                    agents.add(new AgentInfo(
+                        aid.getLocalName(),
+                        state,
+                        ownership,
+                        cid.getName(),
+                        aid.getAllAddresses() != null ? toArray(aid.getAllAddresses()) : new String[0]
+                    ));
+                }
+            } catch (Exception ignored) {
+            }
+            containerNodes.add(new ContainerTreeNode(
+                cid.getName(),
+                cid.getAddress(),
+                cid.getPort(),
+                cid.getName().equals(mainContainerName),
+                agents
+            ));
+        }
+        List<RemotePlatformInfo> remote = new ArrayList<>();
+        try {
+            remote = getRemotePlatforms();
+        } catch (Exception ignored) {
+        }
+        return new PlatformTree(impl.getPlatformID(), containerNodes, remote);
+    }
+
+    @Override
+    public void sendMessage(ACLMessage message) {
+        if (message == null) {
+            throw new IllegalArgumentException("Message cannot be null");
+        }
+        AID sender = message.getSender();
+        if (sender == null) {
+            sender = new AID("ui-user@" + impl.getPlatformID(), AID.ISGUID);
+            message.setSender(sender);
+        }
+        impl.send(message, sender);
+    }
 }

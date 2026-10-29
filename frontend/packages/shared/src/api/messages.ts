@@ -4,6 +4,8 @@ import type {
   MessagesRecentResponse,
   MessagesStreamOptions,
   MessagesStreamStatus,
+  SendMessageRequest,
+  SendMessageResponse,
 } from './types';
 
 const STREAM_PATH = '/api/messages/stream';
@@ -14,6 +16,11 @@ export class MessageAPI {
 
   recent = async (params?: { limit?: number; from?: string; to?: string }): Promise<MessagesRecentResponse> => {
     const res = await this.httpClient.get<MessagesRecentResponse>('/messages/recent', { params });
+    return res.data;
+  };
+
+  send = async (request: SendMessageRequest): Promise<SendMessageResponse> => {
+    const res = await this.httpClient.post<SendMessageResponse>('/messages', request);
     return res.data;
   };
 

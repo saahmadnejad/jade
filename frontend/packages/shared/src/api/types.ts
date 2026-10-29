@@ -179,6 +179,43 @@ export interface MessagesStreamOptions {
   onStatusChange?: (status: MessagesStreamStatus) => void;
 }
 
+export interface ContainerTreeNode {
+  name: string;
+  address: string;
+  port: string;
+  isMain: boolean;
+  agents: AgentInfo[];
+}
+
+export interface PlatformTreeResponse {
+  platformID: string;
+  containers: ContainerTreeNode[];
+  remotePlatforms: RemotePlatformInfo[];
+}
+
+export interface SendMessageRequest {
+  performative: string | number;
+  sender?: string;
+  receivers: string[];
+  replyTo?: string[];
+  content?: string;
+  language?: string;
+  ontology?: string;
+  protocol?: string;
+  conversationId?: string;
+  replyWith?: string;
+  inReplyTo?: string;
+  userProperties?: Record<string, string>;
+}
+
+export interface SendMessageResponse {
+  message: string;
+  performative: string;
+  sender: string;
+  receivers: string[];
+  conversationId?: string;
+}
+
 export interface ScenarioParamInfo {
   type: 'int' | 'string' | 'boolean';
   defaultValue: unknown;

@@ -3,7 +3,7 @@ import {
   Box, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton,
   Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Button,
+  TextField, Button, Autocomplete,
 } from '@mui/material';
 import DeleteForeverIcon from '@mui/icons-material/Delete';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -17,18 +17,30 @@ import LockIcon from '@mui/icons-material/Lock';
 import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
 import AddIcon from '@mui/icons-material/Add';
+import SendIcon from '@mui/icons-material/Send';
 import { api, type AgentInfo, type AgentListResponse } from 'shared';
 import TopProgressBar from '../components/TopProgressBar';
 import PageHeader from '../components/PageHeader';
 import EmptyState from '../components/EmptyState';
+import MessageComposerDialog from '../components/MessageComposerDialog';
 import NotificationSnackbar, { useFeedback } from '../components/NotificationSnackbar';
+
+const COMMON_AGENT_CLASSES = [
+  'io.donbee.jade.core.Agent',
+  'io.donbee.jade.tools.DummyAgent.DummyAgent',
+  'io.donbee.jade.tools.sniffer.Sniffer',
+  'io.donbee.jade.tools.introspector.Introspector',
+  'io.donbee.jade.tools.testagent.TestAgent',
+  'io.donbee.jade.tools.logging.LogManagerAgent',
+];
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<AgentInfo[]>([]);
+  const [containers, setContainers] = useState<string[]>(['Main-Container']);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [deployOpen, setDeployOpen] = useState(false);
-  const [deployForm, setDeployForm] = useState({ name: '', class: '', args: '' });
+  const [deployForm, setDeployForm] = useState({ name: '', class: '', args: '', container: 'Main-Container' });
   const [cloneOpen, setCloneOpen] = useState(false);
   const [cloneForm, setCloneForm] = useState({ newName: '', container: '' });
   const [cloneTarget, setCloneTarget] = useState<string | null>(null);
@@ -42,9 +54,10 @@ export default function AgentsPage() {
   const [saveForm, setSaveForm] = useState({ repository: 'default' });
   const [saveTarget, setSaveTarget] = useState<string | null>(null);
   const [loadOpen, setLoadOpen] = useState(false);
-  const [loadForm, setLoadForm] = useState({ name: '', container: '', repository: 'default' });
+  const [loadForm, setLoadForm] = useState({ name: '', container: 'Main-Container', repository: 'default' });
   const [registerRemoteOpen, setRegisterRemoteOpen] = useState(false);
   const [registerRemoteForm, setRegisterRemoteForm] = useState({ aid: '', addresses: '' });
+  const [composerTarget, setComposerTarget] = useState<string | null>(null);
   const { feedback, notify, close } = useFeedback();
 
   const fetchAgents = async () => {
@@ -60,8 +73,25 @@ export default function AgentsPage() {
     }
   };
 
+  const fetchContainers = async () => {
+    try {
+      const p = api.containers?.list?.();
+      if (p && typeof p.then === 'function') {
+        p.then((res: any) => {
+          if (res?.containers) {
+            const names = res.containers.map((c: any) => c.name);
+            if (names.length > 0) setContainers(names);
+          }
+        }).catch(() => {});
+      }
+    } catch {
+      // Ignore if containers listing fails
+    }
+  };
+
   useEffect(() => {
     fetchAgents();
+    fetchContainers();
   }, []);
 
   const handleAction = async (action: () => Promise<unknown>, actionName: string, agentName: string) => {
@@ -87,11 +117,12 @@ export default function AgentsPage() {
       await api.agents.deploy({
         name: deployForm.name,
         class: deployForm.class,
+        container: deployForm.container || undefined,
         args: deployForm.args ? deployForm.args.split(',').map(s => s.trim()).filter(Boolean) : undefined,
       });
       notify(`Agent '${deployForm.name}' deployed`, 'success');
       setDeployOpen(false);
-      setDeployForm({ name: '', class: '', args: '' });
+      setDeployForm({ name: '', class: '', args: '', container: 'Main-Container' });
       fetchAgents();
     } catch (e: any) {
       notify(`Deploy failed - ${e.message || 'unknown error'}`, 'error');
@@ -137,15 +168,15 @@ export default function AgentsPage() {
 
   const handleSave = async () => {
     if (!saveTarget) return;
-    const agentName = saveTarget;
-    await handleAction(
-      () => api.agents.save(agentName, saveForm.repository),
-      'save',
-      agentName
-    );
-    setSaveOpen(false);
-    setSaveForm({ repository: '' });
-    setSaveTarget(null);
+    try {
+      await api.agents.save(saveTarget, saveForm.repository);
+      notify(`Agent '${saveTarget}' saved to '${saveForm.repository}'`, 'success');
+      setSaveOpen(false);
+      setSaveForm({ repository: 'default' });
+      fetchAgents();
+    } catch (e: any) {
+      notify(`Save failed - ${e.message || 'unknown error'}`, 'error');
+    }
   };
 
   const handleLoad = async () => {
@@ -153,7 +184,7 @@ export default function AgentsPage() {
       await api.agents.load(loadForm.name, loadForm.container, loadForm.repository);
       notify(`Agent '${loadForm.name}' loaded`, 'success');
       setLoadOpen(false);
-      setLoadForm({ name: '', container: '', repository: '' });
+      setLoadForm({ name: '', container: 'Main-Container', repository: 'default' });
       fetchAgents();
     } catch (e: any) {
       notify(`Load failed - ${e.message || 'unknown error'}`, 'error');
@@ -190,6 +221,9 @@ export default function AgentsPage() {
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
+            <Button variant="outlined" startIcon={<SendIcon />} onClick={() => setComposerTarget('')}>
+              Compose Message
+            </Button>
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => setRegisterRemoteOpen(true)}>
               Register Remote
             </Button>
@@ -225,12 +259,21 @@ export default function AgentsPage() {
                   <TableCell>{agent.ownership ?? 'N/A'}</TableCell>
                   <TableCell>{agent.container}</TableCell>
                   <TableCell align="right">
+                    <Tooltip title="Send ACL Message">
+                      <IconButton
+                        color="primary"
+                        size="small"
+                        onClick={() => setComposerTarget(agent.name)}
+                      >
+                        <SendIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title="Kill Agent">
                       <IconButton
                         color="error"
                         size="small"
                         disabled={actionLoading === 'kill:' + agent.name}
-                         onClick={() => handleKill(agent.name)}
+                        onClick={() => handleKill(agent.name)}
                       >
                         <DeleteForeverIcon fontSize="small" />
                       </IconButton>
@@ -293,9 +336,8 @@ export default function AgentsPage() {
                     </Tooltip>
                     <Tooltip title="Clone Agent">
                       <IconButton
-                        color="secondary"
+                        color="primary"
                         size="small"
-                        disabled={actionLoading === 'clone:' + agent.name}
                         onClick={() => { setCloneTarget(agent.name); setCloneOpen(true); }}
                       >
                         <ContentCopyIcon fontSize="small" />
@@ -303,34 +345,31 @@ export default function AgentsPage() {
                     </Tooltip>
                     <Tooltip title="Move Agent">
                       <IconButton
-                        color="secondary"
+                        color="primary"
                         size="small"
-                        disabled={actionLoading === 'move:' + agent.name}
                         onClick={() => { setMoveTarget(agent.name); setMoveOpen(true); }}
                       >
                         <MergeIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                     <Tooltip title="Change Ownership">
-                       <IconButton
-                         color="secondary"
-                         size="small"
-                         disabled={actionLoading === 'ownership:' + agent.name}
-                         onClick={() => { setOwnershipTarget(agent.name); setOwnershipOpen(true); }}
-                       >
-                         <LockIcon fontSize="small" />
-                       </IconButton>
-                     </Tooltip>
-                     <Tooltip title="Save Agent">
-                       <IconButton
-                         color="secondary"
-                         size="small"
-                         disabled={actionLoading === 'save:' + agent.name}
-                         onClick={() => { setSaveTarget(agent.name); setSaveOpen(true); }}
-                       >
-                         <SaveIcon fontSize="small" />
-                       </IconButton>
-                     </Tooltip>
+                    <Tooltip title="Change Ownership">
+                      <IconButton
+                        color="primary"
+                        size="small"
+                        onClick={() => { setOwnershipTarget(agent.name); setOwnershipOpen(true); }}
+                      >
+                        <LockIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Save Agent">
+                      <IconButton
+                        color="primary"
+                        size="small"
+                        onClick={() => { setSaveTarget(agent.name); setSaveOpen(true); }}
+                      >
+                        <SaveIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -339,6 +378,7 @@ export default function AgentsPage() {
         </TableContainer>
       )}
 
+      {/* Deploy Agent Dialog */}
       <Dialog open={deployOpen} onClose={() => setDeployOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Deploy New Agent</DialogTitle>
         <DialogContent>
@@ -348,13 +388,38 @@ export default function AgentsPage() {
               value={deployForm.name}
               onChange={e => setDeployForm({ ...deployForm, name: e.target.value })}
               fullWidth
+              required
             />
-            <TextField
-              label="Class Name"
+            <Autocomplete
+              freeSolo
+              options={COMMON_AGENT_CLASSES}
               value={deployForm.class}
-              onChange={e => setDeployForm({ ...deployForm, class: e.target.value })}
-              fullWidth
-              helperText="e.g., io.donbee.jade.tutorial.HelloWorldAgent"
+              onChange={(_, val) => setDeployForm({ ...deployForm, class: val || '' })}
+              onInputChange={(_, val) => setDeployForm({ ...deployForm, class: val })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Class Name"
+                  required
+                  fullWidth
+                  helperText="Choose common tool or enter custom class"
+                />
+              )}
+            />
+            <Autocomplete
+              freeSolo
+              options={containers}
+              value={deployForm.container}
+              onChange={(_, val) => setDeployForm({ ...deployForm, container: val || 'Main-Container' })}
+              onInputChange={(_, val) => setDeployForm({ ...deployForm, container: val })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Target Container"
+                  fullWidth
+                  helperText="Container to deploy agent into (defaults to Main-Container)"
+                />
+              )}
             />
             <TextField
               label="Args (comma-separated)"
@@ -373,6 +438,7 @@ export default function AgentsPage() {
         </DialogActions>
       </Dialog>
 
+      {/* Clone Agent Dialog */}
       <Dialog open={cloneOpen} onClose={() => setCloneOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Clone Agent</DialogTitle>
         <DialogContent>
@@ -384,12 +450,20 @@ export default function AgentsPage() {
               fullWidth
               helperText="Name for the cloned agent"
             />
-            <TextField
-              label="Target Container (optional)"
+            <Autocomplete
+              freeSolo
+              options={containers}
               value={cloneForm.container}
-              onChange={e => setCloneForm({ ...cloneForm, container: e.target.value })}
-              fullWidth
-              helperText="Leave empty to use the same container"
+              onChange={(_, val) => setCloneForm({ ...cloneForm, container: val || '' })}
+              onInputChange={(_, val) => setCloneForm({ ...cloneForm, container: val })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Target Container (optional)"
+                  fullWidth
+                  helperText="Leave empty to use the same container"
+                />
+              )}
             />
           </Box>
         </DialogContent>
@@ -401,16 +475,25 @@ export default function AgentsPage() {
         </DialogActions>
       </Dialog>
 
+      {/* Move Agent Dialog */}
       <Dialog open={moveOpen} onClose={() => setMoveOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Move Agent</DialogTitle>
         <DialogContent>
           <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
-            <TextField
-              label="Target Container"
+            <Autocomplete
+              freeSolo
+              options={containers}
               value={moveForm.targetContainer}
-              onChange={e => setMoveForm({ ...moveForm, targetContainer: e.target.value })}
-              fullWidth
-              helperText="Container to move the agent to"
+              onChange={(_, val) => setMoveForm({ ...moveForm, targetContainer: val || '' })}
+              onInputChange={(_, val) => setMoveForm({ ...moveForm, targetContainer: val })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Target Container"
+                  fullWidth
+                  helperText="Container to move the agent to"
+                />
+              )}
             />
           </Box>
         </DialogContent>
@@ -422,6 +505,7 @@ export default function AgentsPage() {
         </DialogActions>
       </Dialog>
 
+      {/* Ownership Dialog */}
       <Dialog open={ownershipOpen} onClose={() => setOwnershipOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Change Agent Ownership</DialogTitle>
         <DialogContent>
@@ -441,8 +525,9 @@ export default function AgentsPage() {
             Change
           </Button>
         </DialogActions>
-       </Dialog>
+      </Dialog>
 
+      {/* Save Agent Dialog */}
       <Dialog open={saveOpen} onClose={() => setSaveOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Save Agent</DialogTitle>
         <DialogContent>
@@ -464,6 +549,7 @@ export default function AgentsPage() {
         </DialogActions>
       </Dialog>
 
+      {/* Load Agent Dialog */}
       <Dialog open={loadOpen} onClose={() => setLoadOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Load Agent</DialogTitle>
         <DialogContent>
@@ -475,12 +561,20 @@ export default function AgentsPage() {
               fullWidth
               helperText="Name for the loaded agent"
             />
-            <TextField
-              label="Container"
+            <Autocomplete
+              freeSolo
+              options={containers}
               value={loadForm.container}
-              onChange={e => setLoadForm({ ...loadForm, container: e.target.value })}
-              fullWidth
-              helperText="Container to load the agent into"
+              onChange={(_, val) => setLoadForm({ ...loadForm, container: val || 'Main-Container' })}
+              onInputChange={(_, val) => setLoadForm({ ...loadForm, container: val })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Container"
+                  fullWidth
+                  helperText="Container to load the agent into"
+                />
+              )}
             />
             <TextField
               label="Repository"
@@ -497,8 +591,9 @@ export default function AgentsPage() {
             Load
           </Button>
         </DialogActions>
-       </Dialog>
+      </Dialog>
 
+      {/* Register Remote Agent Dialog */}
       <Dialog open={registerRemoteOpen} onClose={() => setRegisterRemoteOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Register Remote Agent</DialogTitle>
         <DialogContent>
@@ -526,6 +621,14 @@ export default function AgentsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Message Composer Dialog */}
+      <MessageComposerDialog
+        open={composerTarget !== null}
+        onClose={() => setComposerTarget(null)}
+        initialReceiver={composerTarget || undefined}
+        onSent={(res) => notify(`Message sent to ${res.receivers.join(', ')}`, 'success')}
+      />
 
       <NotificationSnackbar feedback={feedback} onClose={close} />
     </Box>

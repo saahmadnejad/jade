@@ -3,7 +3,7 @@ import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton,
   Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Button, Chip,
+  TextField, Button, Chip, Autocomplete,
 } from '@mui/material';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import AddIcon from '@mui/icons-material/Add';
@@ -69,6 +69,7 @@ export default function DFPage() {
     parentDF: '',
     parentDFAddresses: '',
   });
+  const [availableAgents, setAvailableAgents] = useState<string[]>([]);
   const { feedback, notify, close } = useFeedback();
 
   const fetchAll = async () => {
@@ -82,6 +83,17 @@ export default function DFPage() {
         api.df.getDescription(),
       ]);
       setRegistrations(regData.registrations || []);
+
+      try {
+        const agentListPromise = api.agents?.list?.({ detail: false });
+        if (agentListPromise && typeof agentListPromise.then === 'function') {
+          agentListPromise.then((res: any) => {
+            if (res?.agents) setAvailableAgents(res.agents.map((a: any) => a.name));
+          }).catch(() => {});
+        }
+      } catch {
+        // Ignore if agent list unavailable
+      }
       setParents(parentData.parents || []);
       setChildren(childData.children || []);
       setDfStatus(statusData);
@@ -484,12 +496,20 @@ export default function DFPage() {
         <DialogTitle>Register Agent with DF</DialogTitle>
         <DialogContent>
           <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
-            <TextField
-              label="Agent Name"
+            <Autocomplete
+              freeSolo
+              options={availableAgents}
               value={registerForm.name}
-              onChange={e => setRegisterForm({ ...registerForm, name: e.target.value })}
-              fullWidth
-              helperText="Full agent AID (e.g. my-agent@jade-main)"
+              onChange={(_, val) => setRegisterForm({ ...registerForm, name: val || '' })}
+              onInputChange={(_, val) => setRegisterForm({ ...registerForm, name: val })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Agent Name"
+                  fullWidth
+                  helperText="Select from active agents or enter agent AID"
+                />
+              )}
             />
             <TextField
               label="Addresses (comma-separated)"
@@ -624,7 +644,7 @@ export default function DFPage() {
             <Box sx={{display: 'flex', flexDirection: 'column', gap: 1, pt: 1}}>
               <Typography><strong>Name:</strong> {dfDescription.name}</Typography>
               <Typography><strong>Addresses:</strong> {dfDescription.addresses?.join(', ') || 'N/A'}</Typography>
-              <Typography><strong>Services:</strong>
+              <Typography component="div"><strong>Services:</strong>
                 {dfDescription.services && dfDescription.services.length > 0 ? (
                   <Box sx={{display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap'}}>
                     {dfDescription.services.map((svc, i) => (

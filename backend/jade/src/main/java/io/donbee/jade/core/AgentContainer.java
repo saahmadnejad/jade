@@ -73,6 +73,16 @@ public interface AgentContainer {
 	void releaseLocalAgent(AID id);
 	AID[] agentNames();
 
+	/**
+	 * Send an ACL message from this container.
+	 *
+	 * @param msg the message to send
+	 * @param sender the sender AID
+	 */
+	default void send(ACLMessage msg, AID sender) {
+		throw new UnsupportedOperationException("Message sending not supported on this container");
+	}
+
 	//#APIDOC_EXCLUDE_BEGIN
 	//#MIDP_EXCLUDE_BEGIN
 	void fillListFromMessageQueue(List messages, Agent a);
