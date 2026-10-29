@@ -25,6 +25,8 @@ package io.donbee.jade.core;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import io.vertx.core.Future;
 
 //#APIDOC_EXCLUDE_FILE
 
@@ -1050,12 +1052,13 @@ class AgentContainerImpl implements AgentContainer, AgentToolkit {
 	public void undeployByPrefix(String prefix) {
 		if (isVerticleRuntime()) {
 			io.vertx.core.Vertx vx = Runtime.instance().getVertx();
+			java.util.List<Future<?>> futures = new java.util.ArrayList<>();
 			java.util.Iterator<Map.Entry<String, String>> it = verticleDeployments.entrySet().iterator();
 			while (it.hasNext()) {
 				Map.Entry<String, String> entry = it.next();
 				if (entry.getKey().startsWith(prefix)) {
 					try {
-						vx.undeploy(entry.getValue());
+						futures.add(vx.undeploy(entry.getValue()));
 					} catch (Exception e) {
 						if (myLogger.isLoggable(Logger.FINE)) {
 							myLogger.log(Logger.FINE, "Could not undeploy " + entry.getKey() + ": " + e.getMessage());
@@ -1063,6 +1066,11 @@ class AgentContainerImpl implements AgentContainer, AgentToolkit {
 					}
 					it.remove();
 				}
+			}
+			if (!futures.isEmpty()) {
+				try {
+					Future.all(futures).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+				} catch (Exception ignored) {}
 			}
 		}
 	}
