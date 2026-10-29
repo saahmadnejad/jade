@@ -24,8 +24,10 @@ Boston, MA  02111-1307, USA.
 package io.donbee.jade.core;
 
 
+import io.donbee.jade.core.messaging.MessageTrafficMonitor;
 import io.donbee.jade.util.leap.LinkedList;
 import io.donbee.jade.util.Logger;
+import io.vertx.core.Vertx;
 
 import java.util.Map;
 import java.util.Set;
@@ -85,17 +87,17 @@ public class Runtime {
 	private int mode = UNKNOWN_MODE;
 
 	private Logger myLogger = Logger.getMyLogger(getClass().getName());
-	private io.vertx.core.Vertx vertx = null;
+	private Vertx vertx = null;
 	private String agentRuntime = Profile.DEFAULT_AGENT_RUNTIME;
 
 	public synchronized boolean hasVertx() {
 		return vertx != null;
 	}
 
-	public synchronized io.vertx.core.Vertx getVertx() {
+	public synchronized Vertx getVertx() {
 		if (vertx == null) {
-			vertx = io.vertx.core.Vertx.vertx();
-			io.donbee.jade.core.messaging.MessageTrafficMonitor.init(vertx);
+			vertx = Vertx.vertx();
+			MessageTrafficMonitor.init(vertx);
 		}
 		return vertx;
 	}
@@ -318,7 +320,7 @@ public class Runtime {
 					vertx.close().toCompletionStage().toCompletableFuture().get(5, java.util.concurrent.TimeUnit.SECONDS);
 				} catch (Exception ignored) {}
 				vertx = null;
-				io.donbee.jade.core.messaging.MessageTrafficMonitor.reset();
+				MessageTrafficMonitor.reset();
 			}
 
 			// Reset mode

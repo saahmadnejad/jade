@@ -4,9 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.After;
@@ -85,55 +86,6 @@ public class MessageTrafficMonitorTest {
     }
 
     @Test
-    public void Given_LegacyListener_When_MessageNotified_Then_LegacyListenerReceives() throws Exception {
-        // --- Arrange ---
-        CountDownLatch latch = new CountDownLatch(1);
-        AtomicReference<ACLMessage> receivedMsg = new AtomicReference<>();
-
-        MessageTrafficListener listener = (s, r, m) -> {
-            receivedMsg.set(m);
-            latch.countDown();
-        };
-        MessageTrafficMonitor.addListener(listener);
-
-        ACLMessage acl = createMockMessage(ACLMessage.INFORM, "status-ok", null, null);
-
-        // --- Act ---
-        MessageTrafficMonitor.notifyMessage(sender, receiver, acl);
-
-        // --- Assert ---
-        boolean received = latch.await(2, TimeUnit.SECONDS);
-        assertThat(received).isTrue();
-        assertThat(receivedMsg.get()).isSameAs(acl);
-
-        MessageTrafficMonitor.removeListener(listener);
-    }
-
-    @Test
-    public void Given_DualWrite_When_MessageNotified_Then_BothEventBusAndLegacyListenerReceive() throws Exception {
-        // --- Arrange ---
-        MessageTrafficMonitor.init(vertx);
-        CountDownLatch busLatch = new CountDownLatch(1);
-        CountDownLatch listenerLatch = new CountDownLatch(1);
-
-        vertx.eventBus().consumer(MessageTrafficMonitor.EVENT_BUS_ADDRESS, msg -> busLatch.countDown());
-
-        MessageTrafficListener listener = (s, r, m) -> listenerLatch.countDown();
-        MessageTrafficMonitor.addListener(listener);
-
-        ACLMessage acl = createMockMessage(ACLMessage.QUERY_IF, "is-ready", null, null);
-
-        // --- Act ---
-        MessageTrafficMonitor.notifyMessage(sender, receiver, acl);
-
-        // --- Assert ---
-        assertThat(busLatch.await(3, TimeUnit.SECONDS)).isTrue();
-        assertThat(listenerLatch.await(2, TimeUnit.SECONDS)).isTrue();
-
-        MessageTrafficMonitor.removeListener(listener);
-    }
-
-    @Test
     public void Given_NullArguments_When_MessageNotified_Then_NoEventPublishedAndNoException() throws Exception {
         // --- Arrange ---
         MessageTrafficMonitor.init(vertx);
@@ -153,33 +105,46 @@ public class MessageTrafficMonitorTest {
     }
 
     @Test
-    public void Given_FaultyLegacyListener_When_MessageNotified_Then_FailureIsolatedAndOtherReceiversSucceed() throws Exception {
+    public void Given_NoVertx_When_MessageNotified_Then_NoExceptionAndNoAllocation() {
+        // --- Arrange ---
+        MessageTrafficMonitor.reset();
+        ACLMessage acl = createMockMessage(ACLMessage.INFORM, "offline", null, null);
+
+        // --- Act / Assert (must not throw or allocate) ---
+        MessageTrafficMonitor.notifyMessage(sender, receiver, acl);
+    }
+
+    @Test
+    public void Given_MultipleMessages_When_Notified_Then_EventBusPreservesFifoSequenceOrdering() throws Exception {
         // --- Arrange ---
         MessageTrafficMonitor.init(vertx);
-        CountDownLatch busLatch = new CountDownLatch(1);
-        CountDownLatch healthyListenerLatch = new CountDownLatch(1);
+        int count = 10;
+        CountDownLatch latch = new CountDownLatch(count);
+        List<JsonObject> received = new ArrayList<>();
 
-        vertx.eventBus().consumer(MessageTrafficMonitor.EVENT_BUS_ADDRESS, msg -> busLatch.countDown());
-
-        MessageTrafficListener faultyListener = (s, r, m) -> {
-            throw new RuntimeException("Simulated listener crash");
-        };
-        MessageTrafficListener healthyListener = (s, r, m) -> healthyListenerLatch.countDown();
-
-        MessageTrafficMonitor.addListener(faultyListener);
-        MessageTrafficMonitor.addListener(healthyListener);
-
-        ACLMessage acl = createMockMessage(ACLMessage.AGREE, "agreed", null, null);
+        vertx.eventBus().<JsonObject>consumer(MessageTrafficMonitor.EVENT_BUS_ADDRESS, msg -> {
+            synchronized (received) {
+                received.add(msg.body());
+            }
+            latch.countDown();
+        });
 
         // --- Act ---
-        MessageTrafficMonitor.notifyMessage(sender, receiver, acl);
+        for (int i = 1; i <= count; i++) {
+            ACLMessage acl = createMockMessage(ACLMessage.INFORM, "msg-" + i, null, null);
+            MessageTrafficMonitor.notifyMessage(sender, receiver, acl);
+        }
 
         // --- Assert ---
-        assertThat(busLatch.await(3, TimeUnit.SECONDS)).isTrue();
-        assertThat(healthyListenerLatch.await(2, TimeUnit.SECONDS)).isTrue();
-
-        MessageTrafficMonitor.removeListener(faultyListener);
-        MessageTrafficMonitor.removeListener(healthyListener);
+        assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
+        synchronized (received) {
+            assertThat(received).hasSize(count);
+            for (int i = 0; i < count; i++) {
+                assertThat(received.get(i).getString("content")).isEqualTo("msg-" + (i + 1));
+                long expectedSeq = i + 1;
+                assertThat(received.get(i).getString("id")).isEqualTo(Long.toString(expectedSeq));
+            }
+        }
     }
 
     @Test
