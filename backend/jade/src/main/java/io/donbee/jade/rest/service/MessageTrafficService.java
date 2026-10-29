@@ -1,12 +1,13 @@
 package io.donbee.jade.rest.service;
 
-import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.function.Consumer;
 
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 
 import io.donbee.jade.core.AID;
@@ -20,13 +21,18 @@ import io.donbee.jade.lang.acl.ACLMessage;
  * {@code GET /api/messages/recent}) and forwards each capture to subscribed
  * consumers (the WebSocket stream handler).
  *
+ * <p>Phase 2 Step 1 of ADR-0004: In addition to the legacy listener interface,
+ * this service registers as a consumer on the Vert.x EventBus
+ * ({@link MessageTrafficMonitor#EVENT_BUS_ADDRESS}) when started with a {@link Vertx}
+ * instance.</p>
+ *
  * <p><b>Old GUI implementation:</b> The old Swing Sniffer
  * ({@code io.donbee.jade.tools.sniffer.Sniffer}, see
  * {@code sniffer.MMCanvas} / {@code sniffer.Agent}) displayed live message
  * exchanges by registering as a tool agent receiving introspection events.
- * This service is the headless equivalent: it registers a
- * {@link MessageTrafficListener} via {@link MessageTrafficMonitor} and serves
- * the data to the React MessagesPage through the messages API.</p>
+ * This service is the headless equivalent: it captures traffic from the Vert.x
+ * EventBus (or via {@link MessageTrafficListener}) and serves the data to the
+ * React MessagesPage through the messages API.</p>
  */
 public class MessageTrafficService implements MessageTrafficListener {
 
@@ -40,6 +46,7 @@ public class MessageTrafficService implements MessageTrafficListener {
     private long dropped = 0;
     private long sequence = 0;
     private final List<Consumer<JsonObject>> subscribers = new ArrayList<>();
+    private MessageConsumer<JsonObject> consumer;
 
     public MessageTrafficService() {
         this(DEFAULT_CAPACITY);
@@ -51,23 +58,59 @@ public class MessageTrafficService implements MessageTrafficListener {
     }
 
     /**
-     * Register this service as a platform traffic listener.
-     * Called once when the REST API starts.
+     * Start capturing message traffic via Vert.x EventBus.
+     * When vertx is non-null, subscribes to {@link MessageTrafficMonitor#EVENT_BUS_ADDRESS}.
+     * When vertx is null, falls back to {@link MessageTrafficMonitor#addListener}.
      */
-    public void start() {
-        MessageTrafficMonitor.addListener(this);
+    public synchronized void start(Vertx vertx) {
+        if (vertx != null) {
+            if (consumer == null) {
+                consumer = vertx.eventBus().consumer(MessageTrafficMonitor.EVENT_BUS_ADDRESS, msg -> {
+                    onMessage(msg.body());
+                });
+            }
+        } else {
+            MessageTrafficMonitor.addListener(this);
+        }
     }
 
     /**
-     * Unregister from the platform traffic listeners.
+     * Register this service as a platform traffic listener.
+     * Starts using the shared Vert.x instance if active, otherwise legacy fallback.
      */
-    public void stop() {
+    public synchronized void start() {
+        io.donbee.jade.core.Runtime rt = io.donbee.jade.core.Runtime.instance();
+        start(rt != null && rt.hasVertx() ? rt.getVertx() : null);
+    }
+
+    /**
+     * Unregister from the EventBus consumer and legacy platform traffic listeners.
+     */
+    public synchronized void stop() {
+        if (consumer != null) {
+            consumer.unregister();
+            consumer = null;
+        }
         MessageTrafficMonitor.removeListener(this);
     }
 
     @Override
     public void onMessage(AID sender, AID receiver, ACLMessage message) {
-        JsonObject json = toJson(++sequence, sender, receiver, message);
+        onMessage(MessageTrafficMonitor.toJson(++sequence, sender, receiver, message));
+    }
+
+    /**
+     * Ingest a captured message represented as a {@link JsonObject}.
+     * Assigns a local sequence ID if missing, buffers the message in the ring buffer,
+     * and pushes a truncated copy to active subscribers.
+     */
+    public void onMessage(JsonObject json) {
+        if (json == null) {
+            return;
+        }
+        if (!json.containsKey("id") || json.getString("id", "").isBlank()) {
+            json.put("id", Long.toString(++sequence));
+        }
 
         synchronized (buffer) {
             if (buffer.size() >= capacity) {
@@ -166,23 +209,5 @@ public class MessageTrafficService implements MessageTrafficListener {
             return false;
         }
         return true;
-    }
-
-    private static JsonObject toJson(long id, AID sender, AID receiver, ACLMessage message) {
-        String content = message.getContent();
-        return new JsonObject()
-            .put("id", Long.toString(id))
-            .put("timestamp", Instant.now().toString())
-            .put("sender", localName(sender))
-            .put("receiver", localName(receiver))
-            .put("performative", ACLMessage.getPerformative(message.getPerformative()).toLowerCase())
-            .put("protocol", message.getProtocol() != null ? message.getProtocol() : "")
-            .put("ontology", message.getOntology() != null ? message.getOntology() : "")
-            .put("content", content != null ? content : "");
-    }
-
-    private static String localName(AID aid) {
-        String name = aid.getLocalName();
-        return name != null ? name : "";
     }
 }

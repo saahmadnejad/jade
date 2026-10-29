@@ -70,6 +70,7 @@ public class RestAPIVerticle extends AbstractVerticle {
 
     private final io.donbee.jade.wrapper.AgentContainer wrapper;
     private final int port;
+    private MessageTrafficService trafficService;
 
     public RestAPIVerticle(io.donbee.jade.wrapper.AgentContainer container) {
         this(container, 8080);
@@ -83,8 +84,8 @@ public class RestAPIVerticle extends AbstractVerticle {
     @Override
     public void start(Promise<Void> startPromise) {
         PlatformService service = buildService();
-        MessageTrafficService trafficService = new MessageTrafficService();
-        trafficService.start();
+        trafficService = new MessageTrafficService();
+        trafficService.start(vertx);
 
         Router router = Router.router(vertx);
         configureMiddleware(router);
@@ -100,6 +101,14 @@ public class RestAPIVerticle extends AbstractVerticle {
                     startPromise.fail(http.cause());
                 }
             });
+    }
+
+    @Override
+    public void stop(Promise<Void> stopPromise) {
+        if (trafficService != null) {
+            trafficService.stop();
+        }
+        stopPromise.complete();
     }
 
     /**

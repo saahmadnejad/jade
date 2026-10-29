@@ -88,9 +88,14 @@ public class Runtime {
 	private io.vertx.core.Vertx vertx = null;
 	private String agentRuntime = Profile.DEFAULT_AGENT_RUNTIME;
 
+	public synchronized boolean hasVertx() {
+		return vertx != null;
+	}
+
 	public synchronized io.vertx.core.Vertx getVertx() {
 		if (vertx == null) {
 			vertx = io.vertx.core.Vertx.vertx();
+			io.donbee.jade.core.messaging.MessageTrafficMonitor.init(vertx);
 		}
 		return vertx;
 	}
@@ -313,6 +318,7 @@ public class Runtime {
 					vertx.close().toCompletionStage().toCompletableFuture().get(5, java.util.concurrent.TimeUnit.SECONDS);
 				} catch (Exception ignored) {}
 				vertx = null;
+				io.donbee.jade.core.messaging.MessageTrafficMonitor.reset();
 			}
 
 			// Reset mode

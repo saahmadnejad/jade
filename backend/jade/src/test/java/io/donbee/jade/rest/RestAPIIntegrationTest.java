@@ -1086,4 +1086,80 @@ public class RestAPIIntegrationTest {
                 async.complete();
             }));
     }
+
+    // ===== Messages (Live Traffic & EventBus Bridge) =====
+
+    @Test
+    public void Given_RestApiStarted_When_RecentMessagesRequested_Then_Returns200WithMessagesArray(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.get(REST_PORT, "localhost", "/api/messages/recent")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(200, response.statusCode());
+                JsonObject body = response.bodyAsJsonObject();
+                context.assertTrue(body.containsKey("messages"));
+                context.assertTrue(body.containsKey("total"));
+                context.assertTrue(body.containsKey("dropped"));
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_NonexistentMessageId_When_GetByIdRequested_Then_Returns404(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.get(REST_PORT, "localhost", "/api/messages/999999")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(404, response.statusCode());
+                async.complete();
+            }));
+    }
+
+    @Test
+    public void Given_MessagePublishedToEventBus_When_RecentQueried_Then_MessageFoundInResponse(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        JsonObject published = new JsonObject()
+            .put("id", "it-msg-1")
+            .put("sender", "sender-it")
+            .put("receiver", "receiver-it")
+            .put("performative", "inform")
+            .put("content", "integration-test-content")
+            .put("timestamp", "2026-10-29T12:00:00Z");
+
+        // Act — publish directly to EventBus address
+        vertx.eventBus().publish(io.donbee.jade.core.messaging.MessageTrafficMonitor.EVENT_BUS_ADDRESS, published);
+
+        // Allow event bus propagation
+        vertx.setTimer(150, timerId -> {
+            client.get(REST_PORT, "localhost", "/api/messages/recent?from=sender-it")
+                .send()
+                .onComplete(context.asyncAssertSuccess(response -> {
+                    // Assert
+                    context.assertEquals(200, response.statusCode());
+                    JsonObject body = response.bodyAsJsonObject();
+                    io.vertx.core.json.JsonArray msgs = body.getJsonArray("messages");
+                    context.assertTrue(msgs.size() >= 1);
+                    JsonObject found = msgs.getJsonObject(0);
+                    context.assertEquals("sender-it", found.getString("sender"));
+
+                    // Also verify GET /api/messages/:id
+                    client.get(REST_PORT, "localhost", "/api/messages/it-msg-1")
+                        .send()
+                        .onComplete(context.asyncAssertSuccess(byIdResp -> {
+                            context.assertEquals(200, byIdResp.statusCode());
+                            context.assertEquals("integration-test-content", byIdResp.bodyAsJsonObject().getString("content"));
+                            async.complete();
+                        }));
+                }));
+        });
+    }
 }
