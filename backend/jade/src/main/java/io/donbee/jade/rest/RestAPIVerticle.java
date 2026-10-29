@@ -142,7 +142,7 @@ public class RestAPIVerticle extends AbstractVerticle {
 
         // Messages (live ACL traffic)
         router.get(ApiRoutes.MESSAGES_RECENT).handler(new MessagesRecentHandler(trafficService));
-        router.get(ApiRoutes.MESSAGES_STREAM).handler(new MessagesStreamHandler(trafficService));
+        router.get(ApiRoutes.MESSAGES_STREAM).handler(new MessagesStreamHandler());
         // Declare before any parameterized /api/messages/:id route would match "recent".
         router.get(ApiRoutes.MESSAGES_BY_ID).handler(new MessagesByIdHandler(trafficService));
 

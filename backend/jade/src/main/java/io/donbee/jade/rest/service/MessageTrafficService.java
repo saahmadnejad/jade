@@ -4,37 +4,36 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-import java.util.function.Consumer;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 
 import io.donbee.jade.core.AID;
-import io.donbee.jade.core.messaging.MessageTrafficListener;
+import io.donbee.jade.core.Runtime;
 import io.donbee.jade.core.messaging.MessageTrafficMonitor;
 import io.donbee.jade.lang.acl.ACLMessage;
 
 /**
  * Service that captures platform ACL message traffic for the REST layer.
  * Keeps an in-memory ring buffer of recent messages (served by
- * {@code GET /api/messages/recent}) and forwards each capture to subscribed
- * consumers (the WebSocket stream handler).
+ * {@code GET /api/messages/recent} and {@code GET /api/messages/:id}) and
+ * publishes truncated frames to {@link MessageTrafficMonitor#EVENT_BUS_STREAM_ADDRESS}
+ * for streaming consumers.
  *
- * <p>Phase 2 Step 1 of ADR-0004: In addition to the legacy listener interface,
- * this service registers as a consumer on the Vert.x EventBus
- * ({@link MessageTrafficMonitor#EVENT_BUS_ADDRESS}) when started with a {@link Vertx}
- * instance.</p>
+ * <p>Phase 2 Step 1 of ADR-0004: Consumes full message events from
+ * {@link MessageTrafficMonitor#EVENT_BUS_ADDRESS}, buffers them, and forwards
+ * truncated copies onto the stream address for WebSocket clients. Static fan-out
+ * and the internal subscriber list have been retired in favor of the Vert.x EventBus.</p>
  *
  * <p><b>Old GUI implementation:</b> The old Swing Sniffer
  * ({@code io.donbee.jade.tools.sniffer.Sniffer}, see
  * {@code sniffer.MMCanvas} / {@code sniffer.Agent}) displayed live message
  * exchanges by registering as a tool agent receiving introspection events.
  * This service is the headless equivalent: it captures traffic from the Vert.x
- * EventBus (or via {@link MessageTrafficListener}) and serves the data to the
- * React MessagesPage through the messages API.</p>
+ * EventBus and serves the data to the React MessagesPage through the messages API.</p>
  */
-public class MessageTrafficService implements MessageTrafficListener {
+public class MessageTrafficService {
 
     /** Default ring-buffer capacity. */
     public static final int DEFAULT_CAPACITY = 500;
@@ -44,8 +43,6 @@ public class MessageTrafficService implements MessageTrafficListener {
     private final int capacity;
     private final Deque<JsonObject> buffer;
     private long dropped = 0;
-    private long sequence = 0;
-    private final List<Consumer<JsonObject>> subscribers = new ArrayList<>();
     private MessageConsumer<JsonObject> consumer;
 
     public MessageTrafficService() {
@@ -59,57 +56,56 @@ public class MessageTrafficService implements MessageTrafficListener {
 
     /**
      * Start capturing message traffic via Vert.x EventBus.
-     * When vertx is non-null, subscribes to {@link MessageTrafficMonitor#EVENT_BUS_ADDRESS}.
-     * When vertx is null, falls back to {@link MessageTrafficMonitor#addListener}.
+     * Subscribes to {@link MessageTrafficMonitor#EVENT_BUS_ADDRESS}, buffers incoming
+     * captures, and publishes truncated copies to {@link MessageTrafficMonitor#EVENT_BUS_STREAM_ADDRESS}.
      */
     public synchronized void start(Vertx vertx) {
-        if (vertx != null) {
-            if (consumer == null) {
-                consumer = vertx.eventBus().consumer(MessageTrafficMonitor.EVENT_BUS_ADDRESS, msg -> {
-                    onMessage(msg.body());
-                });
-            }
-        } else {
-            MessageTrafficMonitor.addListener(this);
+        if (vertx == null) {
+            return;
+        }
+        if (consumer == null) {
+            consumer = vertx.eventBus().consumer(MessageTrafficMonitor.EVENT_BUS_ADDRESS, msg -> {
+                JsonObject full = msg.body();
+                onMessage(full);
+                vertx.eventBus().publish(MessageTrafficMonitor.EVENT_BUS_STREAM_ADDRESS, truncated(full));
+            });
         }
     }
 
     /**
-     * Register this service as a platform traffic listener.
-     * Starts using the shared Vert.x instance if active, otherwise legacy fallback.
+     * Start capturing using the shared Vert.x instance from Runtime if available.
      */
     public synchronized void start() {
-        io.donbee.jade.core.Runtime rt = io.donbee.jade.core.Runtime.instance();
-        start(rt != null && rt.hasVertx() ? rt.getVertx() : null);
+        Runtime rt = Runtime.instance();
+        if (rt != null && rt.hasVertx()) {
+            start(rt.getVertx());
+        }
     }
 
     /**
-     * Unregister from the EventBus consumer and legacy platform traffic listeners.
+     * Unregister from the EventBus consumer.
      */
     public synchronized void stop() {
         if (consumer != null) {
             consumer.unregister();
             consumer = null;
         }
-        MessageTrafficMonitor.removeListener(this);
     }
 
-    @Override
+    /**
+     * Ingest a captured message (e.g. for testing or direct injection).
+     */
     public void onMessage(AID sender, AID receiver, ACLMessage message) {
-        onMessage(MessageTrafficMonitor.toJson(++sequence, sender, receiver, message));
+        onMessage(MessageTrafficMonitor.toJson(0, sender, receiver, message));
     }
 
     /**
      * Ingest a captured message represented as a {@link JsonObject}.
-     * Assigns a local sequence ID if missing, buffers the message in the ring buffer,
-     * and pushes a truncated copy to active subscribers.
+     * Buffers the message in the ring buffer.
      */
     public void onMessage(JsonObject json) {
         if (json == null) {
             return;
-        }
-        if (!json.containsKey("id") || json.getString("id", "").isBlank()) {
-            json.put("id", Long.toString(++sequence));
         }
 
         synchronized (buffer) {
@@ -119,7 +115,6 @@ public class MessageTrafficService implements MessageTrafficListener {
             }
             buffer.addLast(json.copy());
         }
-        notifySubscribers(truncated(json));
     }
 
     /**
@@ -162,36 +157,8 @@ public class MessageTrafficService implements MessageTrafficListener {
         }
     }
 
-    /**
-     * Subscribe a consumer to live captures. Returns an unsubscribe handle.
-     */
-    public Runnable subscribe(Consumer<JsonObject> consumer) {
-        synchronized (subscribers) {
-            subscribers.add(consumer);
-        }
-        return () -> {
-            synchronized (subscribers) {
-                subscribers.remove(consumer);
-            }
-        };
-    }
-
-    private void notifySubscribers(JsonObject json) {
-        List<Consumer<JsonObject>> current;
-        synchronized (subscribers) {
-            current = new ArrayList<>(subscribers);
-        }
-        for (Consumer<JsonObject> c : current) {
-            try {
-                c.accept(json);
-            } catch (Exception e) {
-                // Isolate faulty subscribers
-            }
-        }
-    }
-
     /** Copy with truncated content, for table/list rendering. */
-    static JsonObject truncated(JsonObject full) {
+    public static JsonObject truncated(JsonObject full) {
         String content = full.getString("content", "");
         if (content.length() <= CONTENT_TRUNCATE_LENGTH) {
             return full;

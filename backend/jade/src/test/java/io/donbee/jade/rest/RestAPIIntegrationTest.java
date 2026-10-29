@@ -1,10 +1,15 @@
 package io.donbee.jade.rest;
 
+import io.donbee.jade.core.AID;
 import io.donbee.jade.core.Runtime;
 import io.donbee.jade.core.Profile;
 import io.donbee.jade.core.ProfileImpl;
+import io.donbee.jade.core.messaging.MessageTrafficMonitor;
+import io.donbee.jade.lang.acl.ACLMessage;
+import io.donbee.jade.wrapper.AgentContainer;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.http.WebSocketClient;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -34,9 +39,10 @@ public class RestAPIIntegrationTest {
         profile.setParameter(Profile.REST_PORT, String.valueOf(REST_PORT));
 
         runtime = Runtime.instance();
-        io.donbee.jade.wrapper.AgentContainer container = runtime.createMainContainer(profile);
+        AgentContainer container = runtime.createMainContainer(profile);
 
         vertx = Vertx.vertx();
+        MessageTrafficMonitor.init(vertx);
         RestAPIVerticle verticle = new RestAPIVerticle(container, REST_PORT);
         vertx.deployVerticle(verticle).onComplete(context.asyncAssertSuccess(ar -> {}));
 
@@ -47,6 +53,7 @@ public class RestAPIIntegrationTest {
 
     @AfterClass
     public static void tearDown(TestContext context) {
+        MessageTrafficMonitor.reset();
         if (vertx != null) {
             vertx.close().onComplete(context.asyncAssertSuccess(ar -> {}));
         }
@@ -1128,38 +1135,138 @@ public class RestAPIIntegrationTest {
         // Arrange
         Async async = context.async();
         JsonObject published = new JsonObject()
-            .put("id", "it-msg-1")
-            .put("sender", "sender-it")
-            .put("receiver", "receiver-it")
+            .put("id", "it-recent-1")
+            .put("sender", "sender-recent")
+            .put("receiver", "receiver-recent")
             .put("performative", "inform")
-            .put("content", "integration-test-content")
+            .put("content", "recent-content")
             .put("timestamp", "2026-10-29T12:00:00Z");
 
-        // Act — publish directly to EventBus address
-        vertx.eventBus().publish(io.donbee.jade.core.messaging.MessageTrafficMonitor.EVENT_BUS_ADDRESS, published);
-
-        // Allow event bus propagation
-        vertx.setTimer(150, timerId -> {
-            client.get(REST_PORT, "localhost", "/api/messages/recent?from=sender-it")
-                .send()
-                .onComplete(context.asyncAssertSuccess(response -> {
-                    // Assert
-                    context.assertEquals(200, response.statusCode());
-                    JsonObject body = response.bodyAsJsonObject();
-                    io.vertx.core.json.JsonArray msgs = body.getJsonArray("messages");
-                    context.assertTrue(msgs.size() >= 1);
-                    JsonObject found = msgs.getJsonObject(0);
-                    context.assertEquals("sender-it", found.getString("sender"));
-
-                    // Also verify GET /api/messages/:id
-                    client.get(REST_PORT, "localhost", "/api/messages/it-msg-1")
+        // Wait deterministically for MessageTrafficService to process the message via stream topic
+        var consumer = vertx.eventBus().<JsonObject>consumer(
+            MessageTrafficMonitor.EVENT_BUS_STREAM_ADDRESS,
+            streamMsg -> {
+                if ("it-recent-1".equals(streamMsg.body().getString("id"))) {
+                    // Act
+                    client.get(REST_PORT, "localhost", "/api/messages/recent?from=sender-recent")
                         .send()
-                        .onComplete(context.asyncAssertSuccess(byIdResp -> {
-                            context.assertEquals(200, byIdResp.statusCode());
-                            context.assertEquals("integration-test-content", byIdResp.bodyAsJsonObject().getString("content"));
+                        .onComplete(context.asyncAssertSuccess(response -> {
+                            // Assert
+                            context.assertEquals(200, response.statusCode());
+                            JsonObject body = response.bodyAsJsonObject();
+                            JsonArray msgs = body.getJsonArray("messages");
+                            context.assertTrue(msgs.size() >= 1);
+                            JsonObject found = msgs.getJsonObject(0);
+                            context.assertEquals("sender-recent", found.getString("sender"));
                             async.complete();
                         }));
-                }));
-        });
+                }
+            }
+        );
+        async.handler(ar -> consumer.unregister());
+
+        // Act
+        vertx.eventBus().publish(MessageTrafficMonitor.EVENT_BUS_ADDRESS, published);
+    }
+
+    @Test
+    public void Given_MessagePublishedToEventBus_When_GetByIdQueried_Then_ReturnsFullMessage(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        String fullContent = "untruncated-content-" + "z".repeat(300);
+        JsonObject published = new JsonObject()
+            .put("id", "it-getbyid-1")
+            .put("sender", "sender-byid")
+            .put("receiver", "receiver-byid")
+            .put("performative", "inform")
+            .put("content", fullContent)
+            .put("timestamp", "2026-10-29T12:00:00Z");
+
+        var consumer = vertx.eventBus().<JsonObject>consumer(
+            MessageTrafficMonitor.EVENT_BUS_STREAM_ADDRESS,
+            streamMsg -> {
+                if ("it-getbyid-1".equals(streamMsg.body().getString("id"))) {
+                    // Act
+                    client.get(REST_PORT, "localhost", "/api/messages/it-getbyid-1")
+                        .send()
+                        .onComplete(context.asyncAssertSuccess(response -> {
+                            // Assert: detail view returns full untruncated content
+                            context.assertEquals(200, response.statusCode());
+                            context.assertEquals(fullContent, response.bodyAsJsonObject().getString("content"));
+                            async.complete();
+                        }));
+                }
+            }
+        );
+        async.handler(ar -> consumer.unregister());
+
+        // Act
+        vertx.eventBus().publish(MessageTrafficMonitor.EVENT_BUS_ADDRESS, published);
+    }
+
+    @Test
+    public void Given_WebSocketClient_When_MessagePublishedToEventBus_Then_ReceivesLiveTruncatedFrame(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        String longContent = "stream-test-" + "w".repeat(300);
+        JsonObject published = new JsonObject()
+            .put("id", "it-ws-1")
+            .put("sender", "sender-ws")
+            .put("receiver", "receiver-ws")
+            .put("performative", "inform")
+            .put("content", longContent)
+            .put("timestamp", "2026-10-29T12:00:00Z");
+
+        WebSocketClient wsClient = vertx.createWebSocketClient();
+        wsClient.connect(REST_PORT, "localhost", "/api/messages/stream").onComplete(context.asyncAssertSuccess(ws -> {
+            ws.handler(frameBuffer -> {
+                JsonObject frame = new JsonObject(frameBuffer.toString());
+                if ("it-ws-1".equals(frame.getString("id"))) {
+                    // Assert: stream view content is truncated per messages-api.md spec
+                    context.assertTrue(frame.getString("content").endsWith("..."));
+                    context.assertEquals(256 + 3, frame.getString("content").length());
+                    ws.close();
+                    wsClient.close();
+                    async.complete();
+                }
+            });
+
+            // Act — publish after WebSocket is open and subscribed to EventBus
+            vertx.eventBus().publish(MessageTrafficMonitor.EVENT_BUS_ADDRESS, published);
+        }));
+    }
+
+    @Test
+    public void Given_AclMessageDispatchedViaMonitor_When_Sent_Then_CapturedViaEventBusInRest(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        AID sender = new AID("agent-e2e-src@platform", AID.ISGUID);
+        AID receiver = new AID("agent-e2e-dst@platform", AID.ISGUID);
+        ACLMessage acl = new ACLMessage(ACLMessage.INFORM);
+        acl.setContent("end-to-end-live-dispatch");
+        acl.setProtocol("fipa-request");
+
+        var consumer = vertx.eventBus().<JsonObject>consumer(
+            MessageTrafficMonitor.EVENT_BUS_STREAM_ADDRESS,
+            streamMsg -> {
+                if ("agent-e2e-src".equals(streamMsg.body().getString("sender"))) {
+                    // Act
+                    client.get(REST_PORT, "localhost", "/api/messages/recent?from=agent-e2e-src")
+                        .send()
+                        .onComplete(context.asyncAssertSuccess(response -> {
+                            // Assert
+                            context.assertEquals(200, response.statusCode());
+                            JsonArray msgs = response.bodyAsJsonObject().getJsonArray("messages");
+                            context.assertTrue(msgs.size() >= 1);
+                            context.assertEquals("end-to-end-live-dispatch", msgs.getJsonObject(0).getString("content"));
+                            async.complete();
+                        }));
+                }
+            }
+        );
+        async.handler(ar -> consumer.unregister());
+
+        // Act — dispatch through the production kernel monitor method
+        MessageTrafficMonitor.notifyMessage(sender, receiver, acl);
     }
 }
