@@ -23,11 +23,8 @@ import io.vertx.core.json.JsonObject;
  */
 public final class MessageTrafficMonitor {
 
-    /** Address on the Vert.x EventBus for full captured ACL message traffic. */
+    /** Address on the Vert.x EventBus for captured ACL message traffic. */
     public static final String EVENT_BUS_ADDRESS = "jade.messages.traffic";
-
-    /** Address on the Vert.x EventBus for truncated live streaming traffic (WebSocket). */
-    public static final String EVENT_BUS_STREAM_ADDRESS = "jade.messages.stream";
 
     private static final Logger logger = Logger.getMyLogger(MessageTrafficMonitor.class.getName());
     private static final AtomicLong SEQUENCE = new AtomicLong(0);

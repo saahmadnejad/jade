@@ -1142,24 +1142,26 @@ public class RestAPIIntegrationTest {
             .put("content", "recent-content")
             .put("timestamp", "2026-10-29T12:00:00Z");
 
-        // Wait deterministically for MessageTrafficService to process the message via stream topic
+        // Wait deterministically for MessageTrafficService to process the message
         var consumer = vertx.eventBus().<JsonObject>consumer(
-            MessageTrafficMonitor.EVENT_BUS_STREAM_ADDRESS,
-            streamMsg -> {
-                if ("it-recent-1".equals(streamMsg.body().getString("id"))) {
-                    // Act
-                    client.get(REST_PORT, "localhost", "/api/messages/recent?from=sender-recent")
-                        .send()
-                        .onComplete(context.asyncAssertSuccess(response -> {
-                            // Assert
-                            context.assertEquals(200, response.statusCode());
-                            JsonObject body = response.bodyAsJsonObject();
-                            JsonArray msgs = body.getJsonArray("messages");
-                            context.assertTrue(msgs.size() >= 1);
-                            JsonObject found = msgs.getJsonObject(0);
-                            context.assertEquals("sender-recent", found.getString("sender"));
-                            async.complete();
-                        }));
+            MessageTrafficMonitor.EVENT_BUS_ADDRESS,
+            msg -> {
+                if ("it-recent-1".equals(msg.body().getString("id"))) {
+                    vertx.runOnContext(v -> {
+                        // Act
+                        client.get(REST_PORT, "localhost", "/api/messages/recent?from=sender-recent")
+                            .send()
+                            .onComplete(context.asyncAssertSuccess(response -> {
+                                // Assert
+                                context.assertEquals(200, response.statusCode());
+                                JsonObject body = response.bodyAsJsonObject();
+                                JsonArray msgs = body.getJsonArray("messages");
+                                context.assertTrue(msgs.size() >= 1);
+                                JsonObject found = msgs.getJsonObject(0);
+                                context.assertEquals("sender-recent", found.getString("sender"));
+                                async.complete();
+                            }));
+                    });
                 }
             }
         );
@@ -1183,18 +1185,20 @@ public class RestAPIIntegrationTest {
             .put("timestamp", "2026-10-29T12:00:00Z");
 
         var consumer = vertx.eventBus().<JsonObject>consumer(
-            MessageTrafficMonitor.EVENT_BUS_STREAM_ADDRESS,
-            streamMsg -> {
-                if ("it-getbyid-1".equals(streamMsg.body().getString("id"))) {
-                    // Act
-                    client.get(REST_PORT, "localhost", "/api/messages/it-getbyid-1")
-                        .send()
-                        .onComplete(context.asyncAssertSuccess(response -> {
-                            // Assert: detail view returns full untruncated content
-                            context.assertEquals(200, response.statusCode());
-                            context.assertEquals(fullContent, response.bodyAsJsonObject().getString("content"));
-                            async.complete();
-                        }));
+            MessageTrafficMonitor.EVENT_BUS_ADDRESS,
+            msg -> {
+                if ("it-getbyid-1".equals(msg.body().getString("id"))) {
+                    vertx.runOnContext(v -> {
+                        // Act
+                        client.get(REST_PORT, "localhost", "/api/messages/it-getbyid-1")
+                            .send()
+                            .onComplete(context.asyncAssertSuccess(response -> {
+                                // Assert: detail view returns full untruncated content
+                                context.assertEquals(200, response.statusCode());
+                                context.assertEquals(fullContent, response.bodyAsJsonObject().getString("content"));
+                                async.complete();
+                            }));
+                    });
                 }
             }
         );
@@ -1231,8 +1235,10 @@ public class RestAPIIntegrationTest {
                 }
             });
 
-            // Act — publish after WebSocket is open and subscribed to EventBus
-            vertx.eventBus().publish(MessageTrafficMonitor.EVENT_BUS_ADDRESS, published);
+            // Act — wait for server-side consumer registration to settle, then publish
+            vertx.setTimer(100, t -> {
+                vertx.eventBus().publish(MessageTrafficMonitor.EVENT_BUS_ADDRESS, published);
+            });
         }));
     }
 
@@ -1247,20 +1253,22 @@ public class RestAPIIntegrationTest {
         acl.setProtocol("fipa-request");
 
         var consumer = vertx.eventBus().<JsonObject>consumer(
-            MessageTrafficMonitor.EVENT_BUS_STREAM_ADDRESS,
-            streamMsg -> {
-                if ("agent-e2e-src".equals(streamMsg.body().getString("sender"))) {
-                    // Act
-                    client.get(REST_PORT, "localhost", "/api/messages/recent?from=agent-e2e-src")
-                        .send()
-                        .onComplete(context.asyncAssertSuccess(response -> {
-                            // Assert
-                            context.assertEquals(200, response.statusCode());
-                            JsonArray msgs = response.bodyAsJsonObject().getJsonArray("messages");
-                            context.assertTrue(msgs.size() >= 1);
-                            context.assertEquals("end-to-end-live-dispatch", msgs.getJsonObject(0).getString("content"));
-                            async.complete();
-                        }));
+            MessageTrafficMonitor.EVENT_BUS_ADDRESS,
+            msg -> {
+                if ("agent-e2e-src".equals(msg.body().getString("sender"))) {
+                    vertx.runOnContext(v -> {
+                        // Act
+                        client.get(REST_PORT, "localhost", "/api/messages/recent?from=agent-e2e-src")
+                            .send()
+                            .onComplete(context.asyncAssertSuccess(response -> {
+                                // Assert
+                                context.assertEquals(200, response.statusCode());
+                                JsonArray msgs = response.bodyAsJsonObject().getJsonArray("messages");
+                                context.assertTrue(msgs.size() >= 1);
+                                context.assertEquals("end-to-end-live-dispatch", msgs.getJsonObject(0).getString("content"));
+                                async.complete();
+                            }));
+                    });
                 }
             }
         );

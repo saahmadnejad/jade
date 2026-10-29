@@ -9,22 +9,18 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 
-import io.donbee.jade.core.AID;
 import io.donbee.jade.core.Runtime;
 import io.donbee.jade.core.messaging.MessageTrafficMonitor;
-import io.donbee.jade.lang.acl.ACLMessage;
 
 /**
  * Service that captures platform ACL message traffic for the REST layer.
  * Keeps an in-memory ring buffer of recent messages (served by
- * {@code GET /api/messages/recent} and {@code GET /api/messages/:id}) and
- * publishes truncated frames to {@link MessageTrafficMonitor#EVENT_BUS_STREAM_ADDRESS}
- * for streaming consumers.
+ * {@code GET /api/messages/recent} and {@code GET /api/messages/:id}).
  *
- * <p>Phase 2 Step 1 of ADR-0004: Consumes full message events from
- * {@link MessageTrafficMonitor#EVENT_BUS_ADDRESS}, buffers them, and forwards
- * truncated copies onto the stream address for WebSocket clients. Static fan-out
- * and the internal subscriber list have been retired in favor of the Vert.x EventBus.</p>
+ * <p>Phase 2 Step 1 of ADR-0004: Consumes full message events directly from
+ * {@link MessageTrafficMonitor#EVENT_BUS_ADDRESS} and buffers them in-memory.
+ * Static fan-out and intermediate relay topics have been retired in favor of
+ * single-topic EventBus consumption.</p>
  *
  * <p><b>Old GUI implementation:</b> The old Swing Sniffer
  * ({@code io.donbee.jade.tools.sniffer.Sniffer}, see
@@ -56,8 +52,7 @@ public class MessageTrafficService {
 
     /**
      * Start capturing message traffic via Vert.x EventBus.
-     * Subscribes to {@link MessageTrafficMonitor#EVENT_BUS_ADDRESS}, buffers incoming
-     * captures, and publishes truncated copies to {@link MessageTrafficMonitor#EVENT_BUS_STREAM_ADDRESS}.
+     * Subscribes to {@link MessageTrafficMonitor#EVENT_BUS_ADDRESS} and buffers incoming captures.
      */
     public synchronized void start(Vertx vertx) {
         if (vertx == null) {
@@ -65,21 +60,17 @@ public class MessageTrafficService {
         }
         if (consumer == null) {
             consumer = vertx.eventBus().consumer(MessageTrafficMonitor.EVENT_BUS_ADDRESS, msg -> {
-                JsonObject full = msg.body();
-                onMessage(full);
-                vertx.eventBus().publish(MessageTrafficMonitor.EVENT_BUS_STREAM_ADDRESS, truncated(full));
+                onMessage(msg.body());
             });
         }
     }
 
     /**
-     * Start capturing using the shared Vert.x instance from Runtime if available.
+     * Start capturing using the shared Vert.x instance from Runtime.
      */
     public synchronized void start() {
         Runtime rt = Runtime.instance();
-        if (rt != null && rt.hasVertx()) {
-            start(rt.getVertx());
-        }
+        start(rt.getVertx());
     }
 
     /**
@@ -90,13 +81,6 @@ public class MessageTrafficService {
             consumer.unregister();
             consumer = null;
         }
-    }
-
-    /**
-     * Ingest a captured message (e.g. for testing or direct injection).
-     */
-    public void onMessage(AID sender, AID receiver, ACLMessage message) {
-        onMessage(MessageTrafficMonitor.toJson(0, sender, receiver, message));
     }
 
     /**
