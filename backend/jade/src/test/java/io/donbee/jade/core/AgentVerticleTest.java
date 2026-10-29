@@ -2,6 +2,7 @@ package io.donbee.jade.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -19,12 +20,15 @@ import io.donbee.jade.core.behaviours.CyclicBehaviour;
 import io.donbee.jade.core.behaviours.OneShotBehaviour;
 import io.donbee.jade.lang.acl.ACLMessage;
 import io.donbee.jade.lang.acl.MessageTemplate;
+import io.donbee.jade.wrapper.AgentContainer;
+import io.donbee.jade.wrapper.AgentController;
+import io.donbee.jade.wrapper.ContainerController;
 
 public class AgentVerticleTest {
 
     private static final AtomicInteger portCounter = new AtomicInteger(13100);
     private Runtime runtime;
-    private io.donbee.jade.wrapper.AgentContainer mainContainer;
+    private AgentContainer mainContainer;
 
     @Before
     public void setUp() {
@@ -69,21 +73,18 @@ public class AgentVerticleTest {
         LifecycleTestAgent.setupRan.set(false);
         LifecycleTestAgent.takeDownRan.set(false);
 
-        io.donbee.jade.wrapper.AgentController ac = mainContainer.createNewAgent(
+        AgentController ac = mainContainer.createNewAgent(
                 "lifecycle-agent", LifecycleTestAgent.class.getName(), new Object[0]);
         ac.start();
 
-        // Wait for setup
         long deadline = System.currentTimeMillis() + 5000;
         while (!LifecycleTestAgent.setupRan.get() && System.currentTimeMillis() < deadline) {
             Thread.sleep(50);
         }
         assertThat(LifecycleTestAgent.setupRan.get()).isTrue();
 
-        // Kill agent
         ac.kill();
 
-        // Wait for takeDown
         deadline = System.currentTimeMillis() + 5000;
         while (!LifecycleTestAgent.takeDownRan.get() && System.currentTimeMillis() < deadline) {
             Thread.sleep(50);
@@ -141,12 +142,12 @@ public class AgentVerticleTest {
     public void Given_VerticleRuntime_When_MessagesDispatched_Then_FifoOrderingPreserved() throws Exception {
         FifoReceiverAgent.receivedSeqs.clear();
 
-        io.donbee.jade.wrapper.AgentController receiver = mainContainer.createNewAgent(
+        AgentController receiver = mainContainer.createNewAgent(
                 "fifo-receiver", FifoReceiverAgent.class.getName(), new Object[0]);
         receiver.start();
         Thread.sleep(300);
 
-        io.donbee.jade.wrapper.AgentController sender = mainContainer.createNewAgent(
+        AgentController sender = mainContainer.createNewAgent(
                 "fifo-sender", SenderAgent.class.getName(), new Object[]{"fifo-receiver", 10});
         sender.start();
 
@@ -187,7 +188,7 @@ public class AgentVerticleTest {
         FairnessTestAgent.countA.set(0);
         FairnessTestAgent.countB.set(0);
 
-        io.donbee.jade.wrapper.AgentController ac = mainContainer.createNewAgent(
+        AgentController ac = mainContainer.createNewAgent(
                 "fairness-agent", FairnessTestAgent.class.getName(), new Object[0]);
         ac.start();
 
@@ -241,12 +242,12 @@ public class AgentVerticleTest {
     public void Given_VerticleRuntime_When_BlockingReceiveUsed_Then_ParksAndWakesCleanly() throws Exception {
         BlockingReceiveAgent.receivedContent = null;
 
-        io.donbee.jade.wrapper.AgentController ac = mainContainer.createNewAgent(
+        AgentController ac = mainContainer.createNewAgent(
                 "blocking-agent", BlockingReceiveAgent.class.getName(), new Object[0]);
         ac.start();
         Thread.sleep(300);
 
-        io.donbee.jade.wrapper.AgentController waker = mainContainer.createNewAgent(
+        AgentController waker = mainContainer.createNewAgent(
                 "waker-agent", WakerSenderAgent.class.getName(), new Object[]{"blocking-agent", "wake-up-payload"});
         waker.start();
 
@@ -265,7 +266,6 @@ public class AgentVerticleTest {
             addBehaviour(new OneShotBehaviour() {
                 @Override
                 public void action() {
-                    // Block for a long time
                     blockingReceive(MessageTemplate.MatchPerformative(ACLMessage.INFORM), 30_000);
                 }
             });
@@ -281,7 +281,7 @@ public class AgentVerticleTest {
     public void Given_BlockedAgent_When_Killed_Then_AbortsPromptlyAndTakesDown() throws Exception {
         AbortTestAgent.takeDownRan.set(false);
 
-        io.donbee.jade.wrapper.AgentController ac = mainContainer.createNewAgent(
+        AgentController ac = mainContainer.createNewAgent(
                 "abort-agent", AbortTestAgent.class.getName(), new Object[0]);
         ac.start();
         Thread.sleep(300);
@@ -304,11 +304,10 @@ public class AgentVerticleTest {
 
         @Override
         protected void setup() {
-            // One-shot that finishes immediately -> agent becomes IDLE
             addBehaviour(new OneShotBehaviour() {
                 @Override
                 public void action() {
-                    // finishes
+                    // completes immediately -> becomes idle
                 }
             });
         }
@@ -323,10 +322,9 @@ public class AgentVerticleTest {
     public void Given_IdleAgent_When_Deleted_Then_TakeDownExecutesPromptly() throws Exception {
         IdleTestAgent.takeDownRan.set(false);
 
-        io.donbee.jade.wrapper.AgentController ac = mainContainer.createNewAgent(
+        AgentController ac = mainContainer.createNewAgent(
                 "idle-agent", IdleTestAgent.class.getName(), new Object[0]);
         ac.start();
-        // Wait for behaviour to finish and agent to go completely idle
         Thread.sleep(300);
 
         ac.kill();
@@ -336,5 +334,151 @@ public class AgentVerticleTest {
             Thread.sleep(50);
         }
         assertThat(IdleTestAgent.takeDownRan.get()).as("takeDown executes on idle agent").isTrue();
+    }
+
+    public static class PendingInterruptAgent extends Agent {
+        static final AtomicBoolean interruptedObserved = new AtomicBoolean(false);
+        static final CountDownLatch readyForInterruptLatch = new CountDownLatch(1);
+        static final CountDownLatch step2FinishedLatch = new CountDownLatch(1);
+
+        @Override
+        protected void setup() {
+            addBehaviour(new OneShotBehaviour() {
+                @Override
+                public void action() {
+                    readyForInterruptLatch.countDown();
+                }
+            });
+        }
+
+        public void scheduleSecondStep() {
+            addBehaviour(new OneShotBehaviour() {
+                @Override
+                public void action() {
+                    interruptedObserved.set(Thread.currentThread().isInterrupted());
+                    step2FinishedLatch.countDown();
+                }
+            });
+        }
+    }
+
+    @Test
+    public void Given_PendingInterrupt_When_DeliveredBetweenSteps_Then_InterruptPreservedOnNextStep() throws Exception {
+        PendingInterruptAgent.interruptedObserved.set(false);
+
+        AgentController ac = mainContainer.createNewAgent(
+                "pending-interrupt-agent", PendingInterruptAgent.class.getName(), new Object[0]);
+        ac.start();
+
+        boolean ready = PendingInterruptAgent.readyForInterruptLatch.await(5, TimeUnit.SECONDS);
+        assertThat(ready).isTrue();
+        Thread.sleep(100);
+
+        Field f = ContainerController.class.getDeclaredField("myImpl");
+        f.setAccessible(true);
+        AgentContainerImpl impl = (AgentContainerImpl) f.get(mainContainer);
+        PendingInterruptAgent agentInstance = (PendingInterruptAgent) impl.acquireLocalAgent(new AID("pending-interrupt-agent", AID.ISLOCALNAME));
+        impl.releaseLocalAgent(agentInstance.getAID());
+
+        // Interrupt when agent is idle (myThread == null) -> sets pendingInterrupt flag
+        agentInstance.interruptThread();
+
+        // Schedule next step -> pendingInterrupt must be applied
+        agentInstance.scheduleSecondStep();
+
+        boolean done = PendingInterruptAgent.step2FinishedLatch.await(5, TimeUnit.SECONDS);
+        assertThat(done).isTrue();
+        assertThat(PendingInterruptAgent.interruptedObserved.get()).as("Interrupt was preserved and applied to step 2").isTrue();
+        ac.kill();
+    }
+
+    public static class ChurnWorkerAgent extends Agent {
+        static final AtomicInteger totalSetup = new AtomicInteger(0);
+        static final AtomicInteger totalTakeDown = new AtomicInteger(0);
+
+        @Override
+        protected void setup() {
+            totalSetup.incrementAndGet();
+            addBehaviour(new OneShotBehaviour() {
+                @Override
+                public void action() {
+                    // Small work
+                    ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+                    msg.addReceiver(getAID());
+                    msg.setContent("self-ping");
+                    send(msg);
+                }
+            });
+            addBehaviour(new CyclicBehaviour() {
+                @Override
+                public void action() {
+                    ACLMessage msg = receive();
+                    if (msg != null) {
+                        // Received self-ping, finished work
+                        block();
+                    } else {
+                        block();
+                    }
+                }
+            });
+        }
+
+        @Override
+        protected void takeDown() {
+            totalTakeDown.incrementAndGet();
+        }
+    }
+
+    @Test
+    public void Given_HighThroughputAgentChurn_When_ConcurrentUpsAndDowns_Then_ZeroLeaksAndCleanExecution() throws Exception {
+        ChurnWorkerAgent.totalSetup.set(0);
+        ChurnWorkerAgent.totalTakeDown.set(0);
+
+        Field f = ContainerController.class.getDeclaredField("myImpl");
+        f.setAccessible(true);
+        AgentContainerImpl impl = (AgentContainerImpl) f.get(mainContainer);
+
+        int waves = 5;
+        int agentsPerWave = 10;
+        int totalAgents = waves * agentsPerWave;
+
+        for (int w = 0; w < waves; w++) {
+            List<AgentController> waveControllers = new ArrayList<>();
+            // Rapidly spin up wave
+            for (int i = 0; i < agentsPerWave; i++) {
+                String name = "churn-w" + w + "-a" + i;
+                AgentController ac = mainContainer.createNewAgent(
+                        name, ChurnWorkerAgent.class.getName(), new Object[0]);
+                ac.start();
+                waveControllers.add(ac);
+            }
+
+            // Short execution window
+            Thread.sleep(150);
+
+            // Rapidly tear down wave
+            for (AgentController ac : waveControllers) {
+                ac.kill();
+            }
+        }
+
+        // Wait for all takeDown calls to complete
+        long deadline = System.currentTimeMillis() + 10_000;
+        while (ChurnWorkerAgent.totalTakeDown.get() < totalAgents && System.currentTimeMillis() < deadline) {
+            Thread.sleep(50);
+        }
+
+        assertThat(ChurnWorkerAgent.totalSetup.get())
+                .as("All agents executed setup()")
+                .isEqualTo(totalAgents);
+        assertThat(ChurnWorkerAgent.totalTakeDown.get())
+                .as("All agents executed takeDown()")
+                .isEqualTo(totalAgents);
+
+        // Verify zero leaked churn verticle deployments in memory (only the 2 system agents: ams and df remain)
+        Thread.sleep(300);
+        assertThat(impl.getVerticleDeploymentCount())
+                .as("All 50 churn verticle deployments cleaned up; only AMS and DF remain")
+                .isEqualTo(2);
     }
 }

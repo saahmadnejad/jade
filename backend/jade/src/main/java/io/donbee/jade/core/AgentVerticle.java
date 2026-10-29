@@ -52,7 +52,10 @@ public class AgentVerticle extends AbstractVerticle {
 
     @Override
     public void stop(Promise<Void> stopPromise) {
-        undeploying.set(true);
+        if (!undeploying.compareAndSet(false, true)) {
+            stopPromise.complete();
+            return;
+        }
         if (agent.isAlive()) {
             agent.doDelete();
             agent.getTerminationFuture().whenComplete((v, t) -> stopPromise.complete());

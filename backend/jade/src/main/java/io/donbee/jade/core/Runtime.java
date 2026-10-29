@@ -310,7 +310,7 @@ public class Runtime {
 
 			if (vertx != null) {
 				try {
-					vertx.close();
+					vertx.close().toCompletionStage().toCompletableFuture().get(5, java.util.concurrent.TimeUnit.SECONDS);
 				} catch (Exception ignored) {}
 				vertx = null;
 			}
