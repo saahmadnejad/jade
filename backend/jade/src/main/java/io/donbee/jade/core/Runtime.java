@@ -90,10 +90,6 @@ public class Runtime {
 	private Vertx vertx = null;
 	private String agentRuntime = Profile.DEFAULT_AGENT_RUNTIME;
 
-	public synchronized boolean hasVertx() {
-		return vertx != null;
-	}
-
 	public synchronized Vertx getVertx() {
 		if (vertx == null) {
 			vertx = Vertx.vertx();

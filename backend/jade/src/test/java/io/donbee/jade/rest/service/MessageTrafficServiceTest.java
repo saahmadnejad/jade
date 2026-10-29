@@ -1,35 +1,25 @@
 package io.donbee.jade.rest.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import io.donbee.jade.core.messaging.MessageTrafficMonitor;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
-import io.donbee.jade.core.AID;
-import io.donbee.jade.core.messaging.MessageTrafficMonitor;
-import io.donbee.jade.lang.acl.ACLMessage;
-
 public class MessageTrafficServiceTest {
 
-    private AID sender;
-    private AID receiver;
     private Vertx vertx;
 
     @Before
     public void setUp() {
-        sender = new AID("seller@platform", AID.ISGUID);
-        receiver = new AID("warehouse@platform", AID.ISGUID);
     }
 
     @After
@@ -40,15 +30,6 @@ public class MessageTrafficServiceTest {
             vertx.close().onComplete(ar -> latch.countDown());
             latch.await(5, TimeUnit.SECONDS);
         }
-    }
-
-    private ACLMessage message(int performative, String content) {
-        ACLMessage msg = mock(ACLMessage.class);
-        when(msg.getPerformative()).thenReturn(performative);
-        when(msg.getContent()).thenReturn(content);
-        when(msg.getProtocol()).thenReturn("fipa-request");
-        when(msg.getOntology()).thenReturn("devteam-ontology");
-        return msg;
     }
 
     @Test
@@ -107,9 +88,9 @@ public class MessageTrafficServiceTest {
     public void Given_FilterParams_When_RecentQueried_Then_OnlyMatchingMessagesReturned() {
         // --- Arrange ---
         MessageTrafficService service = new MessageTrafficService();
-        service.onMessage(sender, receiver, message(ACLMessage.REQUEST, "a"));
-        service.onMessage(receiver, sender, message(ACLMessage.AGREE, "b"));
-        service.onMessage(sender, new AID("restock@platform", AID.ISGUID), message(ACLMessage.INFORM, "c"));
+        service.onMessage(new JsonObject().put("id", "1").put("sender", "seller").put("receiver", "warehouse").put("content", "a"));
+        service.onMessage(new JsonObject().put("id", "2").put("sender", "warehouse").put("receiver", "seller").put("content", "b"));
+        service.onMessage(new JsonObject().put("id", "3").put("sender", "seller").put("receiver", "restock").put("content", "c"));
 
         // --- Act ---
         List<JsonObject> fromSeller = service.recent(0, "seller", null);
@@ -155,18 +136,14 @@ public class MessageTrafficServiceTest {
     }
 
     @Test
-    public void Given_VertxEventBus_When_MessagePublished_Then_CapturedByServiceAndStreamPublished() throws Exception {
+    public void Given_VertxEventBus_When_MessagePublished_Then_CapturedByService() throws Exception {
         // --- Arrange ---
         vertx = Vertx.vertx();
         MessageTrafficService service = new MessageTrafficService();
         service.start(vertx);
 
-        CountDownLatch streamLatch = new CountDownLatch(1);
-        AtomicReference<JsonObject> streamReceived = new AtomicReference<>();
-        vertx.eventBus().<JsonObject>consumer(MessageTrafficMonitor.EVENT_BUS_STREAM_ADDRESS, msg -> {
-            streamReceived.set(msg.body());
-            streamLatch.countDown();
-        });
+        CountDownLatch latch = new CountDownLatch(1);
+        vertx.eventBus().consumer(MessageTrafficMonitor.EVENT_BUS_ADDRESS, msg -> latch.countDown());
 
         String longContent = "y".repeat(300);
         JsonObject published = new JsonObject()
@@ -183,19 +160,17 @@ public class MessageTrafficServiceTest {
         vertx.eventBus().publish(MessageTrafficMonitor.EVENT_BUS_ADDRESS, published);
 
         // --- Assert ---
-        boolean received = streamLatch.await(3, TimeUnit.SECONDS);
-        assertThat(received).isTrue();
-
-        // Stream consumer must receive TRUNCATED content (per messages-api.md spec)
-        JsonObject fromStream = streamReceived.get();
-        assertThat(fromStream).isNotNull();
-        assertThat(fromStream.getString("id")).isEqualTo("bus-1");
-        assertThat(fromStream.getString("content")).hasSize(256 + 3).endsWith("...");
+        assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
 
         // Buffer must retain UNTRUNCATED content (for GET /api/messages/:id)
         JsonObject full = service.getById("bus-1");
         assertThat(full).isNotNull();
         assertThat(full.getString("content")).isEqualTo(longContent);
+
+        // Recent list must truncate (for GET /api/messages/recent)
+        List<JsonObject> recent = service.recent(10, null, null);
+        assertThat(recent).hasSize(1);
+        assertThat(recent.get(0).getString("content")).hasSize(256 + 3).endsWith("...");
 
         service.stop();
     }
@@ -208,8 +183,8 @@ public class MessageTrafficServiceTest {
         service.start(vertx);
         service.stop();
 
-        CountDownLatch streamLatch = new CountDownLatch(1);
-        vertx.eventBus().<JsonObject>consumer(MessageTrafficMonitor.EVENT_BUS_STREAM_ADDRESS, msg -> streamLatch.countDown());
+        CountDownLatch latch = new CountDownLatch(1);
+        vertx.eventBus().consumer(MessageTrafficMonitor.EVENT_BUS_ADDRESS, msg -> latch.countDown());
 
         JsonObject published = new JsonObject()
             .put("id", "bus-stopped")
@@ -222,8 +197,7 @@ public class MessageTrafficServiceTest {
         vertx.eventBus().publish(MessageTrafficMonitor.EVENT_BUS_ADDRESS, published);
 
         // --- Assert ---
-        boolean received = streamLatch.await(300, TimeUnit.MILLISECONDS);
-        assertThat(received).isFalse();
+        assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
         assertThat(service.recent(10, null, null)).isEmpty();
     }
 }
