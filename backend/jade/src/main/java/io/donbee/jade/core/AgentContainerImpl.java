@@ -734,6 +734,11 @@ class AgentContainerImpl implements AgentContainer, AgentToolkit {
 		return myID;
 	}
 
+	@Override
+	public void send(ACLMessage msg, AID sender) {
+		handleSend(msg, sender, true);
+	}
+
 	/**
 	 Issue a SEND_MESSAGE VerticalCommand for each receiver
 	 */

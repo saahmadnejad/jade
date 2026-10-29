@@ -38,10 +38,12 @@ import io.donbee.jade.rest.handler.ShutdownHandler;
 import io.donbee.jade.rest.handler.ToolLaunchHandler;
 import io.donbee.jade.rest.handler.HealthHandler;
 import io.donbee.jade.rest.handler.JsonFailureHandler;
+import io.donbee.jade.rest.handler.MessageSendHandler;
 import io.donbee.jade.rest.handler.MessagesByIdHandler;
 import io.donbee.jade.rest.handler.MessagesRecentHandler;
 import io.donbee.jade.rest.handler.MessagesStreamHandler;
 import io.donbee.jade.rest.handler.PlatformInfoHandler;
+import io.donbee.jade.rest.handler.PlatformTreeHandler;
 import io.donbee.jade.rest.handler.ScenarioInstancesHandler;
 import io.donbee.jade.rest.handler.ScenarioListHandler;
 import io.donbee.jade.rest.handler.ScenarioStartHandler;
@@ -140,7 +142,10 @@ public class RestAPIVerticle extends AbstractVerticle {
         // Version
         router.get(ApiRoutes.VERSION).handler(new VersionHandler());
 
-        // Messages (live ACL traffic)
+        // Messages (live ACL traffic & injection)
+        MessageSendHandler messageSendHandler = new MessageSendHandler(service);
+        router.post(ApiRoutes.MESSAGES).handler(messageSendHandler);
+        router.post(ApiRoutes.MESSAGES_SEND).handler(messageSendHandler);
         router.get(ApiRoutes.MESSAGES_RECENT).handler(new MessagesRecentHandler(trafficService));
         router.get(ApiRoutes.MESSAGES_STREAM).handler(new MessagesStreamHandler());
         // Declare before any parameterized /api/messages/:id route would match "recent".
@@ -155,6 +160,7 @@ public class RestAPIVerticle extends AbstractVerticle {
 
         // Platform
         router.get(ApiRoutes.PLATFORM).handler(new PlatformInfoHandler(service));
+        router.get(ApiRoutes.PLATFORM_TREE).handler(new PlatformTreeHandler(service));
         router.post(ApiRoutes.PLATFORM_SHUTDOWN).handler(new ShutdownHandler(service));
 
         // Containers

@@ -1277,4 +1277,56 @@ public class RestAPIIntegrationTest {
         // Act — dispatch through the production kernel monitor method
         MessageTrafficMonitor.notifyMessage(sender, receiver, acl);
     }
+
+    // ===== Platform Tree =====
+
+    @Test
+    public void Given_MainContainerRunning_When_PlatformTreeRequested_Then_ReturnsContainersAndAgents(TestContext context) {
+        // Arrange
+        Async async = context.async();
+
+        // Act
+        client.get(REST_PORT, "localhost", "/api/platform/tree")
+            .send()
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(200, response.statusCode());
+                JsonObject body = response.bodyAsJsonObject();
+                context.assertTrue(body.containsKey("platformID"));
+                context.assertTrue(body.containsKey("containers"));
+                JsonArray containers = body.getJsonArray("containers");
+                context.assertTrue(containers.size() >= 1);
+                JsonObject mainContainer = containers.getJsonObject(0);
+                context.assertTrue(mainContainer.getBoolean("isMain"));
+                context.assertTrue(mainContainer.getJsonArray("agents").size() >= 1);
+                async.complete();
+            }));
+    }
+
+    // ===== Send Message via REST =====
+
+    @Test
+    public void Given_MainContainerRunning_When_MessageSentViaRest_Then_Returns201AndStreams(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        JsonObject payload = new JsonObject()
+            .put("performative", "INFORM")
+            .put("sender", "rest-sender@jade-main")
+            .put("receivers", new JsonArray().add("ams@jade-main"))
+            .put("content", "hello from rest api test")
+            .put("conversationId", "conv-rest-test-1");
+
+        // Act
+        client.post(REST_PORT, "localhost", "/api/messages")
+            .sendJsonObject(payload)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(201, response.statusCode());
+                JsonObject body = response.bodyAsJsonObject();
+                context.assertEquals("Message sent", body.getString("message"));
+                context.assertEquals("INFORM", body.getString("performative"));
+                context.assertEquals("conv-rest-test-1", body.getString("conversationId"));
+                async.complete();
+            }));
+    }
 }

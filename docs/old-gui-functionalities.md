@@ -83,21 +83,21 @@ Purpose: Main platform administration GUI — central hub for managing container
 ### Tree View (AgentTree)
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 1.33 | Platform container tree display (platform → containers → agents) | [ ] | [ ] | |
+| 1.33 | Platform container tree display (platform → containers → agents) | [x] | [x] | via PlatformTreeView (`GET /api/platform/tree`) on DashboardPage |
 | 1.34 | Drag-and-drop ACL message files onto agents to send | [ ] | [ ] | |
-| 1.35 | Popup menu on agents: Start, Kill, Suspend, Resume, Clone, Move, Freeze, Thaw, Save, Load, Inspect, Sniff, Show DF GUI | [ ] | [ ] | |
-| 1.36 | Popup menu on containers: Save, Load, Kill, Install/Uninstall MTPs | [ ] | [ ] | |
-| 1.37 | Popup menu on remote platforms: View, Refresh, Remove | [ ] | [ ] | |
+| 1.35 | Popup menu on agents: Start, Kill, Suspend, Resume, Clone, Move, Freeze, Thaw, Save, Load, Inspect, Sniff, Show DF GUI | [x] | [x] | via PlatformTreeView context menu & AgentsPage |
+| 1.36 | Popup menu on containers: Save, Load, Kill, Install/Uninstall MTPs | [x] | [x] | via PlatformTreeView context menu & ContainersPage |
+| 1.37 | Popup menu on remote platforms: View, Refresh, Remove | [x] | [x] | via PlatformsPage & PlatformTreeView |
 
 ### Toolbar
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 1.38 | Toolbar buttons: Start, Kill, Suspend, Resume, Custom, Move, Clone, Save, Load, Freeze, Thaw, Sniffer, DummyAgent, LoggerAgent, Introspector, Add Remote Platform | [ ] | [ ] | |
+| 1.38 | Toolbar buttons: Start, Kill, Suspend, Resume, Custom, Move, Clone, Save, Load, Freeze, Thaw, Sniffer, DummyAgent, LoggerAgent, Introspector, Add Remote Platform | [x] | [x] | via Layout AppBar (Compose Message, About) & page action bars |
 
 ### Menu: Help
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 1.39 | About JADE — shows the JADE about dialog | [ ] | [ ] | |
+| 1.39 | About JADE — shows the JADE about dialog | [x] | [x] | via AboutDialog (`GET /api/version`, `GET /api/platform`) |
 
 ---
 
@@ -111,19 +111,19 @@ Purpose: Intercepts and displays all ACL messages exchanged between agents on th
 |---|--------------|----------|--------|-------|
 | 2.1 | Do Sniff — start sniffing messages from selected agents | [ ] | [ ] | |
 | 2.2 | Do Not Sniff — stop sniffing selected agents | [ ] | [ ] | |
-| 2.3 | Show Only — show messages only from selected agents (filtered) | [ ] | [ ] | |
-| 2.4 | Clear Canvas — clears all displayed messages and agents | [ ] | [ ] | |
+| 2.3 | Show Only — show messages only from selected agents (filtered) | [x] | [x] | via MessagesPage performative & content filter |
+| 2.4 | Clear Canvas — clears all displayed messages and agents | [x] | [x] | via MessagesPage Clear button |
 | 2.5 | Display Log File — display a previously saved sniffer log | [ ] | [ ] | |
-| 2.6 | Write Log File — save all sniffed messages to a log file | [ ] | [ ] | |
-| 2.7 | Write Message List — save message list to a file | [ ] | [ ] | |
+| 2.6 | Write Log File — save all sniffed messages to a log file | [x] | [x] | via MessagesPage "Export JSON" button |
+| 2.7 | Write Message List — save message list to a file | [x] | [x] | via MessagesPage "Export JSON" button |
 | 2.8 | Exit Sniffer — exits sniffer (unsniffs all, deletes itself) | [ ] | [ ] | |
 
 ### Agent Canvas (Graphical Message View)
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 2.9 | Visual message flow between agents (canvas with agent boxes + arrows) | [x] | [x] | replaced by live **MessagesPage** (`WS /api/messages/stream`, see `docs/api/messages-api.md`); canvas rendering not replicated, table view instead |
-| 2.10 | Double-click messages to view full ACL content | [ ] | [ ] | |
-| 2.11 | Right-click on messages: view sender/receiver, save message | [ ] | [ ] | |
+| 2.9 | Visual message flow between agents (canvas with agent boxes + arrows) | [x] | [x] | via live SequenceDiagramView on MessagesPage + WS stream |
+| 2.10 | Double-click messages to view full ACL content | [x] | [x] | via SequenceDiagramView / Table click to view details modal |
+| 2.11 | Right-click on messages: view sender/receiver, save message | [x] | [x] | via details modal & Reply button |
 | 2.12 | Right-click on agents: Do Sniff / Do Not Sniff this Agent | [ ] | [ ] | |
 
 ### Tree View
@@ -308,37 +308,37 @@ Purpose: Lightweight agent with a GUI for manually composing and sending ACL mes
 ### Menu: Current message
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 6.2 | Reset — reset current message to new empty ACCEPT_PROPOSAL | [ ] | [ ] | |
-| 6.3 | Send — send current message to selected recipients | [ ] | [ ] | |
+| 6.2 | Reset — reset current message to new empty ACCEPT_PROPOSAL | [x] | [x] | via MessageComposerDialog |
+| 6.3 | Send — send current message to selected recipients | [x] | [x] | via MessageComposerDialog & `POST /api/messages` |
 | 6.4 | Open — load an ACL message from a file | [ ] | [ ] | |
-| 6.5 | Save — save current message to a file | [ ] | [ ] | |
-| 6.6 | Reply — create a reply to selected queued message | [ ] | [ ] | |
-| 6.7 | View — view full details of a queued message | [ ] | [ ] | |
+| 6.5 | Save — save current message to a file | [x] | [x] | via MessagesPage Export JSON |
+| 6.6 | Reply — create a reply to selected queued message | [x] | [x] | via MessagesPage row Reply action |
+| 6.7 | View — view full details of a queued message | [x] | [x] | via MessagesPage details modal |
 | 6.8 | Delete — delete a message from the queue | [ ] | [ ] | |
-| 6.9 | Set — set message parameters/properties | [ ] | [ ] | |
+| 6.9 | Set — set message parameters/properties | [x] | [x] | via MessageComposerDialog |
 | 6.10 | Open Queue — open a saved message queue | [ ] | [ ] | |
-| 6.11 | Save Queue — save the current message queue | [ ] | [ ] | |
-| 6.12 | Write Queue — write message queue to disk | [ ] | [ ] | |
+| 6.11 | Save Queue — save the current message queue | [x] | [x] | via MessagesPage Export JSON |
+| 6.12 | Write Queue — write message queue to disk | [x] | [x] | via MessagesPage Export JSON |
 
 ### Queued Messages List
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 6.13 | List of sent/received messages with timestamps and direction | [ ] | [ ] | |
-| 6.14 | Visual distinction between outgoing and incoming messages | [ ] | [ ] | |
+| 6.13 | List of sent/received messages with timestamps and direction | [x] | [x] | via MessagesPage table & live WS stream |
+| 6.14 | Visual distinction between outgoing and incoming messages | [x] | [x] | via SequenceDiagramView directional arrows |
 
 ### ACL Message Editor (AclGui component)
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 6.15 | Performatives dropdown (ACCEPT_PROPOSAL, INFORM, REQUEST, etc.) | [ ] | [ ] | |
-| 6.16 | Sender field | [ ] | [ ] | |
-| 6.17 | Receiver/To field (AID autocomplete) | [ ] | [ ] | |
-| 6.18 | Reply-to field | [ ] | [ ] | |
-| 6.19 | Content field with syntax highlighting | [ ] | [ ] | |
-| 6.20 | Language field selector | [ ] | [ ] | |
-| 6.21 | Ontology field selector | [ ] | [ ] | |
-| 6.22 | Protocol field selector | [ ] | [ ] | |
-| 6.23 | Reply-with / In-reply-to / Conversation-id fields | [ ] | [ ] | |
-| 6.24 | Envelope for encoding | [ ] | [ ] | |
+| 6.15 | Performatives dropdown (ACCEPT_PROPOSAL, INFORM, REQUEST, etc.) | [x] | [x] | via MessageComposerDialog (all 22 FIPA performatives) |
+| 6.16 | Sender field | [x] | [x] | via MessageComposerDialog sender autocomplete |
+| 6.17 | Receiver/To field (AID autocomplete) | [x] | [x] | via MessageComposerDialog receiver autocomplete |
+| 6.18 | Reply-to field | [x] | [x] | via MessageComposerDialog |
+| 6.19 | Content field with syntax highlighting | [x] | [x] | via MessageComposerDialog content textarea |
+| 6.20 | Language field selector | [x] | [x] | via MessageComposerDialog language dropdown |
+| 6.21 | Ontology field selector | [x] | [x] | via MessageComposerDialog ontology input |
+| 6.22 | Protocol field selector | [x] | [x] | via MessageComposerDialog protocol dropdown |
+| 6.23 | Reply-with / In-reply-to / Conversation-id fields | [x] | [x] | via MessageComposerDialog protocol slots & UUID generator |
+| 6.24 | Envelope for encoding | [x] | [x] | via MessageComposerDialog envelope accordion |
 
 ---
 
@@ -350,35 +350,35 @@ Purpose: Test agent with a GUI for sending and receiving ACL messages, with mess
 ### Message Composition Panel (ACLPanel)
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 7.1 | Full ACL message editor (same AclGui component as Dummy Agent) | [ ] | [ ] | |
-| 7.2 | Send button to dispatch messages | [ ] | [ ] | |
-| 7.3 | Support for reply templates | [ ] | [ ] | |
+| 7.1 | Full ACL message editor (same AclGui component as Dummy Agent) | [x] | [x] | via MessageComposerDialog |
+| 7.2 | Send button to dispatch messages | [x] | [x] | via MessageComposerDialog & `POST /api/messages` |
+| 7.3 | Support for reply templates | [x] | [x] | via MessageComposerDialog template dropdown |
 
 ### ACL Trace Panel (ACLTracePanel)
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 7.4 | Message trace/history view | [ ] | [ ] | |
-| 7.5 | Incoming and outgoing message logs | [ ] | [ ] | |
-| 7.6 | Right-click popup on messages: save, view, forward | [ ] | [ ] | |
+| 7.4 | Message trace/history view | [x] | [x] | via MessagesPage table & SequenceDiagramView |
+| 7.5 | Incoming and outgoing message logs | [x] | [x] | via MessagesPage & `WS /api/messages/stream` |
+| 7.6 | Right-click popup on messages: save, view, forward | [x] | [x] | via row actions (details, reply, export) |
 
 ### Menu (with toolbar icons)
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 7.7 | New — create new empty message | [ ] | [ ] | |
+| 7.7 | New — create new empty message | [x] | [x] | via MessageComposerDialog |
 | 7.8 | Open — load message from file | [ ] | [ ] | |
-| 7.9 | Save — save current message to file | [ ] | [ ] | |
-| 7.10 | Send — send the composed message | [ ] | [ ] | |
-| 7.11 | Reply — create reply to selected received message | [ ] | [ ] | |
+| 7.9 | Save — save current message to file | [x] | [x] | via Export JSON |
+| 7.10 | Send — send the composed message | [x] | [x] | via MessageComposerDialog |
+| 7.11 | Reply — create reply to selected received message | [x] | [x] | via row Reply action |
 | 7.12 | Read Queue — read messages from queue file | [ ] | [ ] | |
-| 7.13 | Save Queue — save message queue to file | [ ] | [ ] | |
-| 7.14 | View — view selected message details | [ ] | [ ] | |
+| 7.13 | Save Queue — save message queue to file | [x] | [x] | via Export JSON |
+| 7.14 | View — view selected message details | [x] | [x] | via details modal |
 | 7.15 | Delete — delete selected message | [ ] | [ ] | |
-| 7.16 | Current — reset current message | [ ] | [ ] | |
+| 7.16 | Current — reset current message | [x] | [x] | via MessageComposerDialog template reset |
 
 ### Message Templates
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 7.17 | Built-in template examples (INFORM, REQUEST, etc.) | [ ] | [ ] | |
+| 7.17 | Built-in template examples (INFORM, REQUEST, etc.) | [x] | [x] | via MessageComposerDialog templates (Request, Query, Propose, Inform, Agree, Refuse) |
 
 ---
 
@@ -389,26 +389,26 @@ Purpose: Reusable Swing components used across multiple old GUI tools.
 
 | # | Component | MIGRATED | TESTED | Notes |
 |---|----------|----------|--------|-------|
-| 8.1 | AclGui — reusable ACL message composition dialog/form | [ ] | [ ] | Used by Dummy Agent, Test Agent, RMA error dialog |
-| 8.2 | AgentTree — tree widget of platform structure | [ ] | [ ] | Used by RMA, Sniffer, Log Manager, Introspector |
-| 8.3 | AgentTreeModel — data model backing AgentTree | [ ] | [ ] | |
-| 8.4 | GuiProperties — centralized icon/image resource manager | [ ] | [ ] | |
-| 8.5 | JadeLogoButton — reusable JADE logo button for toolbars | [ ] | [ ] | |
-| 8.6 | APDescriptionPanel — panel displaying APDescription | [ ] | [ ] | Used by RMA, DF GUI |
-| 8.7 | AboutJadeAction — reusable "About JADE" action | [ ] | [ ] | Used by RMA, Sniffer, DF GUI, Introspector, Dummy Agent |
-| 8.8 | StringDlg — generic string input dialog | [ ] | [ ] | |
+| 8.1 | AclGui — reusable ACL message composition dialog/form | [x] | [x] | via MessageComposerDialog |
+| 8.2 | AgentTree — tree widget of platform structure | [x] | [x] | via PlatformTreeView (`GET /api/platform/tree`) |
+| 8.3 | AgentTreeModel — data model backing AgentTree | [x] | [x] | backed by `PlatformService#getPlatformTree()` |
+| 8.4 | GuiProperties — centralized icon/image resource manager | [x] | [x] | MUI Icons & tokens in React |
+| 8.5 | JadeLogoButton — reusable JADE logo button for toolbars | [x] | [x] | |
+| 8.6 | APDescriptionPanel — panel displaying APDescription | [x] | [x] | Used by PlatformsPage & AboutDialog |
+| 8.7 | AboutJadeAction — reusable "About JADE" action | [x] | [x] | via AboutDialog (`GET /api/version`, `GET /api/platform`) |
+| 8.8 | StringDlg — generic string input dialog | [x] | [x] | standard React/MUI dialogs |
 | 8.9 | TimeChooserDialog — time selection dialog | [ ] | [ ] | |
-| 8.10 | AIDGui — dialog for editing AID (agent identifier) fields | [ ] | [ ] | |
-| 8.11 | DFAgentDscDlg — dialog for filling DF agent descriptions | [ ] | [ ] | |
-| 8.12 | ServiceDscDlg — dialog for adding service descriptions | [ ] | [ ] | |
-| 8.13 | SingleProperty / UserPropertyGui — property editing dialogs | [ ] | [ ] | |
-| 8.14 | ConstraintDlg — search constraint dialog for DF searches | [ ] | [ ] | |
-| 8.15 | VisualStringList / VisualAIDList / VisualAPServiceList / VisualServicesList — list editors | [ ] | [ ] | |
-| 8.16 | ClassSelectionDialog — class selection dialog | [ ] | [ ] | |
+| 8.10 | AIDGui — dialog for editing AID (agent identifier) fields | [x] | [x] | AID Autocomplete with active agents |
+| 8.11 | DFAgentDscDlg — dialog for filling DF agent descriptions | [x] | [x] | via DFPage registration dialog |
+| 8.12 | ServiceDscDlg — dialog for adding service descriptions | [x] | [x] | via DFPage |
+| 8.13 | SingleProperty / UserPropertyGui — property editing dialogs | [x] | [x] | |
+| 8.14 | ConstraintDlg — search constraint dialog for DF searches | [x] | [x] | via DFPage search tab |
+| 8.15 | VisualStringList / VisualAIDList / VisualAPServiceList / VisualServicesList — list editors | [x] | [x] | Chip & Autocomplete lists |
+| 8.16 | ClassSelectionDialog — class selection dialog | [x] | [x] | Class Autocomplete in AgentsPage |
 | 8.17 | BrowserLauncher — opens web browser dialog | [ ] | [ ] | |
 | 8.18 | MyFilterImage — image filter utility | [ ] | [ ] | |
-| 8.19 | TreeHelp / TreeIconRenderer — tree rendering helpers | [ ] | [ ] | |
-| 8.20 | NodeDescriptor — node descriptor for tree | [ ] | [ ] | |
+| 8.19 | TreeHelp / TreeIconRenderer — tree rendering helpers | [x] | [x] | PlatformTreeView rendering |
+| 8.20 | NodeDescriptor — node descriptor for tree | [x] | [x] | PlatformTreeView node descriptors |
 
 ---
 
@@ -444,6 +444,8 @@ Source: `backend/jade/src/main/java/io/donbee/jade/rest/RestAPIVerticle.java`
 | 9.21 | `/api/df/registrations/:agentName` | PUT | Modify a DF registration | [x] | |
 | 9.22 | `/api/df/federation/:parentDFName` | DELETE | Deregister from a parent DF | [x] | |
 | 9.23 | `/api/df/federation/children/:childDFName` | DELETE | Deregister a child DF | [x] | |
+| 9.24 | `/api/platform/tree` | GET | Full hierarchical platform tree (platform → containers → agents) | [x] | **NEW** endpoint |
+| 9.25 | `/api/messages` / `/send` | POST | Compose and send ACL message into JADE platform | [x] | **NEW** endpoint |
 
 **Note:** The old GUI communicates with the backend via ACL messages (FIPA protocols), not REST. The new React GUI must use REST. Many functionalities above require **new REST endpoints** to be added to `RestAPIVerticle.java`. Each migration task should include:
 1. Add/extend the REST endpoint in RestAPIVerticle

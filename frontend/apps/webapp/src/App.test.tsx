@@ -15,7 +15,19 @@ vi.mock('shared/api/factory', () => ({
       health: mockHealthCheck,
       getInfo: mockGetPlatformInfo,
       shutdown: mockShutdown,
-      version: vi.fn(),
+      version: vi.fn().mockResolvedValue({ version: '1.0', revision: 'r1', date: '2026' }),
+      getTree: vi.fn().mockResolvedValue({
+        platformID: 'jade-main',
+        containers: [],
+        remotePlatforms: [],
+      }),
+    },
+    agents: {
+      list: vi.fn().mockResolvedValue({ agents: [] }),
+    },
+    messages: {
+      send: vi.fn(),
+      recent: vi.fn().mockResolvedValue({ messages: [], total: 0, dropped: 0 }),
     },
   },
 }));

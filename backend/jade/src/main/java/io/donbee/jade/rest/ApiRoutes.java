@@ -17,6 +17,7 @@ public final class ApiRoutes {
 
     // Platform
     public static final String PLATFORM = "/api/platform";
+    public static final String PLATFORM_TREE = "/api/platform/tree";
     public static final String PLATFORM_SHUTDOWN = "/api/platform/shutdown";
 
     // Containers
@@ -55,6 +56,8 @@ public final class ApiRoutes {
     public static final String SCENARIO_INSTANCE_BY_NAME = "/api/scenarios/instances/:name";
 
     // Messages (live ACL traffic)
+    public static final String MESSAGES = "/api/messages";
+    public static final String MESSAGES_SEND = "/api/messages/send";
     public static final String MESSAGES_RECENT = "/api/messages/recent";
     public static final String MESSAGES_STREAM = "/api/messages/stream";
     public static final String MESSAGES_BY_ID = "/api/messages/:id";
