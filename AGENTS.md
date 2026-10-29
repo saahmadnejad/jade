@@ -5,7 +5,8 @@
 ```bash
 # Backend (Java 21; full JDK required — see JDK gotcha)
 cd backend && mvn package -DskipTests
-cd backend && mvn test                         # full suite across all modules
+cd backend && mvn test                         # full suite across all modules (thread runtime)
+cd backend && mvn test -Djade.agent-runtime=verticle # full suite on verticle runtime
 cd backend && mvn test -pl llm -am             # single module (-am builds deps)
 cd backend && mvn -pl jade -am compile && mvn -pl jade exec:java -Dexec.mainClass="io.donbee.jade.Boot"
 
@@ -24,7 +25,7 @@ docker compose up -d --build                   # podman compose works identicall
 
 **JDK gotcha**: distro `java-21-openjdk` is often JRE-only (no `javac`) and breaks `mvn` with cryptic errors. `JAVA_HOME` must point at a full JDK 21 that has `bin/javac` (SDKMAN JDKs qualify).
 
-**CI gate** (`.github/workflows/ci.yml`): backend `mvn -B test` + `mvn -B package -DskipTests`; frontend `pnpm install --frozen-lockfile`, `shared` + `webapp` `test:run`, `webapp` `typecheck` + `lint`; both docker images build + entrypoint smoke. `real-it.yml` is nightly/manual only (real tokens, `-Dit.real=true` + `TOKENROUTER_API_KEY`). The backend has no linter/formatter plugin (no checkstyle/spotless).
+**CI gate** (`.github/workflows/ci.yml`): backend `mvn -B test -Djade.agent-runtime=<thread|verticle>` (matrix across both runtimes) + `mvn -B package -DskipTests`; frontend `pnpm install --frozen-lockfile`, `shared` + `webapp` `test:run`, `webapp` `typecheck` + `lint`; both docker images build + entrypoint smoke. `real-it.yml` is nightly/manual only (real tokens, `-Dit.real=true` + `TOKENROUTER_API_KEY`). The backend has no linter/formatter plugin (no checkstyle/spotless).
 
 **Gotchas**
 - Workspace root is `frontend/` (pnpm 9, `packageManager` pinned; lockfile `frontend/pnpm-lock.yaml`). Its `dev`/`build` scripts run `pnpm --filter frontend ...` — "frontend" matches no package (`webapp`, `shared`), so they silently do nothing. Always `--filter webapp` or `--filter shared`.
@@ -41,7 +42,8 @@ docker compose up -d --build                   # podman compose works identicall
 
 ### Backend (`io.donbee.jade.*`, Maven multi-module: `fipa`, `llm`, `jade`, `examples`)
 - **Entry**: `io.donbee.jade.Boot` (CLI args → `ProfileImpl` → `Runtime`). `-conf` loads a properties file; `-name/-container/-host/-port/-rest-port` override defaults.
-- **REST API**: Vert.x 5.1.6 on :8080 (configurable `-rest-port`), Main Container only. `RestAPIVerticle` only configures the router (SRP); ~46 routes under `/api/*`. Paths in `ApiRoutes`; one dedicated class per route group in `rest/handler/`.
+- **REST API & Vert.x**: Vert.x 5.1.6 singleton per JVM (`Runtime.getVertxInstance()`) shared by `RestAPIVerticle` on :8080 (configurable `-rest-port`, Main Container only) and agent verticles. `RestAPIVerticle` only configures the router (SRP); ~46 routes under `/api/*`. Paths in `ApiRoutes`; one dedicated class per route group in `rest/handler/`.
+- **Agent runtimes** (ADR-0004): `-agent-runtime thread|verticle` (default `thread`, override via CLI flag, profile, or `-Djade.agent-runtime=...`). `thread` = one persistent virtual thread per agent running `Agent.run()`. `verticle` = `AgentVerticle` per agent (`c/<container>/a/<name>`); cooperative per-step dispatch via `Agent.drain()` (WIP-counter serial gate on pooled virtual threads); idle agents park zero threads.
 - **Blocking rule**: handlers that do blocking work (LLM probes, container create/kill, synchronized service calls) MUST wrap it in `ctx.vertx().executeBlocking(...)` — the event loop froze 130s+ before this rule existed (`ScenarioStartHandler`/`ScenarioStopHandler` are the working exemplars).
 - **Main Container** = AMS + DF + REST API + all UI/REST-deployed agents. Each scenario instance gets its own container `scenario-<name>`.
 - **Message capture**: `MessageTrafficMonitor` (`io.donbee.jade.core.messaging`) is a static JVM-wide registry; `MessagingService.CommandSourceSink` calls `MessageTrafficMonitor.notifyMessage(...)` for every dispatched ACL message across ALL in-process containers. Streamed via `WS /api/messages/stream`.
@@ -76,13 +78,14 @@ docker compose up -d --build                   # podman compose works identicall
 ## Key files
 - `backend/jade/src/main/java/io/donbee/jade/Boot.java` — CLI entry
 - `backend/jade/src/main/java/io/donbee/jade/core/Profile*.java` — config constants
+- `backend/jade/src/main/java/io/donbee/jade/core/AgentVerticle.java` — verticle agent wrapper (ADR-0004)
 - `backend/jade/src/main/java/io/donbee/jade/rest/RestAPIVerticle.java` — route wiring
 - `backend/jade/src/main/java/io/donbee/jade/rest/ApiRoutes.java` — route path constants
 - `backend/jade/src/main/java/io/donbee/jade/rest/handler/` — one class per route group
 - `backend/llm/src/main/java/io/donbee/llm/{Brain,LangChain4jBrain,BashTool,FallbackBrain}.java`
 - `backend/examples/.../devteam/` — dev-team scenario
 - `frontend/packages/shared/src/api/factory.ts` — `api` client builder
-- `backend/examples/README.md`, `docs/api/` — scenario + REST schema docs
+- `backend/examples/README.md`, `docs/api/`, `docs/adr/0004-agent-as-verticle.md` — scenario, REST schema, and verticle runtime docs
 
 ## Standards
 - **Tests** (mandatory for new code): Arrange-Act-Assert, Given-When-Then naming. Backend: `src/test/java` mirrors, Mockito-mocked handlers, `RestAPIIntegrationTest` for endpoints. Frontend: `apps/webapp/src/**/*.test.tsx`, `packages/shared/tests/*.test.ts`; mock axios/API factory; cover success/error/disabled/validation states.
