@@ -3,9 +3,10 @@ import { render, screen, waitFor, fireEvent, within } from '@testing-library/rea
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import MessagesPage from './MessagesPage';
 
-const { mockRecent, mockGetById } = vi.hoisted(() => ({
+const { mockRecent, mockGetById, mockToolsStart } = vi.hoisted(() => ({
   mockRecent: vi.fn(),
   mockGetById: vi.fn(),
+  mockToolsStart: vi.fn(),
 }));
 
 const mockUnsubscribe = vi.fn();
@@ -21,7 +22,7 @@ vi.mock('shared/api/factory', () => ({
       resume: vi.fn(), freeze: vi.fn(), thaw: vi.fn(), clone: vi.fn(), move: vi.fn(),
       save: vi.fn(), load: vi.fn(), changeOwnership: vi.fn(), registerRemote: vi.fn(),
     },
-    tools: { start: vi.fn() },
+    tools: { start: mockToolsStart },
     platforms: { list: vi.fn(), add: vi.fn(), fetch: vi.fn(), remove: vi.fn(), getDescription: vi.fn(), refreshDescription: vi.fn(), listAgents: vi.fn() },
     df: {
       listRegistrations: vi.fn(), register: vi.fn(), deregister: vi.fn(),
@@ -199,5 +200,16 @@ describe('MessagesPage', () => {
 
     // --- Assert ---
     expect(mockUnsubscribe).toHaveBeenCalled();
+  });
+
+  it('Given Swing Sniffer button clicked, When clicked, Then calls api.tools.start with sniffer', async () => {
+    mockRecent.mockResolvedValue({ messages: [], total: 0, dropped: 0 });
+    mockToolsStart.mockResolvedValue({ message: 'sniffer started', agent: 'sniffer@main' });
+    renderWithTheme(<MessagesPage />);
+    const btn = screen.getByRole('button', { name: /Swing Sniffer/i });
+    fireEvent.click(btn);
+    await waitFor(() => {
+      expect(mockToolsStart).toHaveBeenCalledWith('sniffer', { container: 'Main-Container' });
+    });
   });
 });

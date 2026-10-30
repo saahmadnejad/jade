@@ -6,6 +6,7 @@ import AgentsPage from './AgentsPage';
 const {
   mockList, mockKill, mockSuspend, mockResume, mockFreeze, mockThaw, mockDeploy,
   mockClone, mockMove, mockChangeOwnership, mockSave, mockLoad, mockRegisterRemote,
+  mockToolsStart,
 } = vi.hoisted(() => ({
   mockList: vi.fn(),
   mockKill: vi.fn(),
@@ -20,6 +21,7 @@ const {
   mockSave: vi.fn(),
   mockLoad: vi.fn(),
   mockRegisterRemote: vi.fn(),
+  mockToolsStart: vi.fn(),
 }));
 
 vi.mock('shared/api/factory', () => ({
@@ -42,7 +44,7 @@ vi.mock('shared/api/factory', () => ({
       changeOwnership: mockChangeOwnership,
       registerRemote: mockRegisterRemote,
     },
-    tools: { start: vi.fn() },
+    tools: { start: mockToolsStart },
     platforms: { list: vi.fn(), add: vi.fn(), fetch: vi.fn(), remove: vi.fn(), getDescription: vi.fn(), refreshDescription: vi.fn(), listAgents: vi.fn() },
     df: {
       listRegistrations: vi.fn(),
@@ -368,6 +370,30 @@ describe('AgentsPage', () => {
       // Assert
       const registerButton = screen.getByRole('button', { name: 'Register' });
       expect(registerButton).toBeDisabled();
+    });
+  });
+
+  describe('Legacy Swing GUI comparison launches', () => {
+    it('Given Swing DummyAgent button clicked, When clicked, Then calls api.tools.start with dummy', async () => {
+      mockList.mockResolvedValue({ agents: [] });
+      mockToolsStart.mockResolvedValue({ message: 'dummy started', agent: 'dummy@main' });
+      renderWithTheme(<AgentsPage />);
+      const btn = await screen.findByRole('button', { name: /Swing DummyAgent/i });
+      fireEvent.click(btn);
+      await waitFor(() => {
+        expect(mockToolsStart).toHaveBeenCalledWith('dummy', { container: 'Main-Container' });
+      });
+    });
+
+    it('Given Swing Introspector button clicked, When clicked, Then calls api.tools.start with introspector', async () => {
+      mockList.mockResolvedValue({ agents: [] });
+      mockToolsStart.mockResolvedValue({ message: 'introspector started', agent: 'introspector@main' });
+      renderWithTheme(<AgentsPage />);
+      const btn = await screen.findByRole('button', { name: /Swing Introspector/i });
+      fireEvent.click(btn);
+      await waitFor(() => {
+        expect(mockToolsStart).toHaveBeenCalledWith('introspector', { container: 'Main-Container' });
+      });
     });
   });
 });

@@ -7,7 +7,7 @@ const {
   mockListRegistrations, mockRegister, mockDeregister, mockSearch,
   mockModifyRegistration, mockGetParents, mockGetChildren,
   mockFederate, mockDeregisterParent, mockDeregisterChild,
-  mockGetStatus, mockGetDescription, mockRefresh,
+  mockGetStatus, mockGetDescription, mockRefresh, mockToolsStart,
 } = vi.hoisted(() => ({
   mockListRegistrations: vi.fn(),
   mockRegister: vi.fn(),
@@ -22,6 +22,7 @@ const {
   mockGetStatus: vi.fn(),
   mockGetDescription: vi.fn(),
   mockRefresh: vi.fn(),
+  mockToolsStart: vi.fn(),
 }));
 
 vi.mock('shared/api/factory', () => ({
@@ -29,7 +30,7 @@ vi.mock('shared/api/factory', () => ({
     platform: { health: vi.fn(), getInfo: vi.fn(), shutdown: vi.fn(), version: vi.fn() },
     containers: { list: vi.fn(), get: vi.fn(), kill: vi.fn(), save: vi.fn(), load: vi.fn(), listMTPs: vi.fn(), installMTP: vi.fn(), uninstallMTP: vi.fn() },
     agents: { list: vi.fn(), get: vi.fn(), deploy: vi.fn(), kill: vi.fn(), suspend: vi.fn(), resume: vi.fn(), freeze: vi.fn(), thaw: vi.fn(), clone: vi.fn(), move: vi.fn(), save: vi.fn(), load: vi.fn(), changeOwnership: vi.fn(), registerRemote: vi.fn() },
-    tools: { start: vi.fn() },
+    tools: { start: mockToolsStart },
     platforms: { list: vi.fn(), add: vi.fn(), fetch: vi.fn(), remove: vi.fn(), getDescription: vi.fn(), refreshDescription: vi.fn(), listAgents: vi.fn() },
     df: {
       listRegistrations: mockListRegistrations,
@@ -377,6 +378,17 @@ describe('DFPage', () => {
     });
     await waitFor(() => {
       expect(screen.getByText('DF Description')).toBeInTheDocument();
+    });
+  });
+
+  it('Given Swing DF GUI button clicked, When clicked, Then calls api.tools.start with df-gui', async () => {
+    mockBasicData();
+    mockToolsStart.mockResolvedValue({ message: 'df-gui started', agent: 'df-gui@main' });
+    renderWithTheme(<DFPage />);
+    const btn = await screen.findByRole('button', { name: /Swing DF GUI/i });
+    fireEvent.click(btn);
+    await waitFor(() => {
+      expect(mockToolsStart).toHaveBeenCalledWith('df-gui', { container: 'Main-Container' });
     });
   });
 });

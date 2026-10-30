@@ -18,6 +18,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
 import AddIcon from '@mui/icons-material/Add';
 import SendIcon from '@mui/icons-material/Send';
+import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows';
 import { api, type AgentInfo, type AgentListResponse } from 'shared';
 import TopProgressBar from '../components/TopProgressBar';
 import PageHeader from '../components/PageHeader';
@@ -206,6 +207,15 @@ export default function AgentsPage() {
     }
   };
 
+  const handleLaunchSwing = async (tool: string) => {
+    try {
+      await api.tools.start(tool, { container: 'Main-Container' });
+      notify(`Launched legacy Swing ${tool} GUI for comparison`, 'success');
+    } catch (e: any) {
+      notify(`Failed to launch ${tool} - ${e.message || 'unknown error'}`, 'error');
+    }
+  };
+
   if (loading) {
     return <TopProgressBar />;
   }
@@ -216,6 +226,28 @@ export default function AgentsPage() {
         title="Agents"
         actions={
           <>
+            <Tooltip title="Launch legacy Swing DummyAgent on desktop for side-by-side comparison">
+              <Button
+                variant="outlined"
+                color="inherit"
+                size="small"
+                startIcon={<DesktopWindowsIcon />}
+                onClick={() => handleLaunchSwing('dummy')}
+              >
+                Swing DummyAgent
+              </Button>
+            </Tooltip>
+            <Tooltip title="Launch legacy Swing Introspector on desktop for side-by-side comparison">
+              <Button
+                variant="outlined"
+                color="inherit"
+                size="small"
+                startIcon={<DesktopWindowsIcon />}
+                onClick={() => handleLaunchSwing('introspector')}
+              >
+                Swing Introspector
+              </Button>
+            </Tooltip>
             <Tooltip title="Refresh">
               <IconButton onClick={fetchAgents} disabled={loading}>
                 <RefreshIcon />

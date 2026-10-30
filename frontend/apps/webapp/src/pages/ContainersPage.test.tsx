@@ -5,7 +5,7 @@ import ContainersPage from './ContainersPage';
 
 const {
   mockList, mockKill, mockSave, mockLoad,
-  mockListMtp, mockInstallMtp, mockUninstallMtp,
+  mockListMtp, mockInstallMtp, mockUninstallMtp, mockToolsStart,
 } = vi.hoisted(() => ({
   mockList: vi.fn(),
   mockKill: vi.fn(),
@@ -14,6 +14,7 @@ const {
   mockListMtp: vi.fn(),
   mockInstallMtp: vi.fn(),
   mockUninstallMtp: vi.fn(),
+  mockToolsStart: vi.fn(),
 }));
 
 vi.mock('shared/api/factory', () => ({
@@ -30,7 +31,7 @@ vi.mock('shared/api/factory', () => ({
       uninstallMTP: mockUninstallMtp,
     },
     agents: { list: vi.fn(), get: vi.fn(), deploy: vi.fn(), kill: vi.fn(), suspend: vi.fn(), resume: vi.fn(), freeze: vi.fn(), thaw: vi.fn(), clone: vi.fn(), move: vi.fn(), save: vi.fn(), load: vi.fn(), changeOwnership: vi.fn(), registerRemote: vi.fn() },
-    tools: { start: vi.fn() },
+    tools: { start: mockToolsStart },
     platforms: { list: vi.fn(), add: vi.fn(), fetch: vi.fn(), remove: vi.fn(), getDescription: vi.fn(), refreshDescription: vi.fn(), listAgents: vi.fn() },
     df: {
       listRegistrations: vi.fn(),
@@ -247,6 +248,17 @@ describe('ContainersPage', () => {
     // Assert
     await waitFor(() => {
       expect(mockInstallMtp).toHaveBeenCalledWith('Node1', { className: 'io.jade.mtp.MPI', address: 'jades://10.0.0.1:1099' });
+    });
+  });
+
+  it('Given Swing Log Manager button clicked, When clicked, Then calls api.tools.start with logger', async () => {
+    mockList.mockResolvedValue({ containers: [] });
+    mockToolsStart.mockResolvedValue({ message: 'logger started', agent: 'logger@main' });
+    renderWithTheme(<ContainersPage />);
+    const btn = await screen.findByRole('button', { name: /Swing Log Manager/i });
+    fireEvent.click(btn);
+    await waitFor(() => {
+      expect(mockToolsStart).toHaveBeenCalledWith('logger', { container: 'Main-Container' });
     });
   });
 });
