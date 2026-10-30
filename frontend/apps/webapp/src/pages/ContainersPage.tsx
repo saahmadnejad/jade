@@ -12,6 +12,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
 import AddIcon from '@mui/icons-material/Add';
 import TuneIcon from '@mui/icons-material/Tune';
+import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows';
 import {
   api,
   type ContainerInfo,
@@ -139,6 +140,15 @@ export default function ContainersPage() {
     }
   };
 
+  const handleLaunchSwing = async (tool: string) => {
+    try {
+      await api.tools.start(tool, { container: 'Main-Container' });
+      notify(`Launched legacy Swing ${tool} GUI for comparison`, 'success');
+    } catch (e: any) {
+      notify(`Failed to launch ${tool} - ${e.message || 'unknown error'}`, 'error');
+    }
+  };
+
   if (loading) {
     return <TopProgressBar />;
   }
@@ -148,11 +158,24 @@ export default function ContainersPage() {
       <PageHeader
         title="Containers"
         actions={
-          <Tooltip title="Refresh">
-            <IconButton onClick={fetchContainers} disabled={loading}>
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
+          <>
+            <Tooltip title="Launch legacy Swing Log Manager on desktop for side-by-side comparison">
+              <Button
+                variant="outlined"
+                color="inherit"
+                size="small"
+                startIcon={<DesktopWindowsIcon />}
+                onClick={() => handleLaunchSwing('logger')}
+              >
+                Swing Log Manager
+              </Button>
+            </Tooltip>
+            <Tooltip title="Refresh">
+              <IconButton onClick={fetchContainers} disabled={loading}>
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+          </>
         }
       />
 

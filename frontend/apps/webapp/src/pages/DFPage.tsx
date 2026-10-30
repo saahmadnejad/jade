@@ -11,6 +11,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SearchIcon from '@mui/icons-material/Search';
 import PublicIcon from '@mui/icons-material/Public';
+import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows';
 import {
   api,
   type DFRegistrationInfo,
@@ -280,12 +281,32 @@ export default function DFPage() {
     return <TopProgressBar />;
   }
 
+  const handleLaunchSwing = async (tool: string) => {
+    try {
+      await api.tools.start(tool, { container: 'Main-Container' });
+      notify(`Launched legacy Swing ${tool} GUI for comparison`, 'success');
+    } catch (e: any) {
+      notify(`Failed to launch ${tool} - ${e.message || 'unknown error'}`, 'error');
+    }
+  };
+
   return (
     <Box>
       <PageHeader
         title="Directory Facilitator (DF)"
         actions={
           <>
+            <Tooltip title="Launch legacy Swing DF GUI on desktop for side-by-side comparison">
+              <Button
+                variant="outlined"
+                color="inherit"
+                size="small"
+                startIcon={<DesktopWindowsIcon />}
+                onClick={() => handleLaunchSwing('df-gui')}
+              >
+                Swing DF GUI
+              </Button>
+            </Tooltip>
             <Tooltip title="Refresh DF Data">
               <IconButton onClick={handleRefreshDf} disabled={loading || !!actionLoading}>
                 <RefreshIcon />

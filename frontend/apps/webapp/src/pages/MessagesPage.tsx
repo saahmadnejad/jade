@@ -16,6 +16,7 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import SendIcon from '@mui/icons-material/Send';
 import ReplyIcon from '@mui/icons-material/Reply';
+import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows';
 import { api, subscribeMessagesStream, type AclMessageEvent, type MessagesStreamStatus } from 'shared';
 import PageHeader from '../components/PageHeader';
 import EmptyState from '../components/EmptyState';
@@ -139,12 +140,32 @@ export default function MessagesPage() {
     setComposerOpen(true);
   };
 
+  const handleLaunchSwing = async (tool: string) => {
+    try {
+      await api.tools.start(tool, { container: 'Main-Container' });
+      notify(`Launched legacy Swing ${tool} GUI for comparison`, 'success');
+    } catch (e: any) {
+      notify(`Failed to launch ${tool} - ${e.message || 'unknown error'}`, 'error');
+    }
+  };
+
   return (
     <Box>
       <PageHeader
         title="Messages"
         actions={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Tooltip title="Launch legacy Swing Sniffer GUI for side-by-side comparison">
+              <Button
+                variant="outlined"
+                color="inherit"
+                size="small"
+                startIcon={<DesktopWindowsIcon />}
+                onClick={() => handleLaunchSwing('sniffer')}
+              >
+                Swing Sniffer
+              </Button>
+            </Tooltip>
             <Button
               variant="contained"
               size="small"
