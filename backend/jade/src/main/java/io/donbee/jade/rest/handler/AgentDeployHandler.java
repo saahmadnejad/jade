@@ -53,8 +53,11 @@ public class AgentDeployHandler implements Handler<RoutingContext> {
         } else {
             args = new Object[0];
         }
+        String targetContainer = body.getString("container");
         try {
-            PlatformService.AgentInfo agent = service.deployAgent(name, className, args);
+            PlatformService.AgentInfo agent = (targetContainer != null && !targetContainer.trim().isEmpty())
+                ? service.deployAgent(name, className, args, targetContainer.trim())
+                : service.deployAgent(name, className, args);
             ctx.response()
                 .setStatusCode(201)
                 .putHeader("Content-Type", "application/json")
@@ -70,7 +73,11 @@ public class AgentDeployHandler implements Handler<RoutingContext> {
         } catch (IllegalStateException e) {
             ctx.fail(403, e);
         } catch (Exception e) {
-            ctx.fail(500, e);
+            if (e.getMessage() != null && e.getMessage().contains("Name-clash")) {
+                ctx.fail(409, e);
+            } else {
+                ctx.fail(500, e);
+            }
         }
     }
 }

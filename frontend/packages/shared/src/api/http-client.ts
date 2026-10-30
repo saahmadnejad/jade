@@ -23,6 +23,18 @@ class AxiosHttpClient implements HttpClient {
       baseURL,
       headers: { 'Content-Type': 'application/json' },
     });
+
+    this.client.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        const serverError = error.response?.data?.error;
+        const details = error.response?.data?.details;
+        if (serverError) {
+          error.message = details ? `${serverError} (${details})` : serverError;
+        }
+        return Promise.reject(error);
+      }
+    );
   }
 
   get<T>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {

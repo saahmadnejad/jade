@@ -293,7 +293,7 @@ public class JadesPlatformService implements PlatformService, DFService {
             requestMsg.setSender(impl.getAMS());
             requestMsg.addReceiver(impl.getAMS());
             requestMsg.setLanguage(FIPANames.ContentLanguage.FIPA_SL0);
-            requestMsg.setOntology(codec.getName());
+            requestMsg.setOntology(ontology.getName());
             requestMsg.setReplyByDate(new java.util.Date(System.currentTimeMillis() + 10000L));
             cm.fillContent(requestMsg, a);
 
@@ -508,12 +508,24 @@ public class JadesPlatformService implements PlatformService, DFService {
         if (aid == null) {
             throw new IllegalArgumentException("Agent not found: " + agentName);
         }
-        io.donbee.jade.domain.FIPAAgentManagement.Modify modifyAct = new io.donbee.jade.domain.FIPAAgentManagement.Modify();
-        AMSAgentDescription amsd = new AMSAgentDescription();
-        amsd.setName(aid);
-        amsd.setOwnership(newOwner);
-        modifyAct.setDescription(amsd);
-        sendAMSAction(modifyAct, "Modify");
+        try {
+            AMSAgentDescription amsd = agentManager.getAMSDescription(aid);
+            if (amsd == null) {
+                amsd = new AMSAgentDescription();
+                amsd.setName(aid);
+                amsd.setState(AMSAgentDescription.ACTIVE);
+            }
+            amsd.setOwnership(newOwner);
+            agentManager.amsModify(amsd);
+        } catch (Exception e) {
+            io.donbee.jade.domain.FIPAAgentManagement.Modify modifyAct = new io.donbee.jade.domain.FIPAAgentManagement.Modify();
+            AMSAgentDescription amsd = new AMSAgentDescription();
+            amsd.setName(aid);
+            amsd.setState(AMSAgentDescription.ACTIVE);
+            amsd.setOwnership(newOwner);
+            modifyAct.setDescription(amsd);
+            sendAMSAction(modifyAct, "Modify", io.donbee.jade.domain.FIPAAgentManagement.FIPAManagementOntology.getInstance());
+        }
     }
 
     @Override
@@ -630,18 +642,51 @@ public class JadesPlatformService implements PlatformService, DFService {
         return result;
     }
 
-    private AID findAgentByName(String agentName) {        ContainerID cid = impl.getID();
-        io.donbee.jade.util.leap.List agents;
-        try {
-            agents = agentManager.containerAgents(cid);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to list agents: " + e.getMessage(), e);
-        }
-        for (int i = 0; i < agents.size(); i++) {
-            AID aid = (AID) agents.get(i);
-            if (aid.getName().equals(agentName) || aid.getLocalName().equals(agentName)) {
-                return aid;
+    private AID findAgentByName(String agentName) {
+        if (agentManager == null || agentName == null) return null;
+        String local = agentName.contains("@") ? agentName.substring(0, agentName.indexOf('@')) : agentName;
+
+        // Check local container first
+        ContainerID localCid = impl.getID();
+        if (localCid != null) {
+            try {
+                io.donbee.jade.util.leap.List agents = agentManager.containerAgents(localCid);
+                if (agents != null) {
+                    for (int i = 0; i < agents.size(); i++) {
+                        AID aid = (AID) agents.get(i);
+                        if (aid.getName().equalsIgnoreCase(agentName)
+                            || aid.getLocalName().equalsIgnoreCase(agentName)
+                            || aid.getLocalName().equalsIgnoreCase(local)) {
+                            return aid;
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
             }
+        }
+
+        // Check other containers if available
+        try {
+            ContainerID[] cids = agentManager.containerIDs();
+            if (cids != null) {
+                for (ContainerID cid : cids) {
+                    if (cid == null || (localCid != null && cid.getName().equals(localCid.getName()))) {
+                        continue;
+                    }
+                    io.donbee.jade.util.leap.List agents = agentManager.containerAgents(cid);
+                    if (agents != null) {
+                        for (int i = 0; i < agents.size(); i++) {
+                            AID aid = (AID) agents.get(i);
+                            if (aid.getName().equalsIgnoreCase(agentName)
+                                || aid.getLocalName().equalsIgnoreCase(agentName)
+                                || aid.getLocalName().equalsIgnoreCase(local)) {
+                                return aid;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
         }
         return null;
     }
