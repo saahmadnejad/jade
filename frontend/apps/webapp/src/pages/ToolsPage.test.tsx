@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import { BrowserRouter } from 'react-router-dom';
 import ToolsPage from './ToolsPage';
 
 const { mockStart } = vi.hoisted(() => ({
@@ -39,7 +40,9 @@ const renderWithTheme = (ui: React.ReactElement) => {
   return render(
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {ui}
+      <BrowserRouter>
+        {ui}
+      </BrowserRouter>
     </ThemeProvider>
   );
 };
