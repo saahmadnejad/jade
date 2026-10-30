@@ -3,7 +3,7 @@ import {
   Box, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton,
   Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Button, Autocomplete,
+  TextField, Button, Autocomplete, Typography, Chip,
 } from '@mui/material';
 import DeleteForeverIcon from '@mui/icons-material/Delete';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -26,13 +26,22 @@ import EmptyState from '../components/EmptyState';
 import MessageComposerDialog from '../components/MessageComposerDialog';
 import NotificationSnackbar, { useFeedback } from '../components/NotificationSnackbar';
 
-const COMMON_AGENT_CLASSES = [
+export const COMMON_AGENT_CLASSES = [
   'io.donbee.jade.core.Agent',
   'io.donbee.jade.tools.DummyAgent.DummyAgent',
   'io.donbee.jade.tools.sniffer.Sniffer',
   'io.donbee.jade.tools.introspector.Introspector',
   'io.donbee.jade.tools.testagent.TestAgent',
   'io.donbee.jade.tools.logging.LogManagerAgent',
+];
+
+export const OWNERSHIP_PRESETS = [
+  'admin',
+  'system',
+  'user',
+  'developer',
+  'guest',
+  'NONE',
 ];
 
 export default function AgentsPage() {
@@ -102,7 +111,8 @@ export default function AgentsPage() {
       notify(`${agentName}: ${actionName} completed`, 'success');
       fetchAgents();
     } catch (e: any) {
-      notify(`${agentName}: ${actionName} failed - ${e.message || 'unknown error'}`, 'error');
+      const errorMsg = e.response?.data?.error || e.message || 'unknown error';
+      notify(`${agentName}: ${actionName} failed - ${errorMsg}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -126,7 +136,8 @@ export default function AgentsPage() {
       setDeployForm({ name: '', class: '', args: '', container: 'Main-Container' });
       fetchAgents();
     } catch (e: any) {
-      notify(`Deploy failed - ${e.message || 'unknown error'}`, 'error');
+      const errorMsg = e.response?.data?.error || e.message || 'unknown error';
+      notify(`Deploy failed - ${errorMsg}`, 'error');
     }
   };
 
@@ -176,7 +187,8 @@ export default function AgentsPage() {
       setSaveForm({ repository: 'default' });
       fetchAgents();
     } catch (e: any) {
-      notify(`Save failed - ${e.message || 'unknown error'}`, 'error');
+      const errorMsg = e.response?.data?.error || e.message || 'unknown error';
+      notify(`Save failed - ${errorMsg}`, 'error');
     }
   };
 
@@ -188,7 +200,8 @@ export default function AgentsPage() {
       setLoadForm({ name: '', container: 'Main-Container', repository: 'default' });
       fetchAgents();
     } catch (e: any) {
-      notify(`Load failed - ${e.message || 'unknown error'}`, 'error');
+      const errorMsg = e.response?.data?.error || e.message || 'unknown error';
+      notify(`Load failed - ${errorMsg}`, 'error');
     }
   };
 
@@ -203,7 +216,8 @@ export default function AgentsPage() {
       setRegisterRemoteForm({ aid: '', addresses: '' });
       fetchAgents();
     } catch (e: any) {
-      notify(`Register remote failed - ${e.message || 'unknown error'}`, 'error');
+      const errorMsg = e.response?.data?.error || e.message || 'unknown error';
+      notify(`Register remote failed - ${errorMsg}`, 'error');
     }
   };
 
@@ -212,7 +226,8 @@ export default function AgentsPage() {
       await api.tools.start(tool, { container: 'Main-Container' });
       notify(`Launched legacy Swing ${tool} GUI for comparison`, 'success');
     } catch (e: any) {
-      notify(`Failed to launch ${tool} - ${e.message || 'unknown error'}`, 'error');
+      const errorMsg = e.response?.data?.error || e.message || 'unknown error';
+      notify(`Failed to launch ${tool} - ${errorMsg}`, 'error');
     }
   };
 
@@ -370,7 +385,11 @@ export default function AgentsPage() {
                       <IconButton
                         color="primary"
                         size="small"
-                        onClick={() => { setCloneTarget(agent.name); setCloneOpen(true); }}
+                        onClick={() => {
+                          setCloneTarget(agent.name);
+                          setCloneForm({ newName: '', container: '' });
+                          setCloneOpen(true);
+                        }}
                       >
                         <ContentCopyIcon fontSize="small" />
                       </IconButton>
@@ -379,7 +398,11 @@ export default function AgentsPage() {
                       <IconButton
                         color="primary"
                         size="small"
-                        onClick={() => { setMoveTarget(agent.name); setMoveOpen(true); }}
+                        onClick={() => {
+                          setMoveTarget(agent.name);
+                          setMoveForm({ targetContainer: containers.find(c => c !== agent.container) || '' });
+                          setMoveOpen(true);
+                        }}
                       >
                         <MergeIcon fontSize="small" />
                       </IconButton>
@@ -388,7 +411,11 @@ export default function AgentsPage() {
                       <IconButton
                         color="primary"
                         size="small"
-                        onClick={() => { setOwnershipTarget(agent.name); setOwnershipOpen(true); }}
+                        onClick={() => {
+                          setOwnershipTarget(agent.name);
+                          setOwnershipForm({ ownership: agent.ownership || 'user' });
+                          setOwnershipOpen(true);
+                        }}
                       >
                         <LockIcon fontSize="small" />
                       </IconButton>
@@ -397,7 +424,11 @@ export default function AgentsPage() {
                       <IconButton
                         color="primary"
                         size="small"
-                        onClick={() => { setSaveTarget(agent.name); setSaveOpen(true); }}
+                        onClick={() => {
+                          setSaveTarget(agent.name);
+                          setSaveForm({ repository: 'default' });
+                          setSaveOpen(true);
+                        }}
                       >
                         <SaveIcon fontSize="small" />
                       </IconButton>
@@ -541,14 +572,49 @@ export default function AgentsPage() {
       <Dialog open={ownershipOpen} onClose={() => setOwnershipOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Change Agent Ownership</DialogTitle>
         <DialogContent>
-          <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, pt: 1}}>
-            <TextField
-              label="New Ownership"
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {ownershipTarget && (
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                <Typography variant="body2" color="text.secondary">Target Agent:</Typography>
+                <Chip size="small" label={ownershipTarget} />
+                <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>Current Owner:</Typography>
+                <Chip
+                  size="small"
+                  label={agents.find(a => a.name === ownershipTarget)?.ownership || 'NONE'}
+                  variant="outlined"
+                />
+              </Box>
+            )}
+
+            <Autocomplete
+              freeSolo
+              options={OWNERSHIP_PRESETS}
               value={ownershipForm.ownership}
-              onChange={e => setOwnershipForm({ ...ownershipForm, ownership: e.target.value })}
-              fullWidth
-              helperText="New ownership identifier for the agent"
+              onChange={(_, val) => setOwnershipForm({ ownership: val || '' })}
+              onInputChange={(_, val) => setOwnershipForm({ ownership: val })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="New Ownership"
+                  fullWidth
+                  helperText="Select a standard role preset or enter custom owner identity"
+                />
+              )}
             />
+
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Typography variant="caption" color="text.secondary">Standard Role Presets:</Typography>
+              {OWNERSHIP_PRESETS.map((preset) => (
+                <Chip
+                  key={preset}
+                  label={preset}
+                  size="small"
+                  onClick={() => setOwnershipForm({ ownership: preset })}
+                  variant={ownershipForm.ownership === preset ? 'filled' : 'outlined'}
+                  color="primary"
+                />
+              ))}
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions>
