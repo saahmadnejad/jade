@@ -106,4 +106,36 @@ describe('SequenceDiagramView', () => {
 
     expect(screen.getByText(/Please choose 2 or more agents above/i)).toBeInTheDocument();
   });
+
+  it('Given probe messages (df_req), When rendered, Then hides df_req agents by default and toggles on click', () => {
+    const onSelect = vi.fn();
+    const msgsWithProbe: AclMessageEvent[] = [
+      ...sampleMessages,
+      {
+        id: '99',
+        timestamp: '2026-10-31T10:00:03Z',
+        sender: 'df_req_1793472666006_14',
+        receiver: 'df',
+        performative: 'REQUEST',
+        protocol: 'fipa-request',
+        ontology: 'FIPA-Agent-Management',
+        content: '(search ...)',
+      },
+    ];
+
+    renderWithTheme(
+      <SequenceDiagramView
+        messages={msgsWithProbe}
+        onSelectMessage={onSelect}
+      />
+    );
+
+    // By default, probe is hidden
+    expect(screen.queryByText(/df_req_1793472666006_14/)).not.toBeInTheDocument();
+    expect(screen.getByText('Probes Hidden (df_req)')).toBeInTheDocument();
+
+    // Toggle probes on
+    fireEvent.click(screen.getByText('Probes Hidden (df_req)'));
+    expect(screen.getByText(/df_req_1793472666006_14/)).toBeInTheDocument();
+  });
 });

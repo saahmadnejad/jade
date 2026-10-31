@@ -24,6 +24,12 @@ interface SequenceDiagramViewProps {
   availableAgents?: string[];
 }
 
+const isInternalProbe = (name: string): boolean => {
+  if (!name) return false;
+  const local = name.includes('@') ? name.split('@')[0] : name;
+  return local.startsWith('df_req_') || local.startsWith('ams_req_');
+};
+
 const performativeColors: Record<string, 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'> = {
   INFORM: 'info',
   REQUEST: 'primary',
@@ -44,21 +50,27 @@ export default function SequenceDiagramView({
   onSelectMessage,
   availableAgents: initialAvailableAgents,
 }: SequenceDiagramViewProps) {
+  const [hideProbes, setHideProbes] = useState(true);
+
   // Discover all unique agents from messages and their message counts
   const { allAgents, agentCounts } = useMemo(() => {
     const counts: Record<string, number> = {};
     const set = new Set<string>();
 
     if (initialAvailableAgents) {
-      initialAvailableAgents.forEach((a) => set.add(a));
+      initialAvailableAgents.forEach((a) => {
+        if (!hideProbes || !isInternalProbe(a)) {
+          set.add(a);
+        }
+      });
     }
 
     messages.forEach((m) => {
-      if (m.sender) {
+      if (m.sender && (!hideProbes || !isInternalProbe(m.sender))) {
         set.add(m.sender);
         counts[m.sender] = (counts[m.sender] || 0) + 1;
       }
-      if (m.receiver) {
+      if (m.receiver && (!hideProbes || !isInternalProbe(m.receiver))) {
         set.add(m.receiver);
         counts[m.receiver] = (counts[m.receiver] || 0) + 1;
       }
@@ -66,7 +78,7 @@ export default function SequenceDiagramView({
 
     const sortedAgents = Array.from(set).sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
     return { allAgents: sortedAgents, agentCounts: counts };
-  }, [messages, initialAvailableAgents]);
+  }, [messages, initialAvailableAgents, hideProbes]);
 
   // Selected agents whose lifelines to display
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
@@ -168,6 +180,15 @@ export default function SequenceDiagramView({
               <Button size="small" color="inherit" onClick={handleClearSelection} startIcon={<ClearIcon />}>
                 Clear
               </Button>
+
+              <Chip
+                label={hideProbes ? "Probes Hidden (df_req)" : "Probes Visible"}
+                size="small"
+                variant={hideProbes ? "outlined" : "filled"}
+                color={hideProbes ? "default" : "warning"}
+                onClick={() => setHideProbes((p) => !p)}
+                sx={{ cursor: 'pointer' }}
+              />
 
               <FormControl size="small" sx={{ minWidth: 120 }}>
                 <InputLabel>Show</InputLabel>
