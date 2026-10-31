@@ -4,6 +4,7 @@ import {
   TableHead, TableRow, Paper, Chip, IconButton, Tooltip, TextField,
   Button, InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions,
   ToggleButtonGroup, ToggleButton, FormControl, InputLabel, Select, MenuItem,
+  FormControlLabel, Switch,
 } from '@mui/material';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -41,11 +42,18 @@ const formatTime = (isoTimestamp: string): string => {
   }
 };
 
+export const isInternalProbe = (name: string): boolean => {
+  if (!name) return false;
+  const local = name.includes('@') ? name.split('@')[0] : name;
+  return local.startsWith('df_req_') || local.startsWith('ams_req_');
+};
+
 export default function MessagesPage() {
   const [messages, setMessages] = useState<AclMessageEvent[]>([]);
   const [paused, setPaused] = useState(false);
   const [filter, setFilter] = useState('');
   const [perfFilter, setPerfFilter] = useState('ALL');
+  const [hideInternalProbes, setHideInternalProbes] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'sequence'>('table');
   const [status, setStatus] = useState<MessagesStreamStatus>('connecting');
   const [detailsMessage, setDetailsMessage] = useState<AclMessageEvent | null>(null);
@@ -111,6 +119,10 @@ export default function MessagesPage() {
   const visibleMessages = useMemo(() => {
     const needle = filter.trim().toLowerCase();
     return messages.filter((m) => {
+      if (hideInternalProbes && (isInternalProbe(m.sender) || isInternalProbe(m.receiver))) {
+        return false;
+      }
+
       const matchesSearch =
         !needle ||
         m.sender.toLowerCase().includes(needle) ||
@@ -123,7 +135,7 @@ export default function MessagesPage() {
 
       return matchesSearch && matchesPerf;
     });
-  }, [messages, filter, perfFilter]);
+  }, [messages, filter, perfFilter, hideInternalProbes]);
 
   const clearAll = useCallback(() => {
     setMessages([]);
@@ -226,10 +238,10 @@ export default function MessagesPage() {
 
       {/* Filter and View Mode Controls */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1, maxWidth: 640 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1, maxWidth: 880, flexWrap: 'wrap' }}>
           <TextField
             size="small"
-            fullWidth
+            sx={{ flexGrow: 1, minWidth: 200 }}
             placeholder="Filter by agent or content..."
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -244,7 +256,7 @@ export default function MessagesPage() {
             }}
           />
 
-          <FormControl size="small" sx={{ minWidth: 180 }}>
+          <FormControl size="small" sx={{ minWidth: 170 }}>
             <InputLabel>Performative</InputLabel>
             <Select
               value={perfFilter}
@@ -257,6 +269,19 @@ export default function MessagesPage() {
               ))}
             </Select>
           </FormControl>
+
+          <Tooltip title="Hide transient one-shot HTTP request agents (e.g. df_req_*) created by REST polling">
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={hideInternalProbes}
+                  onChange={(e) => setHideInternalProbes(e.target.checked)}
+                />
+              }
+              label={<Typography variant="caption" sx={{ userSelect: 'none' }}>Hide internal probes (df_req)</Typography>}
+            />
+          </Tooltip>
         </Box>
 
         <ToggleButtonGroup

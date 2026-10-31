@@ -212,4 +212,37 @@ describe('MessagesPage', () => {
       expect(mockToolsStart).toHaveBeenCalledWith('sniffer', { container: 'Main-Container' });
     });
   });
+
+  it('Given df_req probe messages arrive, When hide probes is active, Then probe message is hidden from table until switch toggled', async () => {
+    mockRecent.mockResolvedValue({
+      messages: [
+        sampleMessage,
+        {
+          id: 'probe-1',
+          timestamp: '2026-08-25T10:15:32.000Z',
+          sender: 'df_req_1793472666006_14',
+          receiver: 'df',
+          performative: 'request',
+          protocol: 'fipa-request',
+          ontology: 'FIPA-Agent-Management',
+          content: '(search)',
+        },
+      ],
+      total: 2,
+      dropped: 0,
+    });
+
+    renderWithTheme(<MessagesPage />);
+    await waitFor(() => expect(screen.getByText('manager')).toBeInTheDocument());
+
+    // By default, df_req probe is filtered out
+    expect(screen.queryByText('df_req_1793472666006_14')).not.toBeInTheDocument();
+
+    // Toggle switch off to show internal probes
+    const switchEl = screen.getByRole('switch');
+    fireEvent.click(switchEl);
+
+    // Now df_req probe appears
+    await waitFor(() => expect(screen.getByText('df_req_1793472666006_14')).toBeInTheDocument());
+  });
 });
