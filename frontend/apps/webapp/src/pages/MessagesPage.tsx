@@ -51,6 +51,7 @@ export default function MessagesPage() {
   const [detailsMessage, setDetailsMessage] = useState<AclMessageEvent | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [replyTarget, setReplyTarget] = useState<AclMessageEvent | null>(null);
+  const [platformAgents, setPlatformAgents] = useState<string[]>([]);
   const { feedback, notify, close } = useFeedback();
 
   const pausedRef = useRef(paused);
@@ -58,6 +59,19 @@ export default function MessagesPage() {
 
   useEffect(() => {
     let cancelled = false;
+
+    try {
+      const p = api.agents?.list?.({ detail: false });
+      if (p && typeof p.then === 'function') {
+        p.then((res: any) => {
+          if (!cancelled && res?.agents) {
+            setPlatformAgents(res.agents.map((a: any) => a.name));
+          }
+        }).catch(() => {});
+      }
+    } catch {
+      // Ignore if agents list unavailable
+    }
 
     const loadHistory = async () => {
       try {
@@ -274,6 +288,7 @@ export default function MessagesPage() {
         <SequenceDiagramView
           messages={visibleMessages}
           onSelectMessage={openDetails}
+          availableAgents={platformAgents}
         />
       ) : (
         <TableContainer component={Paper} sx={{ maxHeight: '65vh' }}>
