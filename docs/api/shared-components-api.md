@@ -16,44 +16,29 @@ Used by: RMA, Sniffer, Log Manager, Introspector
 ```json
 {
   "platformID": "jade-main",
-  "localPlatform": {
-    "name": "jade-main",
-    "containers": [
-      {
-        "name": "Main-Container",
-        "address": "127.0.0.1:1099",
-        "isMain": true,
-        "agents": [
-          {
-            "name": "rma@jade-main",
-            "class": "io.donbee.jade.tools.rma.rma",
-            "state": "ACTIVE",
-            "ownership": "init",
-            "addresses": ["jades://127.0.0.1:1099/jade-tools"],
-            "isFrozen": false,
-            "isSuspended": false
-          },
-          {
-            "name": "ams@jade-main",
-            "class": "io.donbee.jade.domain.ams",
-            "state": "ACTIVE",
-            "ownership": "init",
-            "addresses": [],
-            "isFrozen": false,
-            "isSuspended": false
-          }
-        ],
-        "mtps": ["jade.mtp.tcl.TcpMTP"]
-      }
-    ]
-  },
+  "containers": [
+    {
+      "name": "Main-Container",
+      "address": "127.0.0.1",
+      "port": "1099",
+      "isMain": true,
+      "agents": [
+        {
+          "name": "rma",
+          "state": "ACTIVE",
+          "ownership": "init",
+          "container": "Main-Container",
+          "addresses": ["http://127.0.0.1:7778/acc"]
+        }
+      ]
+    }
+  ],
   "remotePlatforms": [
     {
-      "ams": "ams@remote-platform",
       "name": "remote-platform",
-      "addresses": [],
-      "services": [],
-      "agents": []
+      "ams": "ams@remote-platform",
+      "addresses": ["192.168.1.10:1099"],
+      "services": ["FIPAAgentManagement"]
     }
   ]
 }

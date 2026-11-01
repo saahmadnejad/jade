@@ -6,7 +6,15 @@ export interface VersionInfo {
   version: string;
   revision: string;
   date: string;
+  jvm?: string;
+  os?: string;
 }
+
+export const isInternalProbe = (name: string): boolean => {
+  if (!name) return false;
+  const local = name.includes('@') ? name.split('@')[0] : name;
+  return local.startsWith('df_req_') || local.startsWith('ams_req_');
+};
 
 export interface PlatformInfo {
   platformID: string;

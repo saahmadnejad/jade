@@ -79,4 +79,37 @@ describe('MessageComposerDialog', () => {
       expect(onSent).toHaveBeenCalled();
     });
   });
+
+  it('Given empty receivers, Then Send button is disabled', () => {
+    render(
+      <ThemeProvider theme={theme}>
+        <MessageComposerDialog open={true} onClose={() => {}} />
+      </ThemeProvider>
+    );
+
+    const sendBtn = screen.getByRole('button', { name: 'Send Message' });
+    expect(sendBtn).toBeDisabled();
+  });
+
+  it('Given API send failure, When Send clicked, Then renders error alert', async () => {
+    mockSend.mockRejectedValue(new Error('Agent unreachable'));
+
+    render(
+      <ThemeProvider theme={theme}>
+        <MessageComposerDialog
+          open={true}
+          onClose={() => {}}
+          initialReceiver="receiver-agent@jade-main"
+          initialContent="Hello"
+        />
+      </ThemeProvider>
+    );
+
+    const sendBtn = screen.getByRole('button', { name: 'Send Message' });
+    fireEvent.click(sendBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Agent unreachable')).toBeInTheDocument();
+    });
+  });
 });

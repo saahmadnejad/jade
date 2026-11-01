@@ -57,11 +57,11 @@ Purpose: Main platform administration GUI — central hub for managing container
 ### Menu: Tools — Tool Launch
 | # | Functionality | MIGRATED | TESTED | Notes |
 |---|--------------|----------|--------|-------|
-| 1.19 | Start Sniffer — launch Sniffer tool on selected container | [x] | [x] | via ToolsPage |
-| 1.20 | Start DummyAgent — launch Dummy Agent tool | [x] | [x] | via ToolsPage |
-| 1.21 | Start LoggerAgent — launch Log Manager agent | [x] | [x] | via ToolsPage |
-| 1.22 | Start IntrospectAgent — launch Introspector on selected agent | [x] | [x] | via ToolsPage |
-| 1.23 | Show DFGui — open the Directory Facilitator GUI | [x] | [x] | via ToolsPage |
+| 1.19 | Start Sniffer — launch Sniffer tool on selected container | [x] | [x] | via MessagesPage (Swing Sniffer button) |
+| 1.20 | Start DummyAgent — launch Dummy Agent tool | [x] | [x] | via AgentsPage (Swing DummyAgent button) |
+| 1.21 | Start LoggerAgent — launch Log Manager agent | [x] | [x] | via ContainersPage (Swing Log Manager button) |
+| 1.22 | Start IntrospectAgent — launch Introspector on selected agent | [x] | [x] | via AgentsPage (Swing Introspector button) |
+| 1.23 | Show DFGui — open the Directory Facilitator GUI | [x] | [x] | via DFPage (Swing DF GUI button) |
 
 ### Menu: Remote Platforms
 | # | Functionality | MIGRATED | TESTED | Notes |
@@ -333,7 +333,7 @@ Purpose: Lightweight agent with a GUI for manually composing and sending ACL mes
 | 6.16 | Sender field | [x] | [x] | via MessageComposerDialog sender autocomplete |
 | 6.17 | Receiver/To field (AID autocomplete) | [x] | [x] | via MessageComposerDialog receiver autocomplete |
 | 6.18 | Reply-to field | [x] | [x] | via MessageComposerDialog |
-| 6.19 | Content field with syntax highlighting | [x] | [x] | via MessageComposerDialog content textarea |
+| 6.19 | Content field with syntax highlighting | [ ] | [ ] | plain textarea currently |
 | 6.20 | Language field selector | [x] | [x] | via MessageComposerDialog language dropdown |
 | 6.21 | Ontology field selector | [x] | [x] | via MessageComposerDialog ontology input |
 | 6.22 | Protocol field selector | [x] | [x] | via MessageComposerDialog protocol dropdown |

@@ -31,6 +31,10 @@ public class VersionHandler implements Handler<RoutingContext> {
             resp.put("revision", vm.getRevision());
             resp.put("date", vm.getDate());
         } catch (Exception ignored) {}
+        try {
+            resp.put("jvm", System.getProperty("java.version") + " (" + System.getProperty("java.vendor") + ")");
+            resp.put("os", System.getProperty("os.name") + " " + System.getProperty("os.arch"));
+        } catch (Exception ignored) {}
         ctx.response()
             .setStatusCode(200)
             .putHeader("Content-Type", "application/json")

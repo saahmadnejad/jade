@@ -9,8 +9,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Handler for the message-send endpoint ({@code POST /api/messages} and {@code POST /api/messages/send}).
- * Allows composing and injecting an ACL message into the JADE platform via REST.
+ * Handler for the message-creation endpoint ({@code POST /api/messages}).
+ * Composes and injects an ACL message into the JADE platform via REST.
  *
  * <p><b>Old GUI implementation:</b>
  * In the legacy Swing GUI, message composition was handled by
@@ -39,94 +39,20 @@ public class MessageSendHandler implements Handler<RoutingContext> {
 
         JsonObject body = ctx.body().asJsonObject();
         if (body == null) {
-            ctx.response()
-                .setStatusCode(400)
-                .putHeader("Content-Type", "application/json")
-                .end(new JsonObject().put("error", "Request body must be a valid JSON object").put("code", 400).toBuffer());
+            ctx.fail(400, new IllegalArgumentException("Request body must be a valid JSON object"));
             return;
         }
 
-        // Parse performative
-        int perf = parsePerformative(body.getValue("performative"));
-        if (perf < 0 || perf > 21) {
-            ctx.response()
-                .setStatusCode(400)
-                .putHeader("Content-Type", "application/json")
-                .end(new JsonObject().put("error", "Invalid or missing performative").put("code", 400).toBuffer());
+        ACLMessage msg;
+        try {
+            msg = mapToACLMessage(body);
+        } catch (IllegalArgumentException e) {
+            ctx.fail(400, e);
             return;
         }
 
-        // Parse receivers
         JsonArray receivers = body.getJsonArray("receivers");
-        if (receivers == null || receivers.isEmpty()) {
-            ctx.response()
-                .setStatusCode(400)
-                .putHeader("Content-Type", "application/json")
-                .end(new JsonObject().put("error", "At least one receiver is required").put("code", 400).toBuffer());
-            return;
-        }
-
-        ACLMessage msg = new ACLMessage(perf);
-
-        for (int i = 0; i < receivers.size(); i++) {
-            String r = receivers.getString(i);
-            if (r != null && !r.trim().isEmpty()) {
-                msg.addReceiver(new AID(r.trim(), AID.ISGUID));
-            }
-        }
-
-        // Parse sender
-        String senderStr = body.getString("sender");
-        if (senderStr != null && !senderStr.trim().isEmpty()) {
-            msg.setSender(new AID(senderStr.trim(), AID.ISGUID));
-        }
-
-        // Parse reply-to
-        JsonArray replyTo = body.getJsonArray("replyTo");
-        if (replyTo != null) {
-            for (int i = 0; i < replyTo.size(); i++) {
-                String rt = replyTo.getString(i);
-                if (rt != null && !rt.trim().isEmpty()) {
-                    msg.addReplyTo(new AID(rt.trim(), AID.ISGUID));
-                }
-            }
-        }
-
-        // Content
-        if (body.containsKey("content") && body.getString("content") != null) {
-            msg.setContent(body.getString("content"));
-        }
-
-        // Protocol slots
-        if (body.containsKey("language") && body.getString("language") != null) {
-            msg.setLanguage(body.getString("language"));
-        }
-        if (body.containsKey("ontology") && body.getString("ontology") != null) {
-            msg.setOntology(body.getString("ontology"));
-        }
-        if (body.containsKey("protocol") && body.getString("protocol") != null) {
-            msg.setProtocol(body.getString("protocol"));
-        }
-        if (body.containsKey("conversationId") && body.getString("conversationId") != null) {
-            msg.setConversationId(body.getString("conversationId"));
-        }
-        if (body.containsKey("replyWith") && body.getString("replyWith") != null) {
-            msg.setReplyWith(body.getString("replyWith"));
-        }
-        if (body.containsKey("inReplyTo") && body.getString("inReplyTo") != null) {
-            msg.setInReplyTo(body.getString("inReplyTo"));
-        }
-
-        // User properties
-        JsonObject userProps = body.getJsonObject("userProperties");
-        if (userProps != null) {
-            for (String key : userProps.fieldNames()) {
-                String val = userProps.getString(key);
-                if (val != null) {
-                    msg.addUserDefinedParameter(key, val);
-                }
-            }
-        }
+        int perf = msg.getPerformative();
 
         ctx.vertx().executeBlocking(() -> {
             service.sendMessage(msg);
@@ -149,7 +75,82 @@ public class MessageSendHandler implements Handler<RoutingContext> {
         }).onFailure(err -> ctx.fail(500, err));
     }
 
-    private int parsePerformative(Object val) {
+    static ACLMessage mapToACLMessage(JsonObject body) {
+        int perf = parsePerformative(body.getValue("performative"));
+        if (perf < 0 || perf > 21) {
+            throw new IllegalArgumentException("Invalid or missing performative");
+        }
+
+        JsonArray receivers = body.getJsonArray("receivers");
+        if (receivers == null || receivers.isEmpty()) {
+            throw new IllegalArgumentException("At least one receiver is required");
+        }
+
+        ACLMessage msg = new ACLMessage(perf);
+
+        for (int i = 0; i < receivers.size(); i++) {
+            String r = receivers.getString(i);
+            if (r != null && !r.trim().isEmpty()) {
+                msg.addReceiver(new AID(r.trim(), AID.ISGUID));
+            }
+        }
+
+        if (!msg.getAllReceiver().hasNext()) {
+            throw new IllegalArgumentException("At least one valid non-empty receiver is required");
+        }
+
+        String senderStr = body.getString("sender");
+        if (senderStr != null && !senderStr.trim().isEmpty()) {
+            msg.setSender(new AID(senderStr.trim(), AID.ISGUID));
+        }
+
+        JsonArray replyTo = body.getJsonArray("replyTo");
+        if (replyTo != null) {
+            for (int i = 0; i < replyTo.size(); i++) {
+                String rt = replyTo.getString(i);
+                if (rt != null && !rt.trim().isEmpty()) {
+                    msg.addReplyTo(new AID(rt.trim(), AID.ISGUID));
+                }
+            }
+        }
+
+        if (body.containsKey("content") && body.getString("content") != null) {
+            msg.setContent(body.getString("content"));
+        }
+
+        if (body.containsKey("language") && body.getString("language") != null) {
+            msg.setLanguage(body.getString("language"));
+        }
+        if (body.containsKey("ontology") && body.getString("ontology") != null) {
+            msg.setOntology(body.getString("ontology"));
+        }
+        if (body.containsKey("protocol") && body.getString("protocol") != null) {
+            msg.setProtocol(body.getString("protocol"));
+        }
+        if (body.containsKey("conversationId") && body.getString("conversationId") != null) {
+            msg.setConversationId(body.getString("conversationId"));
+        }
+        if (body.containsKey("replyWith") && body.getString("replyWith") != null) {
+            msg.setReplyWith(body.getString("replyWith"));
+        }
+        if (body.containsKey("inReplyTo") && body.getString("inReplyTo") != null) {
+            msg.setInReplyTo(body.getString("inReplyTo"));
+        }
+
+        JsonObject userProps = body.getJsonObject("userProperties");
+        if (userProps != null) {
+            for (String key : userProps.fieldNames()) {
+                Object val = userProps.getValue(key);
+                if (val != null) {
+                    msg.addUserDefinedParameter(key, String.valueOf(val));
+                }
+            }
+        }
+
+        return msg;
+    }
+
+    private static int parsePerformative(Object val) {
         if (val == null) {
             return -1;
         }
@@ -162,7 +163,6 @@ public class MessageSendHandler implements Handler<RoutingContext> {
             if (perf != -1) {
                 return perf;
             }
-            // Try with hyphen if underscore was used, or vice versa
             perf = ACLMessage.getInteger(str.replace('_', '-'));
             if (perf != -1) {
                 return perf;

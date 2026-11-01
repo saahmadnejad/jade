@@ -18,6 +18,7 @@ import TopProgressBar from '../components/TopProgressBar';
 import PageHeader from '../components/PageHeader';
 import EmptyState from '../components/EmptyState';
 import NotificationSnackbar, { useFeedback } from '../components/NotificationSnackbar';
+import { getErrorMessage } from '../utils/errors';
 
 export default function PlatformsPage() {
   const [platforms, setPlatforms] = useState<RemotePlatformInfo[]>([]);
@@ -59,8 +60,8 @@ export default function PlatformsPage() {
       setAddOpen(false);
       setAddForm({ ams: '', addresses: '' });
       fetchPlatforms();
-    } catch (e: any) {
-      notify(`Add platform failed - ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Add platform failed - ${getErrorMessage(e)}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -74,8 +75,8 @@ export default function PlatformsPage() {
       setAddOpen(false);
       setUrlForm({ url: '' });
       fetchPlatforms();
-    } catch (e: any) {
-      notify(`Fetch platform failed - ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Fetch platform failed - ${getErrorMessage(e)}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -90,8 +91,8 @@ export default function PlatformsPage() {
       await api.platforms.remove(name);
       notify(`Platform '${name}' removed`, 'success');
       fetchPlatforms();
-    } catch (e: any) {
-      notify(`Remove failed - ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Remove failed - ${getErrorMessage(e)}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -103,8 +104,8 @@ export default function PlatformsPage() {
       const desc = await api.platforms.getDescription(name);
       setSelectedPlatform(desc);
       setViewOpen(true);
-    } catch (e: any) {
-      notify(`View description failed - ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`View description failed - ${getErrorMessage(e)}`, 'error');
     } finally {
       setActionLoading(null);
     }

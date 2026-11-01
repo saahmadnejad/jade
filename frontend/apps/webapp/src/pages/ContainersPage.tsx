@@ -24,6 +24,7 @@ import TopProgressBar from '../components/TopProgressBar';
 import PageHeader from '../components/PageHeader';
 import EmptyState from '../components/EmptyState';
 import NotificationSnackbar, { useFeedback } from '../components/NotificationSnackbar';
+import { getErrorMessage } from '../utils/errors';
 
 export default function ContainersPage() {
   const [containers, setContainers] = useState<ContainerInfo[]>([]);
@@ -65,8 +66,8 @@ export default function ContainersPage() {
     try {
       const data: MTPListResponse = await api.containers.listMTPs(containerName);
       setMtps(prev => ({ ...prev, [containerName]: data.mtps || [] }));
-    } catch (e: any) {
-      notify(`Failed to fetch MTPs: ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Failed to fetch MTPs: ${getErrorMessage(e)}`, 'error');
     } finally {
       setMtpsLoading(prev => ({ ...prev, [containerName]: false }));
     }
@@ -79,8 +80,8 @@ export default function ContainersPage() {
       await api.containers.kill(containerName);
       notify(`Container '${containerName}' killed`, 'success');
       fetchContainers();
-    } catch (e: any) {
-      notify(`Kill failed - ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Kill failed - ${getErrorMessage(e)}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -93,8 +94,8 @@ export default function ContainersPage() {
       notify(`Container '${saveTarget}' saved to ${saveForm.repository}`, 'success');
       setSaveOpen(false);
       setSaveForm({ repository: '' });
-    } catch (e: any) {
-      notify(`Save failed - ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Save failed - ${getErrorMessage(e)}`, 'error');
     }
   };
 
@@ -106,8 +107,8 @@ export default function ContainersPage() {
       setLoadOpen(false);
       setLoadForm({ repository: '' });
       fetchContainers();
-    } catch (e: any) {
-      notify(`Load failed - ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Load failed - ${getErrorMessage(e)}`, 'error');
     }
   };
 
@@ -122,8 +123,8 @@ export default function ContainersPage() {
       setMtpInstallOpen(false);
       setMtpForm({ className: '', address: '' });
       fetchMtps(mtpInstallTarget);
-    } catch (e: any) {
-      notify(`MTP install failed - ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`MTP install failed - ${getErrorMessage(e)}`, 'error');
     }
   };
 
@@ -133,8 +134,8 @@ export default function ContainersPage() {
       await api.containers.uninstallMTP(containerName, address);
       notify(`MTP at '${address}' uninstalled from '${containerName}'`, 'success');
       fetchMtps(containerName);
-    } catch (e: any) {
-      notify(`MTP uninstall failed - ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`MTP uninstall failed - ${getErrorMessage(e)}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -144,8 +145,8 @@ export default function ContainersPage() {
     try {
       await api.tools.start(tool, { container: 'Main-Container' });
       notify(`Launched legacy Swing ${tool} GUI for comparison`, 'success');
-    } catch (e: any) {
-      notify(`Failed to launch ${tool} - ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Failed to launch ${tool} - ${getErrorMessage(e)}`, 'error');
     }
   };
 

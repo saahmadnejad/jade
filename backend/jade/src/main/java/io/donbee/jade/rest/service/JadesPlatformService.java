@@ -508,12 +508,20 @@ public class JadesPlatformService implements PlatformService, DFService {
         if (aid == null) {
             throw new IllegalArgumentException("Agent not found: " + agentName);
         }
+        String existingState = AMSAgentDescription.ACTIVE;
+        try {
+            AMSAgentDescription currentDesc = agentManager.getAMSDescription(aid);
+            if (currentDesc != null && currentDesc.getState() != null) {
+                existingState = currentDesc.getState();
+            }
+        } catch (Exception ignored) {
+        }
         try {
             AMSAgentDescription amsd = agentManager.getAMSDescription(aid);
             if (amsd == null) {
                 amsd = new AMSAgentDescription();
                 amsd.setName(aid);
-                amsd.setState(AMSAgentDescription.ACTIVE);
+                amsd.setState(existingState);
             }
             amsd.setOwnership(newOwner);
             agentManager.amsModify(amsd);
@@ -521,7 +529,7 @@ public class JadesPlatformService implements PlatformService, DFService {
             io.donbee.jade.domain.FIPAAgentManagement.Modify modifyAct = new io.donbee.jade.domain.FIPAAgentManagement.Modify();
             AMSAgentDescription amsd = new AMSAgentDescription();
             amsd.setName(aid);
-            amsd.setState(AMSAgentDescription.ACTIVE);
+            amsd.setState(existingState);
             amsd.setOwnership(newOwner);
             modifyAct.setDescription(amsd);
             sendAMSAction(modifyAct, "Modify", io.donbee.jade.domain.FIPAAgentManagement.FIPAManagementOntology.getInstance());
@@ -650,16 +658,9 @@ public class JadesPlatformService implements PlatformService, DFService {
         ContainerID localCid = impl.getID();
         if (localCid != null) {
             try {
-                io.donbee.jade.util.leap.List agents = agentManager.containerAgents(localCid);
-                if (agents != null) {
-                    for (int i = 0; i < agents.size(); i++) {
-                        AID aid = (AID) agents.get(i);
-                        if (aid.getName().equalsIgnoreCase(agentName)
-                            || aid.getLocalName().equalsIgnoreCase(agentName)
-                            || aid.getLocalName().equalsIgnoreCase(local)) {
-                            return aid;
-                        }
-                    }
+                AID found = matchAgentInList(agentManager.containerAgents(localCid), agentName, local);
+                if (found != null) {
+                    return found;
                 }
             } catch (Exception ignored) {
             }
@@ -673,20 +674,27 @@ public class JadesPlatformService implements PlatformService, DFService {
                     if (cid == null || (localCid != null && cid.getName().equals(localCid.getName()))) {
                         continue;
                     }
-                    io.donbee.jade.util.leap.List agents = agentManager.containerAgents(cid);
-                    if (agents != null) {
-                        for (int i = 0; i < agents.size(); i++) {
-                            AID aid = (AID) agents.get(i);
-                            if (aid.getName().equalsIgnoreCase(agentName)
-                                || aid.getLocalName().equalsIgnoreCase(agentName)
-                                || aid.getLocalName().equalsIgnoreCase(local)) {
-                                return aid;
-                            }
-                        }
+                    AID found = matchAgentInList(agentManager.containerAgents(cid), agentName, local);
+                    if (found != null) {
+                        return found;
                     }
                 }
             }
         } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private AID matchAgentInList(io.donbee.jade.util.leap.List agents, String agentName, String local) {
+        if (agents != null) {
+            for (int i = 0; i < agents.size(); i++) {
+                AID aid = (AID) agents.get(i);
+                if (aid.getName().equalsIgnoreCase(agentName)
+                    || aid.getLocalName().equalsIgnoreCase(agentName)
+                    || aid.getLocalName().equalsIgnoreCase(local)) {
+                    return aid;
+                }
+            }
         }
         return null;
     }
@@ -1274,38 +1282,46 @@ public class JadesPlatformService implements PlatformService, DFService {
         }
         ContainerID[] cids = agentManager.containerIDs();
         List<ContainerTreeNode> containerNodes = new ArrayList<>();
-        String mainContainerName = impl.here().getName();
-        for (ContainerID cid : cids) {
-            List<AgentInfo> agents = new ArrayList<>();
-            try {
-                io.donbee.jade.util.leap.List leapAgents = agentManager.containerAgents(cid);
-                for (int i = 0; i < leapAgents.size(); i++) {
-                    AID aid = (AID) leapAgents.get(i);
-                    String state = "UNKNOWN";
-                    String ownership = "";
-                    try {
-                        AMSAgentDescription amsDesc = agentManager.getAMSDescription(aid);
-                        state = amsDesc.getState() != null ? amsDesc.getState() : "UNKNOWN";
-                        ownership = amsDesc.getOwnership() != null ? amsDesc.getOwnership() : "";
-                    } catch (Exception ignored) {
+        String mainContainerName = (impl.here() != null) ? impl.here().getName() : "";
+        if (cids != null) {
+            for (ContainerID cid : cids) {
+                if (cid == null) continue;
+                List<AgentInfo> agents = new ArrayList<>();
+                try {
+                    io.donbee.jade.util.leap.List leapAgents = agentManager.containerAgents(cid);
+                    if (leapAgents != null) {
+                        for (int i = 0; i < leapAgents.size(); i++) {
+                            AID aid = (AID) leapAgents.get(i);
+                            if (aid == null) continue;
+                            String state = "UNKNOWN";
+                            String ownership = "";
+                            try {
+                                AMSAgentDescription amsDesc = agentManager.getAMSDescription(aid);
+                                if (amsDesc != null) {
+                                    state = amsDesc.getState() != null ? amsDesc.getState() : "UNKNOWN";
+                                    ownership = amsDesc.getOwnership() != null ? amsDesc.getOwnership() : "";
+                                }
+                            } catch (Exception ignored) {
+                            }
+                            agents.add(new AgentInfo(
+                                aid.getLocalName(),
+                                state,
+                                ownership,
+                                cid.getName(),
+                                aid.getAllAddresses() != null ? toArray(aid.getAllAddresses()) : new String[0]
+                            ));
+                        }
                     }
-                    agents.add(new AgentInfo(
-                        aid.getLocalName(),
-                        state,
-                        ownership,
-                        cid.getName(),
-                        aid.getAllAddresses() != null ? toArray(aid.getAllAddresses()) : new String[0]
-                    ));
+                } catch (Exception ignored) {
                 }
-            } catch (Exception ignored) {
+                containerNodes.add(new ContainerTreeNode(
+                    cid.getName(),
+                    cid.getAddress(),
+                    cid.getPort(),
+                    cid.getName().equals(mainContainerName),
+                    agents
+                ));
             }
-            containerNodes.add(new ContainerTreeNode(
-                cid.getName(),
-                cid.getAddress(),
-                cid.getPort(),
-                cid.getName().equals(mainContainerName),
-                agents
-            ));
         }
         List<RemotePlatformInfo> remote = new ArrayList<>();
         try {

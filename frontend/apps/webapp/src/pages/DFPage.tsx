@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton,
@@ -21,10 +21,13 @@ import {
   type DfFederateRequest,
   type DFStatusResponse,
   type DFDescriptionResponse,
+  type AgentListResponse,
+  type AgentInfo,
 } from 'shared';
 import TopProgressBar from '../components/TopProgressBar';
 import PageHeader from '../components/PageHeader';
 import NotificationSnackbar, { useFeedback } from '../components/NotificationSnackbar';
+import { getErrorMessage } from '../utils/errors';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -71,7 +74,14 @@ export default function DFPage() {
     parentDFAddresses: '',
   });
   const [availableAgents, setAvailableAgents] = useState<string[]>([]);
+  const isMountedRef = useRef(true);
   const { feedback, notify, close } = useFeedback();
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -83,13 +93,16 @@ export default function DFPage() {
         api.df.getStatus(),
         api.df.getDescription(),
       ]);
+      if (!isMountedRef.current) return;
       setRegistrations(regData.registrations || []);
 
       try {
         const agentListPromise = api.agents?.list?.({ detail: false });
         if (agentListPromise && typeof agentListPromise.then === 'function') {
-          agentListPromise.then((res: any) => {
-            if (res?.agents) setAvailableAgents(res.agents.map((a: any) => a.name));
+          agentListPromise.then((res: AgentListResponse) => {
+            if (isMountedRef.current && res?.agents) {
+              setAvailableAgents(res.agents.map((a: AgentInfo) => a.name));
+            }
           }).catch(() => {});
         }
       } catch {
@@ -99,10 +112,14 @@ export default function DFPage() {
       setChildren(childData.children || []);
       setDfStatus(statusData);
       setDfDescription(descData);
-    } catch (e: any) {
-      notify(`Failed to fetch DF data: ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      if (isMountedRef.current) {
+        notify(`Failed to fetch DF data: ${getErrorMessage(e)}`, 'error');
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -114,11 +131,17 @@ export default function DFPage() {
     setLoading(true);
     try {
       const data: DFRegistrationListResponse = await api.df.listRegistrations();
-      setRegistrations(data.registrations || []);
-    } catch (e: any) {
-      notify(`Failed to fetch DF registrations: ${e.message || 'unknown error'}`, 'error');
+      if (isMountedRef.current) {
+        setRegistrations(data.registrations || []);
+      }
+    } catch (e: unknown) {
+      if (isMountedRef.current) {
+        notify(`Failed to fetch DF registrations: ${getErrorMessage(e)}`, 'error');
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -128,8 +151,8 @@ export default function DFPage() {
       const resp = await api.df.refresh();
       notify(`DF refreshed: ${resp.registeredAgentCount} registered agents`, 'success');
       fetchAll();
-    } catch (e: any) {
-      notify(`DF refresh failed: ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`DF refresh failed: ${getErrorMessage(e)}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -155,8 +178,8 @@ export default function DFPage() {
       setRegisterOpen(false);
       setRegisterForm({ name: '', addresses: '', serviceType: '', serviceName: '' });
       fetchRegistrations();
-    } catch (e: any) {
-      notify(`Registration failed: ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Registration failed: ${getErrorMessage(e)}`, 'error');
     }
   };
 
@@ -169,8 +192,8 @@ export default function DFPage() {
       await api.df.deregister(agentName);
       notify(`Agent '${agentName}' deregistered`, 'success');
       fetchRegistrations();
-    } catch (e: any) {
-      notify(`Deregister failed: ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Deregister failed: ${getErrorMessage(e)}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -195,8 +218,8 @@ export default function DFPage() {
       setModifyOpen(false);
       setModifyTarget(null);
       fetchRegistrations();
-    } catch (e: any) {
-      notify(`Modify failed: ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Modify failed: ${getErrorMessage(e)}`, 'error');
     }
   };
 
@@ -211,8 +234,8 @@ export default function DFPage() {
       setRegistrations(resp.results || []);
       setSearchOpen(false);
       setSearchForm({ serviceName: '', serviceType: '' });
-    } catch (e: any) {
-      notify(`Search failed: ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Search failed: ${getErrorMessage(e)}`, 'error');
     }
   };
 
@@ -229,8 +252,8 @@ export default function DFPage() {
       setFederateOpen(false);
       setFederateForm({ parentDF: '', parentDFAddresses: '' });
       setParents([...parents, { name: federateForm.parentDF, addresses: request.parentDFAddresses ?? [] }]);
-    } catch (e: any) {
-      notify(`Federation failed: ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Federation failed: ${getErrorMessage(e)}`, 'error');
     }
   };
 
@@ -243,8 +266,8 @@ export default function DFPage() {
       await api.df.deregisterParent(name);
       notify(`Deregistered from parent DF '${name}'`, 'success');
       setParents(parents.filter(p => p.name !== name));
-    } catch (e: any) {
-      notify(`Deregister parent failed: ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Deregister parent failed: ${getErrorMessage(e)}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -259,8 +282,8 @@ export default function DFPage() {
       await api.df.deregisterChild(name);
       notify(`Child DF '${name}' deregistered`, 'success');
       setChildren(children.filter(c => c.name !== name));
-    } catch (e: any) {
-      notify(`Deregister child failed: ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Deregister child failed: ${getErrorMessage(e)}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -285,8 +308,8 @@ export default function DFPage() {
     try {
       await api.tools.start(tool, { container: 'Main-Container' });
       notify(`Launched legacy Swing ${tool} GUI for comparison`, 'success');
-    } catch (e: any) {
-      notify(`Failed to launch ${tool} - ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Failed to launch ${tool} - ${getErrorMessage(e)}`, 'error');
     }
   };
 
@@ -321,8 +344,8 @@ export default function DFPage() {
                     const desc = await api.df.getDescription();
                     setDfDescription(desc);
                     setDescOpen(true);
-                  } catch (e: any) {
-                    notify(`Failed to load DF description: ${e.message || 'unknown error'}`, 'error');
+                  } catch (e: unknown) {
+                    notify(`Failed to load DF description: ${getErrorMessage(e)}`, 'error');
                   }
                 }}
               >

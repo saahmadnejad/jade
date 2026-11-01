@@ -33,9 +33,15 @@ import AcUnitIcon from '@mui/icons-material/AcUnit';
 import AcUnitOutlinedIcon from '@mui/icons-material/AcUnitOutlined';
 import DeleteForeverIcon from '@mui/icons-material/Delete';
 import PublicIcon from '@mui/icons-material/Public';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import SaveIcon from '@mui/icons-material/Save';
+import UploadIcon from '@mui/icons-material/Upload';
+import TuneIcon from '@mui/icons-material/Tune';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import { api, type PlatformTreeResponse, type ContainerTreeNode, type AgentInfo } from 'shared';
+import { getErrorMessage } from '../utils/errors';
 
-interface PlatformTreeViewProps {
+export interface PlatformTreeViewProps {
   onSendMessage?: (agentName: string) => void;
   onKillAgent?: (agentName: string) => void;
   onSuspendAgent?: (agentName: string) => void;
@@ -44,7 +50,13 @@ interface PlatformTreeViewProps {
   onCloneAgent?: (agentName: string) => void;
   onFreezeAgent?: (agentName: string) => void;
   onThawAgent?: (agentName: string) => void;
+  onInspectAgent?: (agent: AgentInfo) => void;
+  onSniffAgent?: (agentName: string) => void;
   onKillContainer?: (containerName: string) => void;
+  onSaveContainer?: (containerName: string) => void;
+  onLoadContainer?: (containerName: string) => void;
+  onManageMTPs?: (containerName: string) => void;
+  onRemoveRemotePlatform?: (platformName: string) => void;
 }
 
 const stateColors: Record<string, 'success' | 'warning' | 'info' | 'default'> = {
@@ -62,7 +74,13 @@ export default function PlatformTreeView({
   onCloneAgent,
   onFreezeAgent,
   onThawAgent,
+  onInspectAgent,
+  onSniffAgent,
   onKillContainer,
+  onSaveContainer,
+  onLoadContainer,
+  onManageMTPs,
+  onRemoveRemotePlatform,
 }: PlatformTreeViewProps) {
   const [tree, setTree] = useState<PlatformTreeResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,14 +94,18 @@ export default function PlatformTreeView({
   const [containerMenuAnchor, setContainerMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedContainer, setSelectedContainer] = useState<ContainerTreeNode | null>(null);
 
+  // Remote Platform Menu State
+  const [remoteMenuAnchor, setRemoteMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedRemote, setSelectedRemote] = useState<string | null>(null);
+
   const fetchTree = async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await api.platform.getTree();
       setTree(data);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load platform hierarchy');
+    } catch (e: unknown) {
+      setError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -160,14 +182,12 @@ export default function PlatformTreeView({
                       color={container.isMain ? 'primary' : 'default'}
                     />
                     <Chip size="small" label={`${container.agents.length} agents`} variant="outlined" />
-                    {!container.isMain && onKillContainer && (
-                      <IconButton
-                        size="small"
-                        onClick={(e) => handleOpenContainerMenu(e, container)}
-                      >
-                        <MoreVertIcon fontSize="small" />
-                      </IconButton>
-                    )}
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleOpenContainerMenu(e, container)}
+                    >
+                      <MoreVertIcon fontSize="small" />
+                    </IconButton>
                   </Box>
                 }
                 title={<strong>{container.name}</strong>}
@@ -237,7 +257,24 @@ export default function PlatformTreeView({
               <CardContent>
                 <List dense>
                   {tree.remotePlatforms.map((rp) => (
-                    <ListItem key={rp.name}>
+                    <ListItem
+                      key={rp.name}
+                      secondaryAction={
+                        onRemoveRemotePlatform && (
+                          <Tooltip title="Remove Platform">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                setRemoteMenuAnchor(e.currentTarget);
+                                setSelectedRemote(rp.name);
+                              }}
+                            >
+                              <MoreVertIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )
+                      }
+                    >
                       <ListItemText
                         primary={rp.name}
                         secondary={`AMS: ${rp.ams} | Endpoints: ${rp.addresses?.join(', ') || 'none'}`}
@@ -259,6 +296,32 @@ export default function PlatformTreeView({
       >
         {selectedAgent && (
           <Box>
+            {onInspectAgent && (
+              <MenuItem
+                onClick={() => {
+                  const agent = selectedAgent;
+                  handleCloseAgentMenu();
+                  onInspectAgent(agent);
+                }}
+              >
+                <ListItemIcon><InfoOutlinedIcon fontSize="small" color="primary" /></ListItemIcon>
+                <ListItemText primary="Inspect Details" />
+              </MenuItem>
+            )}
+
+            {onSniffAgent && (
+              <MenuItem
+                onClick={() => {
+                  const name = selectedAgent.name;
+                  handleCloseAgentMenu();
+                  onSniffAgent(name);
+                }}
+              >
+                <ListItemIcon><VisibilityIcon fontSize="small" color="info" /></ListItemIcon>
+                <ListItemText primary="Sniff Agent" />
+              </MenuItem>
+            )}
+
             <MenuItem
               onClick={() => {
                 const name = selectedAgent.name;
@@ -363,17 +426,85 @@ export default function PlatformTreeView({
         open={Boolean(containerMenuAnchor)}
         onClose={handleCloseContainerMenu}
       >
-        {selectedContainer && !selectedContainer.isMain && (
+        {selectedContainer && (
+          <Box>
+            {onSaveContainer && (
+              <MenuItem
+                onClick={() => {
+                  const name = selectedContainer.name;
+                  handleCloseContainerMenu();
+                  onSaveContainer(name);
+                }}
+              >
+                <ListItemIcon><SaveIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Save Container" />
+              </MenuItem>
+            )}
+            {onLoadContainer && (
+              <MenuItem
+                onClick={() => {
+                  const name = selectedContainer.name;
+                  handleCloseContainerMenu();
+                  onLoadContainer(name);
+                }}
+              >
+                <ListItemIcon><UploadIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Load Container" />
+              </MenuItem>
+            )}
+            {onManageMTPs && (
+              <MenuItem
+                onClick={() => {
+                  const name = selectedContainer.name;
+                  handleCloseContainerMenu();
+                  onManageMTPs(name);
+                }}
+              >
+                <ListItemIcon><TuneIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Manage MTPs" />
+              </MenuItem>
+            )}
+            {!selectedContainer.isMain && onKillContainer && (
+              <>
+                <Divider />
+                <MenuItem
+                  onClick={() => {
+                    const name = selectedContainer.name;
+                    handleCloseContainerMenu();
+                    onKillContainer(name);
+                  }}
+                  sx={{ color: 'error.main' }}
+                >
+                  <ListItemIcon><DeleteForeverIcon fontSize="small" color="error" /></ListItemIcon>
+                  <ListItemText primary="Kill Container" />
+                </MenuItem>
+              </>
+            )}
+          </Box>
+        )}
+      </Menu>
+
+      {/* Remote Platform Context Menu */}
+      <Menu
+        anchorEl={remoteMenuAnchor}
+        open={Boolean(remoteMenuAnchor)}
+        onClose={() => {
+          setRemoteMenuAnchor(null);
+          setSelectedRemote(null);
+        }}
+      >
+        {selectedRemote && onRemoveRemotePlatform && (
           <MenuItem
             onClick={() => {
-              const name = selectedContainer.name;
-              handleCloseContainerMenu();
-              onKillContainer?.(name);
+              const name = selectedRemote;
+              setRemoteMenuAnchor(null);
+              setSelectedRemote(null);
+              onRemoveRemotePlatform(name);
             }}
             sx={{ color: 'error.main' }}
           >
             <ListItemIcon><DeleteForeverIcon fontSize="small" color="error" /></ListItemIcon>
-            <ListItemText primary="Kill Container" />
+            <ListItemText primary="Remove Remote Platform" />
           </MenuItem>
         )}
       </Menu>

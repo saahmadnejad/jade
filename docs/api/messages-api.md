@@ -81,6 +81,59 @@ the buffer.
 
 ---
 
+## POST /api/messages
+
+Composes and injects an ACL message directly into the JADE platform message bus.
+Replaces the legacy `DummyAgent` and `TestAgent` Swing composition tools.
+
+### Request Body
+
+```json
+{
+  "performative": "INFORM",
+  "sender": "sender@jade-main",
+  "receivers": ["receiver@jade-main"],
+  "replyTo": ["reply@jade-main"],
+  "content": "message payload",
+  "language": "fipa-sl",
+  "ontology": "test-ontology",
+  "protocol": "fipa-request",
+  "conversationId": "conv-12345",
+  "replyWith": "token-1",
+  "inReplyTo": "token-0",
+  "userProperties": {
+    "key": "value"
+  }
+}
+```
+
+- `performative` (required): performative name (`"INFORM"`, `"REQUEST"`, etc.) or integer index (0–21).
+- `receivers` (required): array of recipient AIDs (at least one non-empty receiver).
+- `sender` (optional): sender AID (defaults to `ui-user@<platformID>`).
+- `content` (optional): message body string.
+- Protocol slots (`replyTo`, `language`, `ontology`, `protocol`, `conversationId`, `replyWith`, `inReplyTo`) are optional.
+- `userProperties` (optional): key-value object of user-defined parameters.
+
+### Response — 201 Created
+
+```json
+{
+  "message": "Message sent",
+  "performative": "INFORM",
+  "sender": "sender@jade-main",
+  "receivers": ["receiver@jade-main"],
+  "conversationId": "conv-12345"
+}
+```
+
+### Errors
+
+- `400`: `{"error": "At least one receiver is required", "code": 400}`
+- `400`: `{"error": "Invalid or missing performative", "code": 400}`
+- `403`: `{"error": "Not a Main Container", "code": 403}`
+
+---
+
 ## WS /api/messages/stream
 
 WebSocket endpoint that pushes each newly captured message as a JSON frame with

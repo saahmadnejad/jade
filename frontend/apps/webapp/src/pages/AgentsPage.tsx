@@ -25,6 +25,7 @@ import PageHeader from '../components/PageHeader';
 import EmptyState from '../components/EmptyState';
 import MessageComposerDialog from '../components/MessageComposerDialog';
 import NotificationSnackbar, { useFeedback } from '../components/NotificationSnackbar';
+import { getErrorMessage } from '../utils/errors';
 
 export const COMMON_AGENT_CLASSES = [
   'io.donbee.jade.core.Agent',
@@ -63,6 +64,12 @@ export default function AgentsPage() {
   const [saveOpen, setSaveOpen] = useState(false);
   const [saveForm, setSaveForm] = useState({ repository: 'default' });
   const [saveTarget, setSaveTarget] = useState<string | null>(null);
+  const [freezeOpen, setFreezeOpen] = useState(false);
+  const [freezeTarget, setFreezeTarget] = useState<string | null>(null);
+  const [freezeForm, setFreezeForm] = useState({ bufferContainer: 'Main-Container', repository: 'default' });
+  const [thawOpen, setThawOpen] = useState(false);
+  const [thawTarget, setThawTarget] = useState<string | null>(null);
+  const [thawForm, setThawForm] = useState({ targetContainer: 'Main-Container', repository: 'default' });
   const [loadOpen, setLoadOpen] = useState(false);
   const [loadForm, setLoadForm] = useState({ name: '', container: 'Main-Container', repository: 'default' });
   const [registerRemoteOpen, setRegisterRemoteOpen] = useState(false);
@@ -75,9 +82,9 @@ export default function AgentsPage() {
     try {
       const data: AgentListResponse = await api.agents.list({ detail: true });
       setAgents(data.agents);
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Failed to fetch agents', e);
-      notify('Failed to fetch agents', 'error');
+      notify(`Failed to fetch agents - ${getErrorMessage(e)}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -85,14 +92,16 @@ export default function AgentsPage() {
 
   const fetchContainers = async () => {
     try {
-      const p = api.containers?.list?.();
-      if (p && typeof p.then === 'function') {
-        p.then((res: any) => {
-          if (res?.containers) {
-            const names = res.containers.map((c: any) => c.name);
-            if (names.length > 0) setContainers(names);
-          }
-        }).catch(() => {});
+      const containerListPromise = api.containers?.list?.();
+      if (containerListPromise && typeof containerListPromise.then === 'function') {
+        containerListPromise
+          .then((res: { containers?: Array<{ name: string }> }) => {
+            if (res?.containers) {
+              const names = res.containers.map((c) => c.name);
+              if (names.length > 0) setContainers(names);
+            }
+          })
+          .catch(() => {});
       }
     } catch {
       // Ignore if containers listing fails
@@ -110,9 +119,8 @@ export default function AgentsPage() {
       await action();
       notify(`${agentName}: ${actionName} completed`, 'success');
       fetchAgents();
-    } catch (e: any) {
-      const errorMsg = e.response?.data?.error || e.message || 'unknown error';
-      notify(`${agentName}: ${actionName} failed - ${errorMsg}`, 'error');
+    } catch (e: unknown) {
+      notify(`${agentName}: ${actionName} failed - ${getErrorMessage(e)}`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -135,9 +143,8 @@ export default function AgentsPage() {
       setDeployOpen(false);
       setDeployForm({ name: '', class: '', args: '', container: 'Main-Container' });
       fetchAgents();
-    } catch (e: any) {
-      const errorMsg = e.response?.data?.error || e.message || 'unknown error';
-      notify(`Deploy failed - ${errorMsg}`, 'error');
+    } catch (e: unknown) {
+      notify(`Deploy failed - ${getErrorMessage(e)}`, 'error');
     }
   };
 
@@ -167,6 +174,26 @@ export default function AgentsPage() {
     setMoveForm({ targetContainer: '' });
   };
 
+  const handleFreeze = async () => {
+    if (!freezeTarget) return;
+    await handleAction(
+      () => api.agents.freeze(freezeTarget, { container: freezeForm.bufferContainer, repository: freezeForm.repository }),
+      'freeze',
+      freezeTarget
+    );
+    setFreezeOpen(false);
+  };
+
+  const handleThaw = async () => {
+    if (!thawTarget) return;
+    await handleAction(
+      () => api.agents.thaw(thawTarget, { container: thawForm.targetContainer, repository: thawForm.repository }),
+      'thaw',
+      thawTarget
+    );
+    setThawOpen(false);
+  };
+
   const handleOwnership = async () => {
     if (!ownershipTarget) return;
     await handleAction(
@@ -186,9 +213,8 @@ export default function AgentsPage() {
       setSaveOpen(false);
       setSaveForm({ repository: 'default' });
       fetchAgents();
-    } catch (e: any) {
-      const errorMsg = e.response?.data?.error || e.message || 'unknown error';
-      notify(`Save failed - ${errorMsg}`, 'error');
+    } catch (e: unknown) {
+      notify(`Save failed - ${getErrorMessage(e)}`, 'error');
     }
   };
 
@@ -199,9 +225,8 @@ export default function AgentsPage() {
       setLoadOpen(false);
       setLoadForm({ name: '', container: 'Main-Container', repository: 'default' });
       fetchAgents();
-    } catch (e: any) {
-      const errorMsg = e.response?.data?.error || e.message || 'unknown error';
-      notify(`Load failed - ${errorMsg}`, 'error');
+    } catch (e: unknown) {
+      notify(`Load failed - ${getErrorMessage(e)}`, 'error');
     }
   };
 
@@ -215,9 +240,8 @@ export default function AgentsPage() {
       setRegisterRemoteOpen(false);
       setRegisterRemoteForm({ aid: '', addresses: '' });
       fetchAgents();
-    } catch (e: any) {
-      const errorMsg = e.response?.data?.error || e.message || 'unknown error';
-      notify(`Register remote failed - ${errorMsg}`, 'error');
+    } catch (e: unknown) {
+      notify(`Register remote failed - ${getErrorMessage(e)}`, 'error');
     }
   };
 
@@ -225,9 +249,8 @@ export default function AgentsPage() {
     try {
       await api.tools.start(tool, { container: 'Main-Container' });
       notify(`Launched legacy Swing ${tool} GUI for comparison`, 'success');
-    } catch (e: any) {
-      const errorMsg = e.response?.data?.error || e.message || 'unknown error';
-      notify(`Failed to launch ${tool} - ${errorMsg}`, 'error');
+    } catch (e: unknown) {
+      notify(`Failed to launch ${tool} - ${getErrorMessage(e)}`, 'error');
     }
   };
 
@@ -358,11 +381,11 @@ export default function AgentsPage() {
                         color="warning"
                         size="small"
                         disabled={actionLoading === 'freeze:' + agent.name}
-                        onClick={() => handleAction(
-                          () => api.agents.freeze(agent.name, { container: agent.container, repository: 'default' }),
-                          'freeze',
-                          agent.name
-                        )}
+                        onClick={() => {
+                          setFreezeTarget(agent.name);
+                          setFreezeForm({ bufferContainer: agent.container || 'Main-Container', repository: 'default' });
+                          setFreezeOpen(true);
+                        }}
                       >
                         <AcUnitIcon fontSize="small" />
                       </IconButton>
@@ -372,11 +395,11 @@ export default function AgentsPage() {
                         color="info"
                         size="small"
                         disabled={actionLoading === 'thaw:' + agent.name}
-                        onClick={() => handleAction(
-                          () => api.agents.thaw(agent.name, { container: agent.container, repository: 'default' }),
-                          'thaw',
-                          agent.name
-                        )}
+                        onClick={() => {
+                          setThawTarget(agent.name);
+                          setThawForm({ targetContainer: agent.container || 'Main-Container', repository: 'default' });
+                          setThawOpen(true);
+                        }}
                       >
                         <AcUnitOutlinedIcon fontSize="small" />
                       </IconButton>
@@ -564,6 +587,102 @@ export default function AgentsPage() {
           <Button onClick={() => setMoveOpen(false)}>Cancel</Button>
           <Button onClick={handleMove} variant="contained" disabled={!moveForm.targetContainer}>
             Move
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Freeze Agent Dialog */}
+      <Dialog open={freezeOpen} onClose={() => setFreezeOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Freeze Agent</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {freezeTarget && (
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary">Agent:</Typography>
+                <Chip size="small" label={freezeTarget} />
+              </Box>
+            )}
+            <Autocomplete
+              freeSolo
+              options={containers}
+              value={freezeForm.bufferContainer}
+              onChange={(_, val) => setFreezeForm({ ...freezeForm, bufferContainer: val || 'Main-Container' })}
+              onInputChange={(_, val) => setFreezeForm({ ...freezeForm, bufferContainer: val })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Buffer Container"
+                  fullWidth
+                  helperText="Container where the frozen agent state is buffered"
+                />
+              )}
+            />
+            <TextField
+              label="Repository"
+              value={freezeForm.repository}
+              onChange={(e) => setFreezeForm({ ...freezeForm, repository: e.target.value })}
+              fullWidth
+              helperText="Repository name or URI"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFreezeOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleFreeze}
+            variant="contained"
+            color="warning"
+            disabled={!freezeForm.bufferContainer || !freezeForm.repository}
+          >
+            Freeze
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Thaw Agent Dialog */}
+      <Dialog open={thawOpen} onClose={() => setThawOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Thaw Agent</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {thawTarget && (
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary">Agent:</Typography>
+                <Chip size="small" label={thawTarget} />
+              </Box>
+            )}
+            <Autocomplete
+              freeSolo
+              options={containers}
+              value={thawForm.targetContainer}
+              onChange={(_, val) => setThawForm({ ...thawForm, targetContainer: val || 'Main-Container' })}
+              onInputChange={(_, val) => setThawForm({ ...thawForm, targetContainer: val })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Target Container"
+                  fullWidth
+                  helperText="Container where the thawed agent is reactivated"
+                />
+              )}
+            />
+            <TextField
+              label="Repository"
+              value={thawForm.repository}
+              onChange={(e) => setThawForm({ ...thawForm, repository: e.target.value })}
+              fullWidth
+              helperText="Repository name or URI"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setThawOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleThaw}
+            variant="contained"
+            color="info"
+            disabled={!thawForm.targetContainer || !thawForm.repository}
+          >
+            Thaw
           </Button>
         </DialogActions>
       </Dialog>

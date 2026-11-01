@@ -30,7 +30,7 @@ docker compose up -d --build                   # podman compose works identicall
 **Gotchas**
 - Workspace root is `frontend/` (pnpm 9, `packageManager` pinned; lockfile `frontend/pnpm-lock.yaml`). Its `dev`/`build` scripts run `pnpm --filter frontend ...` — "frontend" matches no package (`webapp`, `shared`), so they silently do nothing. Always `--filter webapp` or `--filter shared`.
 - `pnpm --filter webapp test` runs in watch mode (hangs an agent). Use `test:run`.
-- Vite dev has no `/api` proxy — API-backed pages only work through the docker/nginx frontend. Local `webapp dev` serves the UI alone; use tests or the docker stack to exercise API behavior.
+- Vite dev proxies `/api` (HTTP + WebSocket) to `backend:8080` (configured in `frontend/apps/webapp/vite.config.ts`) for seamless local development with live APIs.
 - Running the backend locally: do **not** use plain `mvn compile exec:java` from `backend/` — `exec:java` runs in every reactor module and fails with `ClassNotFoundException: Boot` on the parent (no Boot there). Compile the reactor once (`-pl jade -am compile`), then run `exec:java` on `-pl jade` only. Ports 8080/1099 clash with the docker stack — pass `-rest-port`/`-port` overrides.
 - Frontend tests mock `shared/api/factory`; add new API methods to the mock or tests crash.
 - Docker Hub pulls occasionally 5xx/timeout — retry; base images cache after first pull.

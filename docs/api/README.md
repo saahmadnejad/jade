@@ -28,6 +28,41 @@ Get platform metadata.
 }
 ```
 
+### GET /api/platform/tree
+Get the full hierarchical platform tree (containers, agents, and remote platforms).
+
+**Output (200):**
+```json
+{
+  "platformID": "jade-main",
+  "containers": [
+    {
+      "name": "Main-Container",
+      "address": "127.0.0.1",
+      "port": "1099",
+      "isMain": true,
+      "agents": [
+        {
+          "name": "rma",
+          "state": "ACTIVE",
+          "ownership": "init",
+          "container": "Main-Container",
+          "addresses": ["http://127.0.0.1:7778/acc"]
+        }
+      ]
+    }
+  ],
+  "remotePlatforms": [
+    {
+      "name": "remote-platform",
+      "ams": "ams@remote-platform",
+      "addresses": ["192.168.1.10:1099"],
+      "services": ["FIPAAgentManagement"]
+    }
+  ]
+}
+```
+
 ### POST /api/platform/shutdown
 Shutdown the platform.
 
@@ -522,6 +557,67 @@ Start a GUI tool agent (sniffer, dummy, logger, introspector, df-gui).
 **Error (400):** `{"error": "Unknown tool: foobar"}`
 
 **Error (500):** `{"error": "..."}` — tool classpath not available
+
+---
+
+## 6. Message Operations
+
+### POST /api/messages
+Compose and inject an ACL message directly into the JADE platform message bus.
+
+**Input:**
+```json
+{
+  "performative": "INFORM",
+  "sender": "sender@jade-main",
+  "receivers": ["receiver@jade-main"],
+  "content": "message payload",
+  "protocol": "fipa-request",
+  "ontology": "test-ontology",
+  "language": "fipa-sl",
+  "conversationId": "conv-12345"
+}
+```
+
+**Output (201):**
+```json
+{
+  "message": "Message sent",
+  "performative": "INFORM",
+  "sender": "sender@jade-main",
+  "receivers": ["receiver@jade-main"],
+  "conversationId": "conv-12345"
+}
+```
+
+### GET /api/messages/recent
+Get recent captured ACL messages (default limit 100).
+
+**Output (200):**
+```json
+{
+  "messages": [
+    {
+      "id": "1",
+      "timestamp": "2026-10-31T10:00:00Z",
+      "sender": "rma",
+      "receiver": "ams",
+      "performative": "subscribe",
+      "protocol": "",
+      "ontology": "JADE-Introspection",
+      "content": "platform-events"
+    }
+  ],
+  "total": 1,
+  "dropped": 0
+}
+```
+
+### GET /api/messages/{id}
+Get full untruncated captured message by ID.
+
+### WS /api/messages/stream
+WebSocket endpoint streaming live ACL traffic frames.
 
 ---
 
