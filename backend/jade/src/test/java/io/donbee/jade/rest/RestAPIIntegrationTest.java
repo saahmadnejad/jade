@@ -736,16 +736,16 @@ public class RestAPIIntegrationTest {
         JsonObject jsonBody = new JsonObject().put("ownership", "dev-team-lead");
 
         // Act
-        client.patch(REST_PORT, "localhost", "/api/agents/rma")
+        client.patch(REST_PORT, "localhost", "/api/agents/df")
             .putHeader("Content-Type", "application/json")
             .sendJsonObject(jsonBody)
             .onComplete(context.asyncAssertSuccess(response -> {
                 // Assert
                 context.assertEquals(200, response.statusCode());
-                context.assertEquals("Agent 'rma' ownership changed to 'dev-team-lead'", response.bodyAsJsonObject().getString("message"));
+                context.assertEquals("Agent 'df' ownership changed to 'dev-team-lead'", response.bodyAsJsonObject().getString("message"));
 
-                // Verify via GET /api/agents/rma
-                client.get(REST_PORT, "localhost", "/api/agents/rma")
+                // Verify via GET /api/agents/df
+                client.get(REST_PORT, "localhost", "/api/agents/df")
                     .send()
                     .onComplete(context.asyncAssertSuccess(getResp -> {
                         context.assertEquals(200, getResp.statusCode());
