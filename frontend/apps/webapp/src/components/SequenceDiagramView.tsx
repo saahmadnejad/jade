@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -16,19 +16,13 @@ import SmartToyIcon from '@mui/icons-material/SmartToy';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
 import AutoModeIcon from '@mui/icons-material/AutoMode';
-import type { AclMessageEvent } from 'shared';
+import { type AclMessageEvent, isInternalProbe } from 'shared';
 
 interface SequenceDiagramViewProps {
   messages: AclMessageEvent[];
   onSelectMessage: (msg: AclMessageEvent) => void;
   availableAgents?: string[];
 }
-
-const isInternalProbe = (name: string): boolean => {
-  if (!name) return false;
-  const local = name.includes('@') ? name.split('@')[0] : name;
-  return local.startsWith('df_req_') || local.startsWith('ams_req_');
-};
 
 const performativeColors: Record<string, 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'> = {
   INFORM: 'info',
@@ -83,12 +77,13 @@ export default function SequenceDiagramView({
   // Selected agents whose lifelines to display
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
   const [messageLimit, setMessageLimit] = useState<number>(25);
+  const hasInitializedRef = useRef(false);
 
-  // Auto-select top 2-3 communicators on initial load if not selected
+  // Auto-select top 2-3 communicators once on initial load if not selected
   useEffect(() => {
-    if (selectedAgents.length === 0 && allAgents.length >= 2) {
-      // Pick top 2 most active agents by default
+    if (!hasInitializedRef.current && allAgents.length >= 2) {
       setSelectedAgents(allAgents.slice(0, Math.min(2, allAgents.length)));
+      hasInitializedRef.current = true;
     }
   }, [allAgents]);
 
@@ -126,11 +121,8 @@ export default function SequenceDiagramView({
 
     const selectedSet = new Set(selectedAgents);
 
-    // Filter messages involving the selected agents
+    // Filter messages where both sender and receiver are among the selected agents
     const filtered = messages.filter((m) => {
-      if (selectedAgents.length === 1) {
-        return selectedSet.has(m.sender) || selectedSet.has(m.receiver);
-      }
       return selectedSet.has(m.sender) && selectedSet.has(m.receiver);
     });
 

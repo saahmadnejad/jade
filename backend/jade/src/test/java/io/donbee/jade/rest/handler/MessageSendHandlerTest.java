@@ -69,7 +69,7 @@ public class MessageSendHandlerTest {
     }
 
     @Test
-    public void Given_MissingBody_When_SendMessage_Then_Returns400() {
+    public void Given_MissingBody_When_SendMessage_Then_FailsWith400() {
         // Arrange
         when(mockService.isMainContainer()).thenReturn(true);
         when(mockBody.asJsonObject()).thenReturn(null);
@@ -78,12 +78,11 @@ public class MessageSendHandlerTest {
         handler.handle(mockContext);
 
         // Assert
-        verify(mockResponse).setStatusCode(400);
-        verify(mockResponse).end(any(Buffer.class));
+        verify(mockContext).fail(eq(400), any(Throwable.class));
     }
 
     @Test
-    public void Given_InvalidPerformative_When_SendMessage_Then_Returns400() {
+    public void Given_InvalidPerformative_When_SendMessage_Then_FailsWith400() {
         // Arrange
         when(mockService.isMainContainer()).thenReturn(true);
         JsonObject body = new JsonObject()
@@ -95,12 +94,11 @@ public class MessageSendHandlerTest {
         handler.handle(mockContext);
 
         // Assert
-        verify(mockResponse).setStatusCode(400);
-        verify(mockResponse).end(any(Buffer.class));
+        verify(mockContext).fail(eq(400), any(Throwable.class));
     }
 
     @Test
-    public void Given_MissingReceivers_When_SendMessage_Then_Returns400() {
+    public void Given_MissingReceivers_When_SendMessage_Then_FailsWith400() {
         // Arrange
         when(mockService.isMainContainer()).thenReturn(true);
         JsonObject body = new JsonObject()
@@ -112,7 +110,46 @@ public class MessageSendHandlerTest {
         handler.handle(mockContext);
 
         // Assert
-        verify(mockResponse).setStatusCode(400);
+        verify(mockContext).fail(eq(400), any(Throwable.class));
+    }
+
+    @Test
+    public void Given_BlankReceivers_When_SendMessage_Then_FailsWith400() {
+        // Arrange
+        when(mockService.isMainContainer()).thenReturn(true);
+        JsonObject body = new JsonObject()
+            .put("performative", "INFORM")
+            .put("receivers", new JsonArray().add("   "));
+        when(mockBody.asJsonObject()).thenReturn(body);
+
+        // Act
+        handler.handle(mockContext);
+
+        // Assert
+        verify(mockContext).fail(eq(400), any(Throwable.class));
+    }
+
+    @Test
+    public void Given_ValidMessageWithMixedUserProperties_When_SendMessage_Then_CoercesSafelyAndReturns201() {
+        // Arrange
+        when(mockService.isMainContainer()).thenReturn(true);
+        JsonObject body = new JsonObject()
+            .put("performative", "INFORM")
+            .put("sender", "sender@jade-main")
+            .put("receivers", new JsonArray().add("ams@jade-main"))
+            .put("content", "hello")
+            .put("userProperties", new JsonObject()
+                .put("intProp", 42)
+                .put("boolProp", true)
+                .put("strProp", "text"));
+        when(mockBody.asJsonObject()).thenReturn(body);
+
+        // Act
+        handler.handle(mockContext);
+
+        // Assert
+        verify(mockService).sendMessage(any());
+        verify(mockResponse).setStatusCode(201);
         verify(mockResponse).end(any(Buffer.class));
     }
 

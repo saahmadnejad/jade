@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -12,7 +12,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import { api, type VersionInfo, type PlatformInfo } from 'shared';
+import { api, type VersionInfo, type PlatformInfo, type PlatformTreeResponse } from 'shared';
 
 interface AboutDialogProps {
   open: boolean;
@@ -22,7 +22,16 @@ interface AboutDialogProps {
 export default function AboutDialog({ open, onClose }: AboutDialogProps) {
   const [version, setVersion] = useState<VersionInfo | null>(null);
   const [platform, setPlatform] = useState<PlatformInfo | null>(null);
+  const [tree, setTree] = useState<PlatformTreeResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -30,13 +39,19 @@ export default function AboutDialog({ open, onClose }: AboutDialogProps) {
       Promise.all([
         api.platform.version().catch(() => null),
         api.platform.getInfo().catch(() => null),
-      ]).then(([v, p]) => {
+        api.platform.getTree().catch(() => null),
+      ]).then(([v, p, t]) => {
+        if (!isMountedRef.current) return;
         setVersion(v);
         setPlatform(p);
+        setTree(t);
         setLoading(false);
       });
     }
   }, [open]);
+
+  const activeContainersCount = tree?.containers?.length ?? 1;
+  const activeAgentsCount = tree?.containers?.reduce((acc, c) => acc + (c.agents?.length || 0), 0) ?? 0;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -75,6 +90,18 @@ export default function AboutDialog({ open, onClose }: AboutDialogProps) {
                 <Typography variant="body2" color="text.secondary">Build Date:</Typography>
                 <Typography variant="body2">{version?.date || 'N/A'}</Typography>
               </Box>
+              {version?.jvm && (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">JVM Platform:</Typography>
+                  <Typography variant="body2">{version.jvm}</Typography>
+                </Box>
+              )}
+              {version?.os && (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">Operating System:</Typography>
+                  <Typography variant="body2">{version.os}</Typography>
+                </Box>
+              )}
             </Box>
 
             <Divider />
@@ -90,6 +117,14 @@ export default function AboutDialog({ open, onClose }: AboutDialogProps) {
                   <Typography variant="body2">{platform.containerName}</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">Active Containers:</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{activeContainersCount}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">Active Agents:</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{activeAgentsCount}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography variant="body2" color="text.secondary">AMS Agent:</Typography>
                   <Typography variant="body2">{platform.ams}</Typography>
                 </Box>
@@ -102,10 +137,17 @@ export default function AboutDialog({ open, onClose }: AboutDialogProps) {
 
             <Divider />
 
-            <Typography variant="caption" color="text.secondary">
-              Legacy Swing GUI source preserved in <code>io.donbee.jade.tools.*</code>.
-              React Management Console powered by Vert.x REST API &amp; WebSocket bus.
-            </Typography>
+            <Box>
+              <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
+                Credits &amp; License
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                Original JADE Platform: Telecom Italia Lab (TILAB), CSELT S.p.A., and Università di Parma.
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                Modernized Architecture &amp; Vert.x REST API: Donbee &amp; DeepMind Agentic Harness.
+              </Typography>
+            </Box>
           </Box>
         )}
       </DialogContent>

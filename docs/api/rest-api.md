@@ -58,6 +58,8 @@ allows developers to compare the old and new implementations side by side.
 | `DFRefreshHandler` | `io.donbee.jade.tools.dfgui.DFGUIRefreshAppletAction` | `DFGUI.refresh()` |
 | `DFStatusHandler` | `io.donbee.jade.tools.dfgui.DFGUI` | `DFGUI.showStatusMsg()` |
 | `DFederationHandler` (all modes) | `io.donbee.jade.tools.dfgui.DFGUIFederateAction`, `DFGUIDeregisterAction` | `DFGUIAdapter.FEDERATE` |
+| `PlatformTreeHandler` | `io.donbee.jade.gui.AgentTree` / `AgentTreeModel` | `rma.AMSListenerBehaviour` |
+| `MessageSendHandler` | `io.donbee.jade.gui.AclGui` (DummyAgent/TestAgent) | `Agent.send()` |
 | `JsonFailureHandler` | `rma.showErrorDialog()` | `AMSClientBehaviour` error handlers |
 | `MessagesRecentHandler` / `MessagesStreamHandler` | `io.donbee.jade.tools.sniffer.Sniffer` (message canvas), `tools.introspector.gui.MessagePanel` | see [messages-api.md](messages-api.md) |
 

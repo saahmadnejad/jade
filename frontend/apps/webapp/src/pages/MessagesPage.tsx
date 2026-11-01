@@ -18,12 +18,13 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import SendIcon from '@mui/icons-material/Send';
 import ReplyIcon from '@mui/icons-material/Reply';
 import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows';
-import { api, subscribeMessagesStream, type AclMessageEvent, type MessagesStreamStatus } from 'shared';
+import { api, subscribeMessagesStream, isInternalProbe, type AclMessageEvent, type MessagesStreamStatus } from 'shared';
 import PageHeader from '../components/PageHeader';
 import EmptyState from '../components/EmptyState';
 import SequenceDiagramView from '../components/SequenceDiagramView';
 import MessageComposerDialog, { FIPA_PERFORMATIVES } from '../components/MessageComposerDialog';
 import NotificationSnackbar, { useFeedback } from '../components/NotificationSnackbar';
+import { getErrorMessage } from '../utils/errors';
 
 const MAX_DISPLAYED_MESSAGES = 500;
 
@@ -40,12 +41,6 @@ const formatTime = (isoTimestamp: string): string => {
   } catch {
     return isoTimestamp;
   }
-};
-
-export const isInternalProbe = (name: string): boolean => {
-  if (!name) return false;
-  const local = name.includes('@') ? name.split('@')[0] : name;
-  return local.startsWith('df_req_') || local.startsWith('ams_req_');
 };
 
 export default function MessagesPage() {
@@ -69,13 +64,15 @@ export default function MessagesPage() {
     let cancelled = false;
 
     try {
-      const p = api.agents?.list?.({ detail: false });
-      if (p && typeof p.then === 'function') {
-        p.then((res: any) => {
-          if (!cancelled && res?.agents) {
-            setPlatformAgents(res.agents.map((a: any) => a.name));
-          }
-        }).catch(() => {});
+      const agentListPromise = api.agents?.list?.({ detail: false });
+      if (agentListPromise && typeof agentListPromise.then === 'function') {
+        agentListPromise
+          .then((res: { agents?: Array<{ name: string }> }) => {
+            if (!cancelled && res?.agents) {
+              setPlatformAgents(res.agents.map((a) => a.name));
+            }
+          })
+          .catch(() => {});
       }
     } catch {
       // Ignore if agents list unavailable
@@ -170,8 +167,8 @@ export default function MessagesPage() {
     try {
       await api.tools.start(tool, { container: 'Main-Container' });
       notify(`Launched legacy Swing ${tool} GUI for comparison`, 'success');
-    } catch (e: any) {
-      notify(`Failed to launch ${tool} - ${e.message || 'unknown error'}`, 'error');
+    } catch (e: unknown) {
+      notify(`Failed to launch ${tool} - ${getErrorMessage(e)}`, 'error');
     }
   };
 

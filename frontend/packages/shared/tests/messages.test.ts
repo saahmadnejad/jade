@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MessageAPI } from '../src/api/messages';
+import { isInternalProbe } from '../src/api/types';
 import type { HttpClient } from '../src/api/http-client';
 import type { SendMessageRequest, SendMessageResponse, AclMessageEvent, MessagesRecentResponse } from '../src/api/types';
 
@@ -91,5 +92,37 @@ describe('MessageAPI', () => {
     // Assert
     expect(mockHttpClient.post).toHaveBeenCalledWith('/messages', request);
     expect(result).toEqual(mockResponse);
+  });
+
+  it('Given invalid message payload, When send() rejects, Then propagates error', async () => {
+    // Arrange
+    const request: SendMessageRequest = {
+      performative: 'INVALID',
+      receivers: [],
+    };
+    vi.mocked(mockHttpClient.post).mockRejectedValue(new Error('At least one receiver is required'));
+
+    // Act & Assert
+    await expect(messageAPI.send(request)).rejects.toThrow('At least one receiver is required');
+    expect(mockHttpClient.post).toHaveBeenCalledWith('/messages', request);
+  });
+
+  describe('isInternalProbe helper', () => {
+    it('Given df_req agent name, Then returns true', () => {
+      expect(isInternalProbe('df_req_1793472666006_14')).toBe(true);
+      expect(isInternalProbe('df_req_1793472666006_14@172.17.0.1:1099/JADE')).toBe(true);
+    });
+
+    it('Given ams_req agent name, Then returns true', () => {
+      expect(isInternalProbe('ams_req_12345')).toBe(true);
+    });
+
+    it('Given normal domain agent name, Then returns false', () => {
+      expect(isInternalProbe('rma')).toBe(false);
+      expect(isInternalProbe('ams')).toBe(false);
+      expect(isInternalProbe('df')).toBe(false);
+      expect(isInternalProbe('worker1@platform')).toBe(false);
+      expect(isInternalProbe('')).toBe(false);
+    });
   });
 });

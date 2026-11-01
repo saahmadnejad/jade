@@ -4,6 +4,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
+import io.donbee.jade.rest.JsonUtils;
 import io.donbee.jade.rest.service.PlatformService;
 
 /**
@@ -46,7 +47,7 @@ public class AgentListHandler implements Handler<RoutingContext> {
                     obj.put("state", ai.state != null ? ai.state : "UNKNOWN")
                        .put("ownership", ai.ownership != null ? ai.ownership : "")
                        .put("container", ai.container)
-                       .put("addresses", jsonFromArray(ai.addresses));
+                       .put("addresses", JsonUtils.jsonFromArray(ai.addresses));
                 }
                 arr.add(obj);
             }
@@ -57,11 +58,5 @@ public class AgentListHandler implements Handler<RoutingContext> {
         } catch (Exception e) {
             ctx.fail(500, e);
         }
-    }
-
-    private JsonArray jsonFromArray(String[] arr) {
-        JsonArray j = new JsonArray();
-        for (String s : arr) j.add(s);
-        return j;
     }
 }

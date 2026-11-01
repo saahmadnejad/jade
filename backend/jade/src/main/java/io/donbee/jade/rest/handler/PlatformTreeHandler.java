@@ -4,6 +4,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
+import io.donbee.jade.rest.JsonUtils;
 import io.donbee.jade.rest.service.PlatformService;
 
 /**
@@ -56,7 +57,7 @@ public class PlatformTreeHandler implements Handler<RoutingContext> {
                         .put("state", a.state != null ? a.state : "UNKNOWN")
                         .put("ownership", a.ownership != null ? a.ownership : "")
                         .put("container", a.container)
-                        .put("addresses", jsonFromArray(a.addresses)));
+                        .put("addresses", JsonUtils.jsonFromArray(a.addresses)));
                 }
                 cObj.put("agents", agentsArr);
                 containersArr.add(cObj);
@@ -68,8 +69,8 @@ public class PlatformTreeHandler implements Handler<RoutingContext> {
                 remoteArr.add(new JsonObject()
                     .put("name", rp.name)
                     .put("ams", rp.ams)
-                    .put("addresses", jsonFromArray(rp.addresses))
-                    .put("services", jsonFromArray(rp.services)));
+                    .put("addresses", JsonUtils.jsonFromArray(rp.addresses))
+                    .put("services", JsonUtils.jsonFromArray(rp.services)));
             }
             root.put("remotePlatforms", remoteArr);
 
@@ -78,15 +79,5 @@ public class PlatformTreeHandler implements Handler<RoutingContext> {
                 .putHeader("Content-Type", "application/json")
                 .end(root.toBuffer());
         }).onFailure(err -> ctx.fail(500, err));
-    }
-
-    private JsonArray jsonFromArray(String[] arr) {
-        JsonArray j = new JsonArray();
-        if (arr != null) {
-            for (String s : arr) {
-                j.add(s);
-            }
-        }
-        return j;
     }
 }

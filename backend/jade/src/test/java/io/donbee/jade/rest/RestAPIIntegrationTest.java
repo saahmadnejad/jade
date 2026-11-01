@@ -730,6 +730,32 @@ public class RestAPIIntegrationTest {
     // ===== Ownership Change =====
 
     @Test
+    public void Given_RunningAgent_When_ChangeOwnership_Then_Returns200AndUpdatesOwnership(TestContext context) {
+        // Arrange
+        Async async = context.async();
+        JsonObject jsonBody = new JsonObject().put("ownership", "dev-team-lead");
+
+        // Act
+        client.patch(REST_PORT, "localhost", "/api/agents/rma")
+            .putHeader("Content-Type", "application/json")
+            .sendJsonObject(jsonBody)
+            .onComplete(context.asyncAssertSuccess(response -> {
+                // Assert
+                context.assertEquals(200, response.statusCode());
+                context.assertEquals("Agent 'rma' ownership changed to 'dev-team-lead'", response.bodyAsJsonObject().getString("message"));
+
+                // Verify via GET /api/agents/rma
+                client.get(REST_PORT, "localhost", "/api/agents/rma")
+                    .send()
+                    .onComplete(context.asyncAssertSuccess(getResp -> {
+                        context.assertEquals(200, getResp.statusCode());
+                        context.assertEquals("dev-team-lead", getResp.bodyAsJsonObject().getString("ownership"));
+                        async.complete();
+                    }));
+            }));
+    }
+
+    @Test
     public void Given_UnknownAgent_When_ChangeOwnership_Then_Returns404(TestContext context) {
         // Arrange
         Async async = context.async();

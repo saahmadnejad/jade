@@ -5,6 +5,7 @@ import io.donbee.jade.core.AgentContainer;
 import io.donbee.jade.core.AgentManager;
 import io.donbee.jade.core.ContainerID;
 import io.donbee.jade.domain.FIPAAgentManagement.AMSAgentDescription;
+import io.donbee.jade.lang.acl.ACLMessage;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -717,5 +718,177 @@ public class JadesPlatformServiceTest {
         assertThatThrownBy(() -> service.getMTPs("nonexistent"))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("Container not found");
+    }
+
+    // ===== getPlatformTree =====
+
+    @Test
+    public void Given_MainContainerWithAgents_When_GetPlatformTree_Then_ReturnsPopulatedTree() throws Exception {
+        // Arrange
+        ContainerID localCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(localCid.getAddress()).thenReturn("127.0.0.1");
+        when(localCid.getPort()).thenReturn("1099");
+        when(mockImpl.here()).thenReturn(localCid);
+        when(mockImpl.getID()).thenReturn(localCid);
+        when(mockImpl.getPlatformID()).thenReturn("jade-platform-test");
+
+        AID aid = new AID("agent1", AID.ISLOCALNAME);
+        io.donbee.jade.util.leap.List agentsList = new io.donbee.jade.util.leap.ArrayList();
+        agentsList.add(aid);
+
+        when(mockAgentManager.containerIDs()).thenReturn(new ContainerID[]{localCid});
+        when(mockAgentManager.containerAgents(localCid)).thenReturn(agentsList);
+
+        AMSAgentDescription desc = new AMSAgentDescription();
+        desc.setName(aid);
+        desc.setState(AMSAgentDescription.ACTIVE);
+        desc.setOwnership("test-owner");
+        when(mockAgentManager.getAMSDescription(aid)).thenReturn(desc);
+
+        // Act
+        PlatformService.PlatformTree tree = service.getPlatformTree();
+
+        // Assert
+        assertThat(tree.platformID).isEqualTo("jade-platform-test");
+        assertThat(tree.containers).hasSize(1);
+        PlatformService.ContainerTreeNode node = tree.containers.get(0);
+        assertThat(node.name).isEqualTo("Main-Container");
+        assertThat(node.isMain).isTrue();
+        assertThat(node.agents).hasSize(1);
+        assertThat(node.agents.get(0).name).isEqualTo("agent1");
+        assertThat(node.agents.get(0).ownership).isEqualTo("test-owner");
+    }
+
+    @Test
+    public void Given_NonMainContainer_When_GetPlatformTree_Then_ReturnsEmptyTree() {
+        // Arrange
+        when(mockImpl.getPlatformID()).thenReturn("jade-platform-test");
+        JadesPlatformService nonMainService = new JadesPlatformService(mockImpl, null);
+
+        // Act
+        PlatformService.PlatformTree tree = nonMainService.getPlatformTree();
+
+        // Assert
+        assertThat(tree.platformID).isEqualTo("jade-platform-test");
+        assertThat(tree.containers).isEmpty();
+        assertThat(tree.remotePlatforms).isEmpty();
+    }
+
+    // ===== sendMessage =====
+
+    @Test
+    public void Given_ValidMessage_When_SendMessage_Then_InvokesImplSend() {
+        // Arrange
+        ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+        AID sender = new AID("custom-sender@host", AID.ISGUID);
+        msg.setSender(sender);
+        msg.addReceiver(new AID("receiver@host", AID.ISGUID));
+        msg.setContent("test content");
+
+        // Act
+        service.sendMessage(msg);
+
+        // Assert
+        verify(mockImpl).send(eq(msg), eq(sender));
+    }
+
+    @Test
+    public void Given_MessageWithoutSender_When_SendMessage_Then_AssignsDefaultSenderAndSends() {
+        // Arrange
+        ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+        msg.addReceiver(new AID("receiver@host", AID.ISGUID));
+        when(mockImpl.getPlatformID()).thenReturn("jade-test");
+
+        // Act
+        service.sendMessage(msg);
+
+        // Assert
+        assertThat(msg.getSender()).isNotNull();
+        assertThat(msg.getSender().getName()).isEqualTo("ui-user@jade-test");
+        verify(mockImpl).send(eq(msg), eq(msg.getSender()));
+    }
+
+    @Test
+    public void Given_NullMessage_When_SendMessage_Then_ThrowsIllegalArgumentException() {
+        // Act & Assert
+        assertThatThrownBy(() -> service.sendMessage(null))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Message cannot be null");
+    }
+
+    // ===== changeAgentOwnership =====
+
+    @Test
+    public void Given_ExistingAgent_When_ChangeAgentOwnership_Then_PreservesStateAndUpdatesOwnership() throws Exception {
+        // Arrange
+        ContainerID localCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(mockImpl.getID()).thenReturn(localCid);
+
+        AID aid = new AID("worker1", AID.ISLOCALNAME);
+        io.donbee.jade.util.leap.List agentsList = new io.donbee.jade.util.leap.ArrayList();
+        agentsList.add(aid);
+        when(mockAgentManager.containerAgents(localCid)).thenReturn(agentsList);
+
+        AMSAgentDescription currentDesc = new AMSAgentDescription();
+        currentDesc.setName(aid);
+        currentDesc.setState(AMSAgentDescription.SUSPENDED);
+        currentDesc.setOwnership("old-owner");
+        when(mockAgentManager.getAMSDescription(aid)).thenReturn(currentDesc);
+
+        // Act
+        service.changeAgentOwnership("worker1", "admin");
+
+        // Assert
+        verify(mockAgentManager).amsModify(argThat(dsc ->
+            "admin".equals(dsc.getOwnership()) && AMSAgentDescription.SUSPENDED.equals(dsc.getState())
+        ));
+    }
+
+    @Test
+    public void Given_NonExistentAgent_When_ChangeAgentOwnership_Then_ThrowsIllegalArgumentException() throws Exception {
+        // Arrange
+        ContainerID localCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(mockImpl.getID()).thenReturn(localCid);
+        io.donbee.jade.util.leap.List agentsList = new io.donbee.jade.util.leap.ArrayList();
+        when(mockAgentManager.containerAgents(localCid)).thenReturn(agentsList);
+
+        // Act & Assert
+        assertThatThrownBy(() -> service.changeAgentOwnership("ghost", "admin"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Agent not found: ghost");
+    }
+
+    @Test
+    public void Given_AgentInPeripheralContainer_When_ChangeAgentOwnership_Then_FindsAgentAndModifies() throws Exception {
+        // Arrange
+        ContainerID localCid = mock(ContainerID.class);
+        ContainerID remoteCid = mock(ContainerID.class);
+        when(localCid.getName()).thenReturn("Main-Container");
+        when(remoteCid.getName()).thenReturn("Node1-Container");
+        when(mockImpl.getID()).thenReturn(localCid);
+        when(mockAgentManager.containerIDs()).thenReturn(new ContainerID[]{localCid, remoteCid});
+
+        // Local container has no agent
+        when(mockAgentManager.containerAgents(localCid)).thenReturn(new io.donbee.jade.util.leap.ArrayList());
+
+        // Remote container has agent
+        AID remoteAid = new AID("peripheral-agent", AID.ISLOCALNAME);
+        io.donbee.jade.util.leap.List remoteAgents = new io.donbee.jade.util.leap.ArrayList();
+        remoteAgents.add(remoteAid);
+        when(mockAgentManager.containerAgents(remoteCid)).thenReturn(remoteAgents);
+
+        AMSAgentDescription desc = new AMSAgentDescription();
+        desc.setName(remoteAid);
+        desc.setState(AMSAgentDescription.ACTIVE);
+        when(mockAgentManager.getAMSDescription(remoteAid)).thenReturn(desc);
+
+        // Act
+        service.changeAgentOwnership("peripheral-agent", "developer");
+
+        // Assert
+        verify(mockAgentManager).amsModify(argThat(dsc -> "developer".equals(dsc.getOwnership())));
     }
 }

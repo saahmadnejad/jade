@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -25,6 +25,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SendIcon from '@mui/icons-material/Send';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { api, type SendMessageRequest, type SendMessageResponse } from 'shared';
+import { getErrorMessage } from '../utils/errors';
 
 export const FIPA_PERFORMATIVES = [
   'INFORM',
@@ -149,9 +150,18 @@ export default function MessageComposerDialog({
   const [conversationId, setConversationId] = useState(initialConversationId);
   const [inReplyTo, setInReplyTo] = useState(initialInReplyTo);
   const [replyWith, setReplyWith] = useState('');
+  const [replyTo, setReplyTo] = useState<string[]>([]);
   const [availableAgents, setAvailableAgents] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Sync initial values when opened
   useEffect(() => {
@@ -163,15 +173,21 @@ export default function MessageComposerDialog({
       setProtocol(initialProtocol);
       setOntology(initialOntology);
       setContent(initialContent);
+      setReplyTo([]);
       setError(null);
 
       // Fetch active agents for autocomplete
-      api.agents.list({ detail: false })
-        .then((res) => {
-          const names = res.agents.map((a) => a.name);
-          setAvailableAgents(names);
-        })
-        .catch(() => {});
+      const agentListPromise = api.agents?.list?.({ detail: false });
+      if (agentListPromise && typeof agentListPromise.then === 'function') {
+        agentListPromise
+          .then((res: { agents?: Array<{ name: string }> }) => {
+            if (isMountedRef.current && res?.agents) {
+              const names = res.agents.map((a) => a.name);
+              setAvailableAgents(names);
+            }
+          })
+          .catch(() => {});
+      }
     }
   }, [open, initialReceiver, initialPerformative, initialConversationId, initialInReplyTo, initialProtocol, initialOntology, initialContent]);
 
@@ -203,6 +219,7 @@ export default function MessageComposerDialog({
         performative,
         sender: sender.trim() || undefined,
         receivers,
+        replyTo: replyTo.length > 0 ? replyTo : undefined,
         content,
         language: language || undefined,
         ontology: ontology.trim() || undefined,
@@ -215,10 +232,12 @@ export default function MessageComposerDialog({
       const res = await api.messages.send(payload);
       onSent?.(res);
       onClose();
-    } catch (e: any) {
-      setError(e.message || 'Failed to send ACL message');
+    } catch (e: unknown) {
+      setError(getErrorMessage(e));
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -397,6 +416,23 @@ export default function MessageComposerDialog({
                   value={replyWith}
                   onChange={(e) => setReplyWith(e.target.value)}
                   placeholder="Token to identify reply"
+                />
+
+                <Autocomplete
+                  multiple
+                  freeSolo
+                  options={availableAgents}
+                  value={replyTo}
+                  onChange={(_, val) => setReplyTo(val)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Reply-To (Optional)"
+                      size="small"
+                      placeholder="Add reply-to AID"
+                    />
+                  )}
+                  sx={{ gridColumn: { sm: '1 / -1' } }}
                 />
               </Box>
             </AccordionDetails>

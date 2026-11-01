@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import { MemoryRouter } from 'react-router-dom';
 import DashboardPage from './pages/DashboardPage';
 
 const { mockHealthCheck, mockGetPlatformInfo, mockShutdown } = vi.hoisted(() => ({
@@ -54,10 +55,12 @@ describe('DashboardPage', () => {
 
     // Act
     render(
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <DashboardPage />
-      </ThemeProvider>
+      <MemoryRouter>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <DashboardPage />
+        </ThemeProvider>
+      </MemoryRouter>
     );
 
     // Assert
@@ -84,10 +87,12 @@ describe('DashboardPage', () => {
 
     // Act
     render(
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <DashboardPage />
-      </ThemeProvider>
+      <MemoryRouter>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <DashboardPage />
+        </ThemeProvider>
+      </MemoryRouter>
     );
 
     // Assert
@@ -116,10 +121,12 @@ describe('DashboardPage', () => {
 
     // Act
     render(
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <DashboardPage />
-      </ThemeProvider>
+      <MemoryRouter>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <DashboardPage />
+        </ThemeProvider>
+      </MemoryRouter>
     );
 
     // Assert
@@ -141,10 +148,12 @@ describe('DashboardPage', () => {
 
     // Act
     render(
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <DashboardPage />
-      </ThemeProvider>
+      <MemoryRouter>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <DashboardPage />
+        </ThemeProvider>
+      </MemoryRouter>
     );
 
     // Assert
