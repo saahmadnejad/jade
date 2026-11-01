@@ -1173,7 +1173,7 @@ public class RestAPIIntegrationTest {
             MessageTrafficMonitor.EVENT_BUS_ADDRESS,
             msg -> {
                 if ("it-recent-1".equals(msg.body().getString("id"))) {
-                    vertx.runOnContext(v -> {
+                    vertx.setTimer(100, t -> {
                         // Act
                         client.get(REST_PORT, "localhost", "/api/messages/recent?from=sender-recent")
                             .send()
@@ -1282,7 +1282,7 @@ public class RestAPIIntegrationTest {
             MessageTrafficMonitor.EVENT_BUS_ADDRESS,
             msg -> {
                 if ("agent-e2e-src".equals(msg.body().getString("sender"))) {
-                    vertx.runOnContext(v -> {
+                    vertx.setTimer(100, t -> {
                         // Act
                         client.get(REST_PORT, "localhost", "/api/messages/recent?from=agent-e2e-src")
                             .send()
