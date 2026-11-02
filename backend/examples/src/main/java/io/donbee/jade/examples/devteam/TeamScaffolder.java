@@ -181,9 +181,20 @@ public final class TeamScaffolder {
     }
 
     private static boolean isDirectory(String resourcePath) {
-        // Directory resources end with '/' in getResource() URLs.
-        var url = TeamScaffolder.class.getResource(resourcePath);
-        return url != null && url.getPath().endsWith("/");
+        try {
+            String p = resourcePath.startsWith("/") ? resourcePath : "/" + resourcePath;
+            var url = TeamScaffolder.class.getResource(p);
+            if (url == null) return false;
+            if ("file".equalsIgnoreCase(url.getProtocol())) {
+                return new java.io.File(url.toURI()).isDirectory();
+            }
+            if ("jar".equalsIgnoreCase(url.getProtocol())) {
+                return url.getPath().endsWith("/") || !JarResources.list(resourcePath).isEmpty();
+            }
+            return url.getPath().endsWith("/");
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static List<String> resourceChildren(String dirResource) throws IOException {
