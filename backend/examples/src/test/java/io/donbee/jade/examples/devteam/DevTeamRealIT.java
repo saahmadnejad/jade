@@ -186,7 +186,7 @@ public class DevTeamRealIT {
             """.formatted(lib, Files.readString(lib), tests, Files.readString(tests));
 
         Sh judgeRun = sh("cd " + workspaceDir
-            + " && opencode run --auto -m tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free " + shellQuote(prompt));
+            + " && opencode run --standalone --auto -m tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free " + shellQuote(prompt));
         assertThat(judgeRun.exit).as("judge opencode run").isZero();
         String lastLine = lastNonEmptyLine(judgeRun.out);
         assertThat(lastLine).as("judge verdict line, got: " + firstLines(judgeRun.out))

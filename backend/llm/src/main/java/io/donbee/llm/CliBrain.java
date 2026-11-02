@@ -80,6 +80,7 @@ public class CliBrain implements Brain {
         List<String> cmd = new ArrayList<>();
         cmd.add(cliPath);
         cmd.add("run");
+        cmd.add("--standalone");
         cmd.add("--auto");
         if (role != null && !role.isBlank()) {
             cmd.add("--agent");

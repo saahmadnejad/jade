@@ -65,13 +65,20 @@ public final class TeamScaffolder {
         String json = """
             {
               "$schema": "https://opencode.ai/config.json",
-              "provider": {
+              "providers": {
                 "tokenrouter": {
-                  "npm": "@ai-sdk/openai-compatible",
                   "name": "TokenRouter",
-                  "options": {
-                    "baseURL": "%s",
-                    "apiKey": "{env:TOKENROUTER_API_KEY}"
+                  "package": "@opencode/ai/providers/openai-compatible",
+                  "settings": {
+                    "baseURL": "%s"
+                  },
+                  "headers": {
+                    "Authorization": "Bearer {env:TOKENROUTER_API_KEY}"
+                  },
+                  "models": {
+                    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": {
+                      "name": "Nemotron"
+                    }
                   }
                 }
               }
