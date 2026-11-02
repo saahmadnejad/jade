@@ -396,7 +396,14 @@ public class ManagerAgent extends Agent {
 
     private void saveArtifacts(String text, String prefix) {
         for (Map.Entry<String, String> e : ArtifactParser.parse(text).entrySet()) {
-            workspace.save(prefix + "/" + e.getKey(), e.getValue());
+            String path = e.getKey();
+            if (path.startsWith(prefix + "/")) {
+                workspace.save(path, e.getValue());
+            } else if (path.startsWith("src/") || path.startsWith("tests/") || path.startsWith("design/")) {
+                workspace.save(path, e.getValue());
+            } else {
+                workspace.save(prefix + "/" + path, e.getValue());
+            }
         }
     }
 

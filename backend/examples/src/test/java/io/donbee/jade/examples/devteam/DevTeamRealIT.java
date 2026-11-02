@@ -126,8 +126,8 @@ public class DevTeamRealIT {
         // Gate 3: the team's own tests pass.
         Path tests = findFile(workspaceDir, "test_string_utils.py");
         assertThat(tests).as("test_string_utils.py produced").isNotNull();
-        assertThat(sh("cd " + tests.getParent().getParent()
-            + " && python3 -m unittest discover -s tests -t .").exit).isEqualTo(0);
+        Sh testRun = sh("cd " + workspaceDir + " && python3 -m unittest discover -s tests");
+        assertThat(testRun.exit).as("unittest output: " + testRun.out).isEqualTo(0);
 
         // Gate 4: LLM judge scores the artifact against the brief (>= 7/10).
         int score = judge(lib, tests);
@@ -197,7 +197,7 @@ public class DevTeamRealIT {
         String modelArg = (model != null && !model.isBlank()) ? " -m " + model.trim() : "";
         Sh judgeRun = sh("cd " + workspaceDir
             + " && opencode run --standalone --auto" + modelArg + " " + shellQuote(prompt));
-        assertThat(judgeRun.exit).as("judge opencode run").isZero();
+        assertThat(judgeRun.exit).as("judge opencode run: " + judgeRun.out).isZero();
         String lastLine = lastNonEmptyLine(judgeRun.out);
         assertThat(lastLine).as("judge verdict line, got: " + firstLines(judgeRun.out))
             .startsWith("SCORE:");

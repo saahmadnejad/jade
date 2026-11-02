@@ -119,8 +119,8 @@ public class DevTeamFlowIntegrationTest {
         // prefixes: design artifacts under design/, code under src/,
         // reports under tests/ — saveArtifacts(text, prefix)).
         assertThat(Files.readString(workspaceDir.resolve("DESIGN.md"))).contains("# design");
-        assertThat(Files.readString(workspaceDir.resolve("src/src/app.py"))).contains("print(1)");
-        assertThat(Files.readString(workspaceDir.resolve("src/tests/test_app.py"))).contains("assert True");
+        assertThat(Files.readString(workspaceDir.resolve("src/app.py"))).contains("print(1)");
+        assertThat(Files.readString(workspaceDir.resolve("tests/test_app.py"))).contains("assert True");
         assertThat(Files.readString(workspaceDir.resolve("REVIEW-round1.md"))).contains("REJECTED");
         assertThat(Files.readString(workspaceDir.resolve("REVIEW-round2.md"))).contains("APPROVED");
 

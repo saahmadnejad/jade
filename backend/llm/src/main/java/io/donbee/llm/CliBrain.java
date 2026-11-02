@@ -95,6 +95,7 @@ public class CliBrain implements Brain {
         try {
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.directory(workDir.toFile());
+            pb.environment().put("PWD", workDir.toAbsolutePath().toString());
             pb.redirectErrorStream(true);
             Process proc = pb.start();
             try {
