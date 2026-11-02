@@ -204,8 +204,10 @@ public final class TeamScaffolder {
     }
 
     private static void writePersona(Path workDir, String role) throws IOException {
-        Path agentFile = workDir.resolve(".opencode").resolve("agent").resolve(role + ".md");
-        Files.createDirectories(agentFile.getParent());
+        Path agentsFile = workDir.resolve(".opencode").resolve("agents").resolve(role + ".md");
+        Path legacyAgentFile = workDir.resolve(".opencode").resolve("agent").resolve(role + ".md");
+        Files.createDirectories(agentsFile.getParent());
+        Files.createDirectories(legacyAgentFile.getParent());
         String prompt = switch (role) {
             case "manager" -> """
                 You are the Manager of a software development team. You own the product
@@ -226,10 +228,16 @@ public final class TeamScaffolder {
                 standards and spec compliance. End with the verdict line contract
                 defined by your task.""";
         };
-        String frontmatter = "---\nname: %s\ndescription: Dev-team %s persona\n---\n\n"
-            .formatted(role, role);
-        Files.writeString(agentFile,
-            frontmatter + "## Persona\n\n" + prompt.trim() + "\n");
+        String frontmatter = """
+            ---
+            description: Dev-team %s persona
+            mode: all
+            ---
+
+            """.formatted(role);
+        String content = frontmatter + "## Persona\n\n" + prompt.trim() + "\n";
+        Files.writeString(agentsFile, content);
+        Files.writeString(legacyAgentFile, content);
     }
 
     private static void writeAgentsMd(Path workDir, String githubOrg, String repoName,
