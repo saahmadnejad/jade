@@ -41,8 +41,10 @@ public abstract class RoleAgent extends Agent {
     private static final io.donbee.jade.util.Logger LOG =
         io.donbee.jade.util.Logger.getJADELogger(RoleAgent.class.getName());
 
-    /** Default opencode model id (provider/model) when the arg is missing (empty = host default per ADR-0005). */
-    static final String DEFAULT_MODEL = "";
+    /** Default opencode model id (provider/model) when the arg is missing (resolves from LLM_MODEL env, empty = host default per ADR-0005). */
+    static final String DEFAULT_MODEL = System.getenv("LLM_MODEL") != null
+        ? System.getenv("LLM_MODEL").trim()
+        : "";
 
     protected Brain brain;
     private String githubToken;

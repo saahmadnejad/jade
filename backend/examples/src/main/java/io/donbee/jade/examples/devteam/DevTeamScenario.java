@@ -69,8 +69,10 @@ public class DevTeamScenario implements Scenario {
                 "Created repository visibility: private or public"));
     }
 
-    /** Default opencode model id (empty = unconfigured, opencode resolves host default per ADR-0005). */
-    static final String DEFAULT_MODEL = "";
+    /** Default opencode model id (resolves from LLM_MODEL env, empty string = opencode default per ADR-0005). */
+    static final String DEFAULT_MODEL = System.getenv("LLM_MODEL") != null
+        ? System.getenv("LLM_MODEL").trim()
+        : "";
 
     @Override
     public List<AgentSpec> agents(Map<String, Object> config) {

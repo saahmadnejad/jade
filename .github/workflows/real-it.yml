@@ -32,6 +32,7 @@ jobs:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
           LLM_PROVIDER_ID: ${{ secrets.LLM_PROVIDER_ID }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
           TOKENROUTER_API_KEY: ${{ secrets.TOKENROUTER_API_KEY }}
         run: >
           mvn -B -pl examples -am test
