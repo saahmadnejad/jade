@@ -13,7 +13,7 @@ A fork of JADE (Java Agent DEvelopment Framework) running on Java 21 with virtua
 - **REST API** (~46 endpoints) + **React UI**: agents, containers, DF, tools, remote platforms, scenarios, live messages
 - **Live message traffic** in the browser (WebSocket): watch FIPA ACL conversations as they happen (MessagesPage)
 - **Scenarios page**: launch configurable multi-agent demo scenarios with one click; each instance runs in its own container and can be stopped independently — or add your own scenarios by dropping a jar implementing the `io.donbee.jade.rest.scenario.Scenario` SPI on the classpath
-- **LLM-powered agents**: role agents think through the `opencode` CLI (bundled in the backend image) reaching any provider it supports — tokenrouter by default (see `docs/adr/0003`); the dev-team scenario's five AI agents build a small project from a brief
+- **LLM-powered agents**: role agents think through the `opencode` CLI (bundled in the backend image) reaching any OpenAI-compatible provider (see `docs/adr/0005`); the dev-team scenario's five AI agents build a small project from a brief
 - **Library-ready artifacts**: `io.donbee:jade` (+ `fipa`, `llm`, `examples`) installable via Maven; the platform uber jar runs standalone without the UI
 
 ## Project Structure
@@ -42,10 +42,10 @@ jade/
 ## Quick Start
 
 ```bash
-# 1) LLM provider key (required for the dev-team scenario): the backend
-#    reaches tokenrouter through the opencode CLI bundled in its image
-#    (see docs/adr/0003). The key is injected from the environment:
-export TOKENROUTER_API_KEY=<your-tokenrouter-key>
+# 1) LLM provider key (for the dev-team scenario): the backend
+#    reaches any OpenAI-compatible provider via the opencode CLI
+#    (see docs/adr/0005). The key is injected from the environment:
+export LLM_API_KEY=<your-api-key>             # or deprecated export TOKENROUTER_API_KEY=<key>
 
 # 2) Build and start all containers (docker works identically)
 podman compose up --build -d
@@ -121,7 +121,7 @@ pnpm --filter webapp test:run    # App integration tests (non-watch; `test` runs
 # Offline flow test (stubbed CLI, no network) — runs in the default suite:
 cd backend && mvn -pl examples -am test -Dtest=DevTeamFlowIntegrationTest
 
-# Real run against tokenrouter (costs tokens; needs network + key):
-TOKENROUTER_API_KEY=... cd backend && \
+# Real run against an LLM provider (costs tokens; needs network + key):
+LLM_API_KEY=... cd backend && \
   mvn -pl examples -am test -Dtest=DevTeamRealIT -Dit.real=true -Dsurefire.failIfNoSpecifiedTests=false
 ```

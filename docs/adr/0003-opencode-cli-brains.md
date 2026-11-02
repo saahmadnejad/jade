@@ -1,5 +1,7 @@
 # Dev-team agents reason through the opencode CLI (tokenrouter)
 
+> **Note**: The tokenrouter-specific provider configuration and hardcoded model IDs in this ADR are superseded by [ADR-0005](0005-generic-llm-provider.md).
+
 ## Status
 
 Accepted (supersedes the dev-team decision in ADR-0001 — the HTTP/langchain4j

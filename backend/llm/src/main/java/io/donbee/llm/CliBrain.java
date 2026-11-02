@@ -36,7 +36,7 @@ public class CliBrain implements Brain {
 
     /**
      * @param model    opencode model id in {@code provider/model} form (e.g.
-     *                 {@code tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free}); nullable
+     *                 {@code custom/my-model}); nullable
      * @param role     agent persona name for {@code --agent} (e.g. the JADE
      *                 role: architect, implementer, ...); nullable/blank omits the flag
      * @param workDir  directory the CLI runs in (persona + opencode.json live

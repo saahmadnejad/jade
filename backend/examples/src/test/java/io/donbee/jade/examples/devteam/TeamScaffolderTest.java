@@ -44,4 +44,51 @@ public class TeamScaffolderTest {
         assertThat(Files.exists(skillsDir)).isTrue();
         assertThat(Files.list(skillsDir).count()).isGreaterThan(0);
     }
+
+    @Test
+    public void Given_GenericLLMEnvs_When_Scaffold_Then_CustomProviderBlockWritten() throws Exception {
+        Path workDir = Files.createTempDirectory("team-scaffold-generic");
+
+        TeamScaffolder.scaffold(workDir, "", "generic-proj", "private", varName -> {
+            return switch (varName) {
+                case "LLM_PROVIDER_ID" -> "my-provider";
+                case "LLM_BASE_URL" -> "https://my-llm.example.com/v1";
+                case "LLM_API_KEY" -> "secret-123";
+                default -> null;
+            };
+        });
+
+        String config = Files.readString(workDir.resolve("opencode.json"));
+        assertThat(config).contains("\"my-provider\"");
+        assertThat(config).contains("https://my-llm.example.com/v1");
+        assertThat(config).contains("{env:LLM_API_KEY}");
+    }
+
+    @Test
+    public void Given_DeprecatedTokenrouterAlias_When_Scaffold_Then_TokenrouterAliasReferenceWritten() throws Exception {
+        Path workDir = Files.createTempDirectory("team-scaffold-alias");
+
+        TeamScaffolder.scaffold(workDir, "", "alias-proj", "private", varName -> {
+            return switch (varName) {
+                case "TOKENROUTER_API_KEY" -> "tr-secret-456";
+                case "LLM_BASE_URL" -> "https://api.tokenrouter.com/v1";
+                default -> null;
+            };
+        });
+
+        String config = Files.readString(workDir.resolve("opencode.json"));
+        assertThat(config).contains("\"custom\"");
+        assertThat(config).contains("https://api.tokenrouter.com/v1");
+        assertThat(config).contains("{env:TOKENROUTER_API_KEY}");
+    }
+
+    @Test
+    public void Given_AllLLMEnvsUnset_When_Scaffold_Then_EmptyProviderSkeletonWritten() throws Exception {
+        Path workDir = Files.createTempDirectory("team-scaffold-unset");
+
+        TeamScaffolder.scaffold(workDir, "", "unset-proj", "private", varName -> null);
+
+        String config = Files.readString(workDir.resolve("opencode.json"));
+        assertThat(config).contains("\"providers\": {}");
+    }
 }

@@ -18,14 +18,14 @@ pnpm --filter webapp test:run
 pnpm --filter webapp typecheck
 pnpm --filter webapp lint
 
-# Docker (compose at repo root; TOKENROUTER_API_KEY required or dev-team role agents fail)
-export TOKENROUTER_API_KEY=<key>
+# Docker (compose at repo root; LLM_API_KEY or TOKENROUTER_API_KEY required or dev-team role agents fail)
+export LLM_API_KEY=<key>                       # or deprecated export TOKENROUTER_API_KEY=<key>
 docker compose up -d --build                   # podman compose works identically
 ```
 
 **JDK gotcha**: distro `java-21-openjdk` is often JRE-only (no `javac`) and breaks `mvn` with cryptic errors. `JAVA_HOME` must point at a full JDK 21 that has `bin/javac` (SDKMAN JDKs qualify).
 
-**CI gate** (`.github/workflows/ci.yml`): backend `mvn -B test -Djade.agent-runtime=<thread|verticle>` (matrix across both runtimes) + `mvn -B package -DskipTests`; frontend `pnpm install --frozen-lockfile`, `shared` + `webapp` `test:run`, `webapp` `typecheck` + `lint`; both docker images build + entrypoint smoke. `real-it.yml` is nightly/manual only (real tokens, `-Dit.real=true` + `TOKENROUTER_API_KEY`). The backend has no linter/formatter plugin (no checkstyle/spotless).
+**CI gate** (`.github/workflows/ci.yml`): backend `mvn -B test -Djade.agent-runtime=<thread|verticle>` (matrix across both runtimes) + `mvn -B package -DskipTests`; frontend `pnpm install --frozen-lockfile`, `shared` + `webapp` `test:run`, `webapp` `typecheck` + `lint`; both docker images build + entrypoint smoke. `real-it.yml` is nightly/manual only (real tokens, `-Dit.real=true` + `LLM_API_KEY` or `TOKENROUTER_API_KEY`). The backend has no linter/formatter plugin (no checkstyle/spotless).
 
 **Gotchas**
 - Workspace root is `frontend/` (pnpm 9, `packageManager` pinned; lockfile `frontend/pnpm-lock.yaml`). Its `dev`/`build` scripts run `pnpm --filter frontend ...` — "frontend" matches no package (`webapp`, `shared`), so they silently do nothing. Always `--filter webapp` or `--filter shared`.
@@ -36,7 +36,7 @@ docker compose up -d --build                   # podman compose works identicall
 - Docker Hub pulls occasionally 5xx/timeout — retry; base images cache after first pull.
 - `docker compose up` without `--build` reuses the stale `jade-backend:latest` image even after `mvn package`. Source changes need `up -d --build` (or `docker compose build backend` first).
 - `useFeedback()` in `frontend/.../NotificationSnackbar.tsx` must keep `notify`/`close` as stable `useCallback`s — unstable identities caused fetch loops spamming the scenarios/instances API.
-- Dev-team tests: `DevTeamFlowIntegrationTest` (offline, stub CLI, default suite) needs `-am` — surefire otherwise resolves a stale `~/.m2` llm jar and agents die with `NoClassDefFoundError`. `DevTeamRealIT` needs `-Dit.real=true` + `TOKENROUTER_API_KEY` (real tokens).
+- Dev-team tests: `DevTeamFlowIntegrationTest` (offline, stub CLI, default suite) needs `-am` — surefire otherwise resolves a stale `~/.m2` llm jar and agents die with `NoClassDefFoundError`. `DevTeamRealIT` needs `-Dit.real=true` + `LLM_API_KEY` or `TOKENROUTER_API_KEY` (real tokens).
 
 ## Architecture
 
@@ -60,19 +60,19 @@ docker compose up -d --build                   # podman compose works identicall
 
 ### Docker
 - **Backend image**: multi-stage (Maven → `eclipse-temurin:21-jre-alpine`). `CMD ["java","-cp","app.jar:examples.jar:llm.jar","io.donbee.jade.Boot","-host","localhost","-local-host","localhost"]` (note the triple-classpath `-cp` — README's `java -jar app.jar` is incomplete). Includes `gh`, `opencode`, python3/node for agent tooling.
-- **Ports** (host→container): backend RMI 10990→1099, REST 8080→8080; frontend nginx 3000→80. Compose passes `TOKENROUTER_API_KEY`/`GH_TOKEN` env and mounts `backend/examples/conf` → `/app/conf` (ro). (No 9router service anymore — LLM access is the bundled `opencode` CLI inside the backend image; provider config is a workspace `opencode.json` per instance.)
+- **Ports** (host→container): backend RMI 10990→1099, REST 8080→8080; frontend nginx 3000→80. Compose passes `LLM_*`/`TOKENROUTER_API_KEY`/`GH_TOKEN` env and mounts `backend/examples/conf` → `/app/conf` (ro). (No 9router service anymore — LLM access is the bundled `opencode` CLI inside the backend image; provider config is a workspace `opencode.json` per instance.)
 
 ### Dev-team scenario (`backend/examples/.../devteam/`)
 - 5 agents: Manager (deterministic state machine, no LLM) → Architect → Implementer → Tester → Reviewer. Manager phases: CLARIFY→DESIGN→IMPLEMENT→TEST→REVIEW→PUBLISH with per-phase deadlines (`enterPhase()`) + 60s `TickerBehaviour` watchdog.
 - Start body: `{"instanceName":"...","config":{...}}` — config MUST nest under `"config"`; a flat body is silently ignored → empty brief → instance FAILED.
 - Agent workspace: `${java.io.tmpdir}/jade-devteam-<instance>/` (i.e. `/tmp/...` inside the backend container); the `workspaceDir` config param overrides it — compose mounts a `devteam-workspaces` volume at `/workspace` for persistent use.
-- `*Model` params are `provider/model` ids resolved by the opencode CLI (default `tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`). A model the CLI/auth can't serve fails at the first role-agent call → STATUS.md FAILED with reason.
+- `*Model` params are `provider/model` ids resolved by the opencode CLI (default empty string `""` — opencode resolves host/global default per ADR-0005). A model the CLI/auth can't serve fails at the first role-agent call → STATUS.md FAILED with reason.
 - Peer messages use `PEER_PROTOCOL` = `FIPANames.InteractionProtocol.FIPA_REQUEST` (exact `fipa-request` token, case-sensitive — never hand-write it). Manager filters its own `dt-*` conversation IDs and ignores `dt-peer-*`.
 - `githubOrg` defaults empty (memory-only, skips publish). Publishing needs non-empty `githubOrg` + `GH_TOKEN` env in the backend container.
 
 ## Secrets (ADR-0002 — never commit)
 - GitHub publish token: `GH_TOKEN` env or gitignored `backend/examples/conf/secrets-local.properties` (`github.token`; template `secrets-local.properties.example`). `SecretsResolver` resolves only this now.
-- LLM provider key: `TOKENROUTER_API_KEY` env, injected into the workspace `opencode.json` (`{env:TOKENROUTER_API_KEY}`) — never on disk (ADR-0003).
+- LLM provider key: `LLM_API_KEY` (or deprecated `TOKENROUTER_API_KEY`) env, injected into the workspace `opencode.json` (`{env:LLM_API_KEY}`) — never on disk (ADR-0002/0005).
 - `.gitignore` covers specific `secrets.local.properties`/`secrets-local.properties` paths and the glob `secrets-*.properties` (with dash). Files like `secretsfoo.properties` (no dash) are NOT ignored.
 
 ## Key files

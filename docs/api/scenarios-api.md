@@ -100,9 +100,10 @@ Start a new instance of a scenario.
 - The `brief` config param is required for the dev-team scenario: an empty
   brief fails the instance immediately.
 - The `*Model` params are `provider/model` ids resolved by the `opencode`
-  CLI; the default provider is tokenrouter (configured per instance
-  workspace, see `docs/adr/0003`). Role agents fail fast when the CLI or the
-  provider key (`TOKENROUTER_API_KEY`) is missing.
+  CLI; defaults to empty string (`""`) so host/global OpenCode defaults
+  flow through, or generic OpenAI-compatible providers configured via `LLM_*`
+  envs (see `docs/adr/0005`). Role agents fail fast when the CLI or the
+  provider key (`LLM_API_KEY` or deprecated `TOKENROUTER_API_KEY`) is missing.
 
 ---
 

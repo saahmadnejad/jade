@@ -25,18 +25,18 @@ import io.donbee.jade.rest.service.ScenarioService;
 
 /**
  * REAL end-to-end assessment (gated): boots the platform and lets the five
- * agents run against the real opencode CLI + tokenrouter provider
- * ({@code tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free}). Verifies the produced code, not
- * just the conversation: the generated library must compile, its tests must
- * pass, and an LLM judge scores the result (ADR-0003 quality gates).
+ * agents run against the real opencode CLI + generic LLM provider (or deprecated
+ * TOKENROUTER_API_KEY). Verifies the produced code, not just the conversation:
+ * the generated library must compile, its tests must pass, and an LLM judge scores
+ * the result (ADR-0005 quality gates).
  *
  * <p>Gating (skipped by default; costs real tokens, needs network):</p>
  * <ul>
  *   <li>{@code -Dit.real=true} opts in</li>
- *   <li>{@code TOKENROUTER_API_KEY} env must be set</li>
+ *   <li>{@code LLM_API_KEY} (or deprecated {@code TOKENROUTER_API_KEY}) env must be set</li>
  * </ul>
  *
- * <p>Run: {@code TOKENROUTER_API_KEY=... mvn -pl examples -am test
+ * <p>Run: {@code LLM_API_KEY=... mvn -pl examples -am test
  * -Dtest=DevTeamRealIT -Dit.real=true -Dsurefire.failIfNoSpecifiedTests=false}</p>
  */
 public class DevTeamRealIT {
@@ -49,9 +49,12 @@ public class DevTeamRealIT {
     @BeforeClass
     public static void gate() throws Exception {
         Assume.assumeTrue("opt-in: -Dit.real=true", Boolean.getBoolean("it.real"));
-        Assume.assumeTrue("TOKENROUTER_API_KEY env required",
-            System.getenv("TOKENROUTER_API_KEY") != null
-                && !System.getenv("TOKENROUTER_API_KEY").isBlank());
+        String apiKey = System.getenv("LLM_API_KEY");
+        if (apiKey == null || apiKey.isBlank()) {
+            apiKey = System.getenv("TOKENROUTER_API_KEY");
+        }
+        Assume.assumeTrue("LLM_API_KEY or TOKENROUTER_API_KEY env required",
+            apiKey != null && !apiKey.isBlank());
 
         workspaceDir = Files.createTempDirectory("devteam-realit-ws");
 
@@ -186,7 +189,7 @@ public class DevTeamRealIT {
             """.formatted(lib, Files.readString(lib), tests, Files.readString(tests));
 
         Sh judgeRun = sh("cd " + workspaceDir
-            + " && opencode run --standalone --auto -m tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free " + shellQuote(prompt));
+            + " && opencode run --standalone --auto " + shellQuote(prompt));
         assertThat(judgeRun.exit).as("judge opencode run").isZero();
         String lastLine = lastNonEmptyLine(judgeRun.out);
         assertThat(lastLine).as("judge verdict line, got: " + firstLines(judgeRun.out))

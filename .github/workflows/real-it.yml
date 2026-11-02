@@ -1,8 +1,8 @@
 name: Real IT
 
 # Nightly + manual only: runs the dev-team scenario against the real
-# opencode CLI + tokenrouter provider. Costs real tokens and needs
-# network; gated by -Dit.real=true + the TOKENROUTER_API_KEY secret.
+# opencode CLI + generic LLM provider (or deprecated TOKENROUTER_API_KEY).
+# Costs real tokens and needs network; gated by -Dit.real=true + the LLM_API_KEY secret.
 on:
   schedule:
     - cron: '0 3 * * *'
@@ -29,6 +29,9 @@ jobs:
       - name: Real dev-team IT (STATUS + py_compile + unittest + LLM-judge gates)
         working-directory: backend
         env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          LLM_PROVIDER_ID: ${{ secrets.LLM_PROVIDER_ID }}
           TOKENROUTER_API_KEY: ${{ secrets.TOKENROUTER_API_KEY }}
         run: >
           mvn -B -pl examples -am test

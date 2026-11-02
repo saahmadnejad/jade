@@ -1,9 +1,10 @@
 # LLM API keys are never committed
 
 The development-team scenario authenticates to LLM providers at runtime, but
-no API key may ever enter the repository. The tokenrouter provider key is
-injected from the environment (`TOKENROUTER_API_KEY`) directly into the
-workspace `opencode.json` (see ADR-0003). The GitHub publish token is resolved
+no API key may ever enter the repository. The LLM provider key is
+injected from the environment (`LLM_API_KEY`, or deprecated alias
+`TOKENROUTER_API_KEY`) directly into the workspace `opencode.json` (see ADR-0005).
+The GitHub publish token is resolved
 by `SecretsResolver`:
 
 1. Environment variable (`GH_TOKEN`)

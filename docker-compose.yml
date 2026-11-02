@@ -9,6 +9,9 @@ services:
       - "8080:8080"
     environment:
       - JAVA_OPTS=-Xmx512m
+      - LLM_PROVIDER_ID=${LLM_PROVIDER_ID:-}
+      - LLM_BASE_URL=${LLM_BASE_URL:-}
+      - LLM_API_KEY=${LLM_API_KEY:-}
       - TOKENROUTER_API_KEY=${TOKENROUTER_API_KEY:-}
       - GH_TOKEN=${GH_TOKEN:-}
       - LOG_DIR=/app/logs

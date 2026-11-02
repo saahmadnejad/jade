@@ -69,12 +69,12 @@ your own agents.
 ## API keys (LLM provider)
 
 The dev-team role agents think through the `opencode` CLI, which reaches an
-LLM provider configured per instance workspace (see `docs/adr/0003`).
+LLM provider configured per instance workspace (see `docs/adr/0005`).
 **Keys are never stored in this repository** (see `docs/adr/0002`):
 
 ```bash
 # Environment variable (passed through docker compose)
-export TOKENROUTER_API_KEY=<your-tokenrouter-key>
+export LLM_API_KEY=<your-api-key>             # or deprecated export TOKENROUTER_API_KEY=<key>
 ```
 
 The provider is defined in an `opencode.json` written into each instance

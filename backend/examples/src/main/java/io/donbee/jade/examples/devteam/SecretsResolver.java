@@ -12,8 +12,8 @@ import java.util.function.UnaryOperator;
  * (ADR-0002): environment variable first, then a gitignored local properties
  * file, then failure with an actionable message. LLM provider keys are
  * injected directly from the environment by the opencode CLI
- * ({@code {env:TOKENROUTER_API_KEY}} in the workspace {@code opencode.json},
- * see ADR-0003); this class only resolves the GitHub publish token.
+ * ({@code {env:LLM_API_KEY}} in the workspace {@code opencode.json},
+ * see ADR-0005); this class only resolves the GitHub publish token.
  */
 public final class SecretsResolver {
 

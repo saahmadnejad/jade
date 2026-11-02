@@ -26,9 +26,6 @@ public final class TeamScaffolder {
     private TeamScaffolder() {
     }
 
-    /** Default tokenrouter base URL for the opencode provider config. */
-    static final String DEFAULT_PROVIDER_BASE_URL = "https://api.tokenrouter.com/v1";
-
     /**
      * @param workDir      the instance working directory (also CLI cwd)
      * @param githubOrg    target GitHub org, empty = memory-only mode
@@ -37,7 +34,7 @@ public final class TeamScaffolder {
      */
     public static void scaffold(Path workDir, String githubOrg, String repoName,
                                 String visibility) throws IOException {
-        scaffold(workDir, githubOrg, repoName, visibility, DEFAULT_PROVIDER_BASE_URL);
+        scaffold(workDir, githubOrg, repoName, visibility, System::getenv);
     }
 
     /**
@@ -46,44 +43,108 @@ public final class TeamScaffolder {
      */
     public static void scaffold(Path workDir, String githubOrg, String repoName,
                                 String visibility, String providerBaseUrl) throws IOException {
+        scaffold(workDir, githubOrg, repoName, visibility, varName -> {
+            if ("LLM_BASE_URL".equals(varName)) {
+                return providerBaseUrl;
+            }
+            return System.getenv(varName);
+        });
+    }
+
+    /**
+     * Scaffold with an injectable environment lookup (for testing generic provider config
+     * and deprecated alias resolution per ADR-0005).
+     */
+    public static void scaffold(Path workDir, String githubOrg, String repoName,
+                                String visibility, java.util.function.UnaryOperator<String> envLookup) throws IOException {
         LOG.info("scaffolding workspace " + workDir);
         Files.createDirectories(workDir);
         copySkills(workDir.resolve(".opencode").resolve("skills"));
         for (String role : List.of("manager", "architect", "implementer", "tester", "reviewer")) {
             writePersona(workDir, role);
         }
-        writeOpencodeJson(workDir, providerBaseUrl);
+        writeOpencodeJson(workDir, envLookup);
         writeAgentsMd(workDir, githubOrg, repoName, visibility);
     }
 
     /**
-     * Provider config for the opencode CLI (ADR-0003): tokenrouter reached
-     * as an OpenAI-compatible endpoint; the API key is injected from the
-     * {@code TOKENROUTER_API_KEY} environment variable, never stored on disk.
+     * Provider config for the opencode CLI (ADR-0005): generic OpenAI-compatible
+     * provider resolved from LLM_* environment variables. When no provider envs are
+     * set, writes an empty provider skeleton so host/global opencode config and auth flow
+     * through. The API key reference ({env:LLM_API_KEY} or deprecated alias
+     * {env:TOKENROUTER_API_KEY}) is never stored in plain text on disk (ADR-0002).
      */
-    private static void writeOpencodeJson(Path workDir, String baseUrl) throws IOException {
-        String json = """
-            {
-              "$schema": "https://opencode.ai/config.json",
-              "providers": {
-                "tokenrouter": {
-                  "name": "TokenRouter",
-                  "package": "@opencode/ai/providers/openai-compatible",
-                  "settings": {
-                    "baseURL": "%s"
+    private static void writeOpencodeJson(Path workDir, java.util.function.UnaryOperator<String> envLookup) throws IOException {
+        String providerId = envLookup.apply("LLM_PROVIDER_ID");
+        if (providerId == null || providerId.isBlank()) {
+            providerId = "custom";
+        } else {
+            providerId = providerId.trim();
+        }
+
+        String baseUrl = envLookup.apply("LLM_BASE_URL");
+        if (baseUrl != null) {
+            baseUrl = baseUrl.trim();
+        }
+
+        String apiKey = envLookup.apply("LLM_API_KEY");
+        String keyEnvVar = "LLM_API_KEY";
+        if (apiKey == null || apiKey.isBlank()) {
+            String tokenrouterKey = envLookup.apply("TOKENROUTER_API_KEY");
+            if (tokenrouterKey != null && !tokenrouterKey.isBlank()) {
+                LOG.warning("TOKENROUTER_API_KEY is deprecated; use LLM_API_KEY instead.");
+                apiKey = tokenrouterKey.trim();
+                keyEnvVar = "TOKENROUTER_API_KEY";
+            }
+        } else {
+            apiKey = apiKey.trim();
+        }
+
+        boolean hasBaseUrl = baseUrl != null && !baseUrl.isBlank();
+        boolean hasKey = apiKey != null && !apiKey.isBlank();
+
+        String json;
+        if (!hasBaseUrl && !hasKey) {
+            json = """
+                {
+                  "$schema": "https://opencode.ai/config.json",
+                  "providers": {},
+                  "provider": {}
+                }
+                """;
+        } else {
+            String effectiveBaseUrl = hasBaseUrl ? baseUrl : "";
+            json = """
+                {
+                  "$schema": "https://opencode.ai/config.json",
+                  "providers": {
+                    "%s": {
+                      "name": "%s",
+                      "package": "@opencode/ai/providers/openai-compatible",
+                      "settings": {
+                        "baseURL": "%s"
+                      },
+                      "headers": {
+                        "Authorization": "Bearer {env:%s}"
+                      }
+                    }
                   },
-                  "headers": {
-                    "Authorization": "Bearer {env:TOKENROUTER_API_KEY}"
-                  },
-                  "models": {
-                    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": {
-                      "name": "Nemotron"
+                  "provider": {
+                    "%s": {
+                      "npm": "@ai-sdk/openai-compatible",
+                      "name": "%s",
+                      "options": {
+                        "baseURL": "%s",
+                        "apiKey": "{env:%s}"
+                      }
                     }
                   }
                 }
-              }
-            }
-            """.formatted(baseUrl);
+                """.formatted(
+                    providerId, providerId, effectiveBaseUrl, keyEnvVar,
+                    providerId, providerId, effectiveBaseUrl, keyEnvVar
+                );
+        }
         Files.writeString(workDir.resolve("opencode.json"), json);
     }
 

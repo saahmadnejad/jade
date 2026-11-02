@@ -41,8 +41,8 @@ public abstract class RoleAgent extends Agent {
     private static final io.donbee.jade.util.Logger LOG =
         io.donbee.jade.util.Logger.getJADELogger(RoleAgent.class.getName());
 
-    /** Default opencode model id (provider/model) when the arg is missing. */
-    static final String DEFAULT_MODEL = "tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free";
+    /** Default opencode model id (provider/model) when the arg is missing (empty = host default per ADR-0005). */
+    static final String DEFAULT_MODEL = "";
 
     protected Brain brain;
     private String githubToken;

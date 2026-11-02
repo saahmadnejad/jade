@@ -53,14 +53,14 @@ public class CliBrainTest {
             echo 'DESIGN DOC'
             """).toString();
 
-        CliBrain brain = new CliBrain("tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "architect",
+        CliBrain brain = new CliBrain("custom/my-model", "architect",
             dir, Duration.ofSeconds(30), cli);
         String out = brain.respond("be the architect", "design the app");
 
         assertThat(out).isEqualTo("DESIGN DOC");
         List<String> argv = recordedArgs(dir);
         assertThat(argv).contains("run", "--auto", "--agent", "architect",
-            "-m", "tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "be the architect\n\n---\n\ndesign the app");
+            "-m", "custom/my-model", "be the architect\n\n---\n\ndesign the app");
     }
 
     @Test

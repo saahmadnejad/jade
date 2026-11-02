@@ -59,18 +59,18 @@ public class DevTeamScenario implements Scenario {
             ScenarioParam.stringParam("fallbackModel", "",
                 "Fallback opencode model id (empty = no fallback brain; must differ from the role models to activate the chain)"),
             ScenarioParam.stringParam("managerModel", DEFAULT_MODEL, "Manager model (unused: manager is deterministic)"),
-            ScenarioParam.stringParam("architectModel", DEFAULT_MODEL, "Architect model (opencode provider/model id)"),
-            ScenarioParam.stringParam("implementerModel", DEFAULT_MODEL, "Implementer model (opencode provider/model id)"),
-            ScenarioParam.stringParam("testerModel", DEFAULT_MODEL, "Tester model (opencode provider/model id)"),
-            ScenarioParam.stringParam("reviewerModel", DEFAULT_MODEL, "Reviewer model (opencode provider/model id)"),
+            ScenarioParam.stringParam("architectModel", DEFAULT_MODEL, "Architect model (opencode model id; empty = opencode default)"),
+            ScenarioParam.stringParam("implementerModel", DEFAULT_MODEL, "Implementer model (opencode model id; empty = opencode default)"),
+            ScenarioParam.stringParam("testerModel", DEFAULT_MODEL, "Tester model (opencode model id; empty = opencode default)"),
+            ScenarioParam.stringParam("reviewerModel", DEFAULT_MODEL, "Reviewer model (opencode model id; empty = opencode default)"),
             ScenarioParam.stringParam("githubOrg", "",
                 "GitHub org the team publishes to (empty = skip GitHub publishing)"),
             ScenarioParam.stringParam("githubVisibility", "private",
                 "Created repository visibility: private or public"));
     }
 
-    /** Default opencode model id (tokenrouter provider, see ADR-0003). */
-    static final String DEFAULT_MODEL = "tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free";
+    /** Default opencode model id (empty = unconfigured, opencode resolves host default per ADR-0005). */
+    static final String DEFAULT_MODEL = "";
 
     @Override
     public List<AgentSpec> agents(Map<String, Object> config) {
