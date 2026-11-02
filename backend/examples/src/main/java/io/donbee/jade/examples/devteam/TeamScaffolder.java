@@ -27,7 +27,7 @@ public final class TeamScaffolder {
     }
 
     /** Default tokenrouter base URL for the opencode provider config. */
-    static final String DEFAULT_PROVIDER_BASE_URL = "https://tokenrouter.com/v1";
+    static final String DEFAULT_PROVIDER_BASE_URL = "https://api.tokenrouter.com/v1";
 
     /**
      * @param workDir      the instance working directory (also CLI cwd)

@@ -35,7 +35,7 @@ HTTP gateway) via `LangChain4jBrain`. Problems:
    brain); configure a distinct model id to activate the chain.
 4. **tokenrouter provider** reaches opencode through an `opencode.json`
    written into each instance workspace by `TeamScaffolder`
-   (`@ai-sdk/openai-compatible`, `baseURL` default `https://tokenrouter.com/v1`).
+   (`@ai-sdk/openai-compatible`, `baseURL` default `https://api.tokenrouter.com/v1`).
    The API key is injected from the environment (`{env:TOKENROUTER_API_KEY}`),
    never stored on disk. Default model: `tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`;
    per-role `*Model` scenario params are `provider/model` ids.
