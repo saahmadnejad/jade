@@ -56,6 +56,23 @@ public class ToolLaunchHandler implements Handler<RoutingContext> {
             ctx.fail(400, new RuntimeException("Missing tool name"));
             return;
         }
+
+        if ("df-gui".equalsIgnoreCase(toolName) || "dfgui".equalsIgnoreCase(toolName)) {
+            try {
+                service.showDFGUI();
+                ctx.response()
+                    .setStatusCode(200)
+                    .putHeader("Content-Type", "application/json")
+                    .end(new JsonObject()
+                        .put("message", "df-gui started")
+                        .put("agent", "df")
+                        .toBuffer());
+            } catch (Exception e) {
+                ctx.fail(500, e);
+            }
+            return;
+        }
+
         String className = mapToolClassName(toolName);
         if (className == null) {
             ctx.fail(400, new RuntimeException("Unknown tool: " + toolName));
@@ -90,17 +107,15 @@ public class ToolLaunchHandler implements Handler<RoutingContext> {
     }
 
     private String mapToolClassName(String toolName) {
-        switch (toolName) {
+        switch (toolName.toLowerCase()) {
             case "sniffer":
                 return "io.donbee.jade.tools.sniffer.Sniffer";
             case "dummy":
                 return "io.donbee.jade.tools.DummyAgent.DummyAgent";
             case "logger":
-                return "io.donbee.jade.tools.logging.LoggerAgent";
+                return "io.donbee.jade.tools.logging.LogManagerAgent";
             case "introspector":
                 return "io.donbee.jade.tools.introspector.Introspector";
-            case "df-gui":
-                return "io.donbee.jade.tools.df.DFTool";
             default:
                 return null;
         }

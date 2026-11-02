@@ -1343,4 +1343,34 @@ public class JadesPlatformService implements PlatformService, DFService {
         }
         impl.send(message, sender);
     }
+
+    @Override
+    public void showDFGUI() {
+        if (agentManager == null) {
+            throw new IllegalStateException("Not a Main Container");
+        }
+        AID dfAID = getDefaultDF();
+        if (dfAID == null) {
+            throw new IllegalStateException("No default DF available on this container");
+        }
+        io.donbee.jade.domain.JADEAgentManagement.ShowGui showGui = new io.donbee.jade.domain.JADEAgentManagement.ShowGui();
+        try {
+            ACLMessage reply = DFRequestAgent.execute(
+                agentManager, impl.getID(), dfAID, showGui,
+                io.donbee.jade.domain.JADEAgentManagement.JADEManagementOntology.getInstance().getName(),
+                "ShowGui",
+                DF_TIMEOUT_MS
+            );
+            if (reply != null && reply.getPerformative() == ACLMessage.FAILURE) {
+                if (reply.getContent() != null && !reply.getContent().contains("Gui_is_being_shown_already")) {
+                    throw new RuntimeException("DF GUI launch failed: " + decodeFailure(reply));
+                }
+            }
+        } catch (Exception e) {
+            if (e.getMessage() != null && e.getMessage().contains("Gui_is_being_shown_already")) {
+                return;
+            }
+            throw new RuntimeException("Failed to launch DF GUI: " + e.getMessage(), e);
+        }
+    }
 }

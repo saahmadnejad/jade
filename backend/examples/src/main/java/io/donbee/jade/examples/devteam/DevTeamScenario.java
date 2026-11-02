@@ -70,7 +70,7 @@ public class DevTeamScenario implements Scenario {
     }
 
     /** Default opencode model id (tokenrouter provider, see ADR-0003). */
-    static final String DEFAULT_MODEL = "tokenrouter/z-ai/glm-5.3-free";
+    static final String DEFAULT_MODEL = "tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free";
 
     @Override
     public List<AgentSpec> agents(Map<String, Object> config) {

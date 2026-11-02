@@ -155,6 +155,8 @@ public class DFRequestAgent extends Agent {
                 cm.registerOntology(FIPAManagementOntology.getInstance());
             } else if (ontologyName.equals(DFAppletOntology.getInstance().getName())) {
                 cm.registerOntology(DFAppletOntology.getInstance());
+            } else if (ontologyName.equals(io.donbee.jade.domain.JADEAgentManagement.JADEManagementOntology.getInstance().getName())) {
+                cm.registerOntology(io.donbee.jade.domain.JADEAgentManagement.JADEManagementOntology.getInstance());
             }
 
             Action act = new Action();

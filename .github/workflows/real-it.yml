@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 20
       - name: Install opencode CLI (same route as the backend image)
-        run: npm install -g opencode-ai@1.18.30 opencode-linux-x64-musl@1.18.30
+        run: npm install -g opencode-ai@1.18.30
       - name: CLI sanity
         run: opencode --version
       - name: Real dev-team IT (STATUS + py_compile + unittest + LLM-judge gates)

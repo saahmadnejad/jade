@@ -26,7 +26,7 @@ import io.donbee.jade.rest.service.ScenarioService;
 /**
  * REAL end-to-end assessment (gated): boots the platform and lets the five
  * agents run against the real opencode CLI + tokenrouter provider
- * ({@code tokenrouter/z-ai/glm-5.3-free}). Verifies the produced code, not
+ * ({@code tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free}). Verifies the produced code, not
  * just the conversation: the generated library must compile, its tests must
  * pass, and an LLM judge scores the result (ADR-0003 quality gates).
  *
@@ -186,7 +186,7 @@ public class DevTeamRealIT {
             """.formatted(lib, Files.readString(lib), tests, Files.readString(tests));
 
         Sh judgeRun = sh("cd " + workspaceDir
-            + " && opencode run --auto -m tokenrouter/z-ai/glm-5.3-free " + shellQuote(prompt));
+            + " && opencode run --auto -m tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free " + shellQuote(prompt));
         assertThat(judgeRun.exit).as("judge opencode run").isZero();
         String lastLine = lastNonEmptyLine(judgeRun.out);
         assertThat(lastLine).as("judge verdict line, got: " + firstLines(judgeRun.out))

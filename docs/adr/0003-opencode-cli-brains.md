@@ -37,7 +37,7 @@ HTTP gateway) via `LangChain4jBrain`. Problems:
    written into each instance workspace by `TeamScaffolder`
    (`@ai-sdk/openai-compatible`, `baseURL` default `https://tokenrouter.com/v1`).
    The API key is injected from the environment (`{env:TOKENROUTER_API_KEY}`),
-   never stored on disk. Default model: `tokenrouter/z-ai/glm-5.3-free`;
+   never stored on disk. Default model: `tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`;
    per-role `*Model` scenario params are `provider/model` ids.
 5. **No pre-deploy provider probe.** The old HTTP `/models` check (409 on
    failure) is deleted; resilience is retry → fallback → STATUS.md FAILED with

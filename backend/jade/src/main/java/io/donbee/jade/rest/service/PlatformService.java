@@ -98,6 +98,8 @@ public interface PlatformService {
 
     void sendMessage(ACLMessage message);
 
+    void showDFGUI();
+
     class PlatformTree {
         public final String platformID;
         public final java.util.List<ContainerTreeNode> containers;

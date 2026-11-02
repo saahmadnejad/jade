@@ -38,7 +38,7 @@ public class DevTeamScenarioTest {
 
         AgentSpec architect = specs.get(1);
         assertThat(architect.getArgs().get(0))
-            .isEqualTo("tokenrouter/z-ai/glm-5.3-free");     // model
+            .isEqualTo("tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free");     // model
         assertThat(architect.getArgs().get(1))
             .isEqualTo("");                                    // fallback: empty default = no chain
         assertThat(architect.getArgs().get(2)).isEqualTo("600"); // callTimeoutSec

@@ -77,16 +77,10 @@ export default function DFPage() {
   const isMountedRef = useRef(true);
   const { feedback, notify, close } = useFeedback();
 
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [regData, parentData, childData, statusData, descData] = await Promise.all([
+      const [regRes, parentRes, childRes, statusRes, descRes] = await Promise.allSettled([
         api.df.listRegistrations(),
         api.df.getParents(),
         api.df.getChildren(),
@@ -94,7 +88,26 @@ export default function DFPage() {
         api.df.getDescription(),
       ]);
       if (!isMountedRef.current) return;
-      setRegistrations(regData.registrations || []);
+
+      if (regRes.status === 'fulfilled') {
+        setRegistrations(regRes.value.registrations || []);
+      }
+      if (parentRes.status === 'fulfilled') {
+        setParents(parentRes.value.parents || []);
+      }
+      if (childRes.status === 'fulfilled') {
+        setChildren(childRes.value.children || []);
+      }
+      if (statusRes.status === 'fulfilled') {
+        setDfStatus(statusRes.value);
+      }
+      if (descRes.status === 'fulfilled') {
+        setDfDescription(descRes.value);
+      }
+
+      if (regRes.status === 'rejected') {
+        notify(`Failed to fetch DF data: ${getErrorMessage(regRes.reason)}`, 'error');
+      }
 
       try {
         const agentListPromise = api.agents?.list?.({ detail: false });
@@ -108,23 +121,21 @@ export default function DFPage() {
       } catch {
         // Ignore if agent list unavailable
       }
-      setParents(parentData.parents || []);
-      setChildren(childData.children || []);
-      setDfStatus(statusData);
-      setDfDescription(descData);
     } catch (e: unknown) {
       if (isMountedRef.current) {
         notify(`Failed to fetch DF data: ${getErrorMessage(e)}`, 'error');
       }
     } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 
   useEffect(() => {
+    isMountedRef.current = true;
     fetchAll();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   const fetchRegistrations = async () => {
@@ -139,9 +150,7 @@ export default function DFPage() {
         notify(`Failed to fetch DF registrations: ${getErrorMessage(e)}`, 'error');
       }
     } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 

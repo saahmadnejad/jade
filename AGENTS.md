@@ -66,7 +66,7 @@ docker compose up -d --build                   # podman compose works identicall
 - 5 agents: Manager (deterministic state machine, no LLM) → Architect → Implementer → Tester → Reviewer. Manager phases: CLARIFY→DESIGN→IMPLEMENT→TEST→REVIEW→PUBLISH with per-phase deadlines (`enterPhase()`) + 60s `TickerBehaviour` watchdog.
 - Start body: `{"instanceName":"...","config":{...}}` — config MUST nest under `"config"`; a flat body is silently ignored → empty brief → instance FAILED.
 - Agent workspace: `${java.io.tmpdir}/jade-devteam-<instance>/` (i.e. `/tmp/...` inside the backend container); the `workspaceDir` config param overrides it — compose mounts a `devteam-workspaces` volume at `/workspace` for persistent use.
-- `*Model` params are `provider/model` ids resolved by the opencode CLI (default `tokenrouter/z-ai/glm-5.3-free`). A model the CLI/auth can't serve fails at the first role-agent call → STATUS.md FAILED with reason.
+- `*Model` params are `provider/model` ids resolved by the opencode CLI (default `tokenrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`). A model the CLI/auth can't serve fails at the first role-agent call → STATUS.md FAILED with reason.
 - Peer messages use `PEER_PROTOCOL` = `FIPANames.InteractionProtocol.FIPA_REQUEST` (exact `fipa-request` token, case-sensitive — never hand-write it). Manager filters its own `dt-*` conversation IDs and ignores `dt-peer-*`.
 - `githubOrg` defaults empty (memory-only, skips publish). Publishing needs non-empty `githubOrg` + `GH_TOKEN` env in the backend container.
 

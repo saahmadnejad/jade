@@ -109,14 +109,14 @@ public class ToolLaunchHandlerTest {
         mockPathParam("logger");
         mockNullBody();
         AgentInfo info = new AgentInfo("logger-agent", "active", "jade", "Main-Container", new String[]{});
-        when(mockService.deployAgent("logger-agent", "io.donbee.jade.tools.logging.LoggerAgent", new Object[]{}))
+        when(mockService.deployAgent("logger-agent", "io.donbee.jade.tools.logging.LogManagerAgent", new Object[]{}))
             .thenReturn(info);
 
         // Act
         handler.handle(mockContext);
 
         // Assert
-        verify(mockService).deployAgent("logger-agent", "io.donbee.jade.tools.logging.LoggerAgent", new Object[]{});
+        verify(mockService).deployAgent("logger-agent", "io.donbee.jade.tools.logging.LogManagerAgent", new Object[]{});
         verify(mockResponse).setStatusCode(201);
     }
 
@@ -138,20 +138,18 @@ public class ToolLaunchHandlerTest {
     }
 
     @Test
-    public void Given_ValidToolName_When_LaunchDfGui_Then_DeploysAgentAndReturns201() {
+    public void Given_ValidToolName_When_LaunchDfGui_Then_CallsShowDFGUIAndReturns200() {
         // Arrange
         mockPathParam("df-gui");
         mockBodyNoContainer();
-        AgentInfo info = new AgentInfo("df-gui-agent", "active", "jade", "Main-Container", new String[]{});
-        when(mockService.deployAgent("df-gui-agent", "io.donbee.jade.tools.df.DFTool", new Object[]{}))
-            .thenReturn(info);
+        doNothing().when(mockService).showDFGUI();
 
         // Act
         handler.handle(mockContext);
 
         // Assert
-        verify(mockService).deployAgent("df-gui-agent", "io.donbee.jade.tools.df.DFTool", new Object[]{});
-        verify(mockResponse).setStatusCode(201);
+        verify(mockService).showDFGUI();
+        verify(mockResponse).setStatusCode(200);
     }
 
     @Test
