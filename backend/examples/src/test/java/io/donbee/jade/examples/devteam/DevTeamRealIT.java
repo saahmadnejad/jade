@@ -3,6 +3,7 @@ package io.donbee.jade.examples.devteam;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
@@ -140,6 +141,10 @@ public class DevTeamRealIT {
     private static Sh sh(String cmd) throws Exception {
         Process p = new ProcessBuilder("sh", "-c", cmd)
             .redirectErrorStream(true).start();
+        try {
+            p.getOutputStream().close();
+        } catch (IOException ignored) {
+        }
         StringBuilder out = new StringBuilder();
         try (var r = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
             String line;

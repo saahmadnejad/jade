@@ -104,14 +104,40 @@ public final class TeamScaffolder {
         boolean hasKey = apiKey != null && !apiKey.isBlank();
 
         String json;
+        String agentsBlock = """
+              "agents": {
+                "architect": {
+                  "description": "Dev-team architect persona",
+                  "mode": "all",
+                  "system": "You are the Architect. Before designing, clarify ambiguity using the grilling skill mindset: list your questions WITH the answer you assume for each. Then produce the design. Use codebase-design thinking."
+                },
+                "implementer": {
+                  "description": "Dev-team implementer persona",
+                  "mode": "all",
+                  "system": "You are the lead Implementer. Follow the implement and tdd skills: small increments, tests first where practical, complete files only."
+                },
+                "tester": {
+                  "description": "Dev-team tester persona",
+                  "mode": "all",
+                  "system": "You are the quality engineer. Use the tdd skill conventions for test layout and write a concise test report."
+                },
+                "reviewer": {
+                  "description": "Dev-team reviewer persona",
+                  "mode": "all",
+                  "system": "You are the Reviewer. Apply the code-review skill along two axes: standards and spec compliance. End with the verdict line contract defined by your task."
+                }
+              }
+            """;
+
         if (!hasBaseUrl && !hasKey) {
             json = """
                 {
                   "$schema": "https://opencode.ai/config.json",
                   "providers": {},
-                  "provider": {}
+                  "provider": {},
+                %s
                 }
-                """;
+                """.formatted(agentsBlock);
         } else {
             String effectiveBaseUrl = hasBaseUrl ? baseUrl : "";
             json = """
@@ -138,11 +164,13 @@ public final class TeamScaffolder {
                         "apiKey": "{env:%s}"
                       }
                     }
-                  }
+                  },
+                %s
                 }
                 """.formatted(
                     providerId, providerId, effectiveBaseUrl, keyEnvVar,
-                    providerId, providerId, effectiveBaseUrl, keyEnvVar
+                    providerId, providerId, effectiveBaseUrl, keyEnvVar,
+                    agentsBlock
                 );
         }
         Files.writeString(workDir.resolve("opencode.json"), json);

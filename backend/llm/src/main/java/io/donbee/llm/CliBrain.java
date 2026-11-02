@@ -97,6 +97,10 @@ public class CliBrain implements Brain {
             pb.directory(workDir.toFile());
             pb.redirectErrorStream(true);
             Process proc = pb.start();
+            try {
+                proc.getOutputStream().close();
+            } catch (IOException ignored) {
+            }
 
             // Gobble output on a separate thread: reading synchronously
             // would block past the timeout when the CLI is hung and silent.
