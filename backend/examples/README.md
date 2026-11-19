@@ -9,6 +9,7 @@ through the REST API, and watch them live in the React frontend.
 | Scenario | Folder | Description |
 |----------|--------|-------------|
 | Dev team | `dev-team` (in `src/main/java/.../devteam/`) | Five LLM-powered agents (Manager, Architect, Implementer, Tester, Reviewer) build a small project from a brief, in bounded review rounds. |
+| Smart Grid | `smartgrid` (in `src/main/java/.../smartgrid/`) | High-scale decentralized microgrid: solar/wind prosumers, smart consumers, and battery storage balancing power via FIPA Contract-Net auctions. |
 
 ## Building
 
@@ -58,6 +59,36 @@ curl -s -X DELETE http://localhost:8080/api/scenarios/instances/team-demo
 
 The body's `config` object MUST nest under `"config"` (a flat body is silently
 ignored → empty brief → FAILED instance).
+
+## Running the smart-grid scenario
+
+A decentralized smart grid simulation modeling a metropolitan distribution network with thousands of distributed energy resources (DERs) coordinating in real time via FIPA Contract-Net protocols. See [Smart Grid Scenario Architecture & Benchmark Report](src/main/java/io/donbee/jade/examples/smartgrid/README.md) for full architecture and benchmark details.
+
+### Via the React UI
+Open the UI at `http://localhost:3000`, navigate to **Scenarios**, select **Smart Grid Microgrid & Decentralized Energy Trading**, configure parameters (defaults prefilled), and click **Start**.
+
+### Via REST API
+```bash
+# Launch a smart-grid instance
+curl -s -X POST http://localhost:8080/api/scenarios/smart-grid/instances \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "instanceName": "grid-demo",
+    "config": {
+      "prosumersCount": 200,
+      "consumersCount": 200,
+      "tickIntervalMs": 250,
+      "stormProbability": "0.15"
+    }
+  }'
+
+# List active instances
+curl -s http://localhost:8080/api/scenarios/instances
+
+# Stop instance
+curl -s -X DELETE http://localhost:8080/api/scenarios/instances/grid-demo
+```
+
 
 ### Option B: runtime deployment via REST
 

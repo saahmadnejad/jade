@@ -733,7 +733,7 @@ public class JadesPlatformServiceTest {
         when(mockImpl.getID()).thenReturn(localCid);
         when(mockImpl.getPlatformID()).thenReturn("jade-platform-test");
 
-        AID aid = new AID("agent1", AID.ISLOCALNAME);
+        AID aid = new AID("agent1@jade-platform-test", AID.ISGUID);
         io.donbee.jade.util.leap.List agentsList = new io.donbee.jade.util.leap.ArrayList();
         agentsList.add(aid);
 
@@ -826,7 +826,7 @@ public class JadesPlatformServiceTest {
         when(localCid.getName()).thenReturn("Main-Container");
         when(mockImpl.getID()).thenReturn(localCid);
 
-        AID aid = new AID("worker1", AID.ISLOCALNAME);
+        AID aid = new AID("worker1@jade-platform-test", AID.ISGUID);
         io.donbee.jade.util.leap.List agentsList = new io.donbee.jade.util.leap.ArrayList();
         agentsList.add(aid);
         when(mockAgentManager.containerAgents(localCid)).thenReturn(agentsList);
@@ -875,7 +875,7 @@ public class JadesPlatformServiceTest {
         when(mockAgentManager.containerAgents(localCid)).thenReturn(new io.donbee.jade.util.leap.ArrayList());
 
         // Remote container has agent
-        AID remoteAid = new AID("peripheral-agent", AID.ISLOCALNAME);
+        AID remoteAid = new AID("peripheral-agent@jade-platform-test", AID.ISGUID);
         io.donbee.jade.util.leap.List remoteAgents = new io.donbee.jade.util.leap.ArrayList();
         remoteAgents.add(remoteAid);
         when(mockAgentManager.containerAgents(remoteCid)).thenReturn(remoteAgents);
